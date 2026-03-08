@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/systemlogs")
+@RequestMapping("/api/v1/system-logs")
 public class SystemLogController {
 
     private final SystemLogService service;

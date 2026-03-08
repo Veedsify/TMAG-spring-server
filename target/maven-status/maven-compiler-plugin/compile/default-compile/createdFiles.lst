@@ -81,6 +81,7 @@ com/TravelMedicineAdvisory/Server/domain/employee/EmployeeController.class
 com/TravelMedicineAdvisory/Server/domain/planusageledger/PlanUsageLedgerController.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItem.class
 com/TravelMedicineAdvisory/Server/domain/notification/Notification.class
+com/TravelMedicineAdvisory/Server/domain/user/ProfileResponse.class
 com/TravelMedicineAdvisory/Server/domain/country/CountryService.class
 com/TravelMedicineAdvisory/Server/domain/role/RoleRequest.class
 com/TravelMedicineAdvisory/Server/core/storage/LocalStorageService.class
@@ -100,6 +101,7 @@ com/TravelMedicineAdvisory/Server/domain/credit/CreditRepository.class
 com/TravelMedicineAdvisory/Server/domain/user/User.class
 com/TravelMedicineAdvisory/Server/domain/resourceaccess/ResourceAccess.class
 com/TravelMedicineAdvisory/Server/domain/auth/ForgotPasswordRequest.class
+com/TravelMedicineAdvisory/Server/domain/useronboarding/OnboardingRequest.class
 com/TravelMedicineAdvisory/Server/domain/blogpost/BlogPostRequest.class
 com/TravelMedicineAdvisory/Server/domain/notification/NotificationResponse.class
 com/TravelMedicineAdvisory/Server/domain/notification/NotificationService.class
@@ -121,6 +123,7 @@ com/TravelMedicineAdvisory/Server/domain/systemsetting/SystemSettingResponse.cla
 com/TravelMedicineAdvisory/Server/domain/abuseflag/AbuseFlagResponse.class
 com/TravelMedicineAdvisory/Server/domain/useronboarding/UserOnboardingResponse.class
 com/TravelMedicineAdvisory/Server/domain/systemsetting/SystemSettingRequest.class
+com/TravelMedicineAdvisory/Server/domain/user/ProfileController.class
 com/TravelMedicineAdvisory/Server/core/exceptions/ErrorResponse.class
 com/TravelMedicineAdvisory/Server/domain/credit/CreditResponse.class
 com/TravelMedicineAdvisory/Server/core/events/EventPublisher.class
@@ -130,6 +133,7 @@ com/TravelMedicineAdvisory/Server/domain/companyuser/CompanyUser.class
 com/TravelMedicineAdvisory/Server/domain/auth/LoginRequest.class
 com/TravelMedicineAdvisory/Server/domain/auth/ResetPasswordRequest.class
 com/TravelMedicineAdvisory/Server/domain/permission/PermissionController.class
+com/TravelMedicineAdvisory/Server/domain/useronboarding/OnboardingController.class
 com/TravelMedicineAdvisory/Server/domain/travelplan/TravelPlanRepository.class
 com/TravelMedicineAdvisory/Server/domain/resourcepermission/ResourcePermissionRequest.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItemService.class
@@ -156,6 +160,7 @@ com/TravelMedicineAdvisory/Server/domain/rolepermission/RolePermissionRepository
 com/TravelMedicineAdvisory/Server/domain/rolepermission/RolePermissionResponse.class
 com/TravelMedicineAdvisory/Server/domain/translation/TranslationRequest.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItemController.class
+com/TravelMedicineAdvisory/Server/domain/user/UpdateProfileRequest.class
 com/TravelMedicineAdvisory/Server/domain/systemlog/SystemLog.class
 com/TravelMedicineAdvisory/Server/domain/pricingplan/PricingPlan.class
 com/TravelMedicineAdvisory/Server/domain/abuseflag/AbuseFlagService.class
@@ -192,6 +197,7 @@ com/TravelMedicineAdvisory/Server/domain/role/Role.class
 com/TravelMedicineAdvisory/Server/domain/employee/EmployeeService.class
 com/TravelMedicineAdvisory/Server/domain/role/RoleResponse.class
 com/TravelMedicineAdvisory/Server/domain/country/CountryRequest.class
+com/TravelMedicineAdvisory/Server/domain/user/ChangePasswordRequest.class
 com/TravelMedicineAdvisory/Server/domain/planusageledger/PlanUsageLedgerRequest.class
 com/TravelMedicineAdvisory/Server/core/types/PaginatedResponse.class
 com/TravelMedicineAdvisory/Server/domain/planusageledger/PlanUsageLedger.class

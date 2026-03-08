@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/countryhealthalerts")
+@RequestMapping("/api/v1/country-health-alerts")
 public class CountryHealthAlertController {
 
     private final CountryHealthAlertService service;

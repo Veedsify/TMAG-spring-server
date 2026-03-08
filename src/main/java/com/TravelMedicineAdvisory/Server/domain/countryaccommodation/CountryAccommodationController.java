@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/countryaccommodations")
+@RequestMapping("/api/v1/country-accommodations")
 public class CountryAccommodationController {
 
     private final CountryAccommodationService service;

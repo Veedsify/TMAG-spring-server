@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/faqitems")
+@RequestMapping("/api/v1/faq-items")
 public class FaqItemController {
 
     private final FaqItemService service;

@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/rolepermissions")
+@RequestMapping("/api/v1/role-permissions")
 public class RolePermissionController {
 
     private final RolePermissionService service;

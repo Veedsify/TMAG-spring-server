@@ -150,7 +150,7 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     protected void seedRolePermissions() {
         if (rolePermissionRepository.count() > 0) return;
-//        logger.info("Seeding role-permissions...");
+        // logger.info("Seeding role-permissions...");
 
         Map<String, Role> roleMap = new HashMap<>();
         roleRepository.findAll().forEach(r -> roleMap.put(r.getName(), r));
@@ -173,6 +173,7 @@ public class DataSeeder implements CommandLineRunner {
                 "country", "blog_post", "faq_item", "pricing_plan", "system_setting",
                 "notification", "system_log"
         };
+
         for (String resource : adminResources) {
             for (String action : ACTIONS) {
                 Permission p = permMap.get(resource + ":" + action);
@@ -192,6 +193,7 @@ public class DataSeeder implements CommandLineRunner {
         // CustomerSupport
         Role customerSupport = roleMap.get("CustomerSupport");
         addPermissions(assignments, customerSupport, permMap, "user", "read");
+        addPermissions(assignments, customerSupport, permMap, "user", "update");
         addPermissions(assignments, customerSupport, permMap, "company", "read");
         addPermissions(assignments, customerSupport, permMap, "employee", "read");
         addPermissions(assignments, customerSupport, permMap, "travel_plan", "read");

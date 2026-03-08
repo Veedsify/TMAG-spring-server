@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/planusageledgers")
+@RequestMapping("/api/v1/plan-usage-ledgers")
 public class PlanUsageLedgerController {
 
     private final PlanUsageLedgerService service;

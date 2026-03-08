@@ -62,38 +62,37 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/v1/auth/**",
-                    "/api/v1/public/**",
-                    "/ws/**",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/health",
-                    "/",
-                    "/storage/**"
-                ).permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/api/v1/countries",
-                    "/api/v1/countries/**",
-                    "/api/v1/faqitems",
-                    "/api/v1/faqitems/**",
-                    "/api/v1/pricingplans",
-                    "/api/v1/pricingplans/**",
-                    "/api/v1/countryhealthalerts",
-                    "/api/v1/countryhealthalerts/**",
-                    "/api/v1/blogposts",
-                    "/api/v1/blogposts/**",
-                    "/api/v1/systemsettings",
-                    "/api/v1/systemsettings/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/api/v1/public/**",
+                                "/ws/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/health",
+                                "/",
+                                "/storage/**")
+                        .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/v1/countries",
+                                "/api/v1/countries/**",
+                                "/api/v1/faq-items",
+                                "/api/v1/faq-items/**",
+                                "/api/v1/pricing-plans",
+                                "/api/v1/pricing-plans/**",
+                                "/api/v1/country-health-alerts",
+                                "/api/v1/country-health-alerts/**",
+                                "/api/v1/blog-posts",
+                                "/api/v1/blog-posts/**",
+                                "/api/v1/system-settings",
+                                "/api/v1/system-settings/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -25,10 +25,22 @@ public class HealthProfileService {
                 .map(this::toResponse);
     }
 
+    public java.util.List<HealthProfileResponse> findAllList() {
+        return repository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public HealthProfileResponse findById(Long id) {
         HealthProfile entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("HealthProfile not found"));
         return toResponse(entity);
+    }
+
+    public HealthProfileResponse getMyHealthProfile(String email) {
+        return repository.findByUser_Email(email)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     public HealthProfileResponse create(HealthProfileRequest request) {
@@ -53,7 +65,7 @@ public class HealthProfileService {
         repository.deleteById(id);
     }
 
-    private HealthProfileResponse toResponse(HealthProfile entity) {
+    public HealthProfileResponse toResponse(HealthProfile entity) {
         return new HealthProfileResponse(
             entity.getId(),
             entity.getConditions(),

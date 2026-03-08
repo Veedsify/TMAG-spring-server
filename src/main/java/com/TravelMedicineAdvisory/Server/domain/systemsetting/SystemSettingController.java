@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/systemsettings")
+@RequestMapping("/api/v1/system-settings")
 public class SystemSettingController {
 
     private final SystemSettingService service;

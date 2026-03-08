@@ -7,16 +7,31 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/v1/healthprofiles")
+@RequestMapping("/api/v1/health-profiles")
 public class HealthProfileController {
 
     private final HealthProfileService service;
 
     public HealthProfileController(HealthProfileService service) {
         this.service = service;
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<?> getMy() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        HealthProfileResponse result = service.getMyHealthProfile(email);
+        return ResponseEntity.ok(Map.of("success", true, "data", result != null ? result : Map.of()));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<SuccessResponse> getAllList() {
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAllList()));
     }
 
     @GetMapping

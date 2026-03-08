@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/companyusers")
+@RequestMapping("/api/v1/company-users")
 public class CompanyUserController {
 
     private final CompanyUserService service;

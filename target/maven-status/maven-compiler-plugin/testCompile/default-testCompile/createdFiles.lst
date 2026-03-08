@@ -1,0 +1,3 @@
+com/TravelMedicineAdvisory/Server/ServerApplicationTests.class
+com/TravelMedicineAdvisory/Server/domain/auth/AuthServiceTest.class
+com/TravelMedicineAdvisory/Server/migration/DataMigrationVerificationTest.class
