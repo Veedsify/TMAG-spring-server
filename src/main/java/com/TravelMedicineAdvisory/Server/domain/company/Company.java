@@ -3,14 +3,12 @@ package com.TravelMedicineAdvisory.Server.domain.company;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
 import java.util.List;
 
 @Entity
 @Table(name = "companies")
 @SQLDelete(sql = "UPDATE companies SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class Company extends BaseEntity {
 
     private String name;

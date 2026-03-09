@@ -39,9 +39,12 @@ public class OnboardingController {
         UserOnboarding entity = onboardingRepository.findByUser_Email(email)
                 .orElseGet(UserOnboarding::new);
 
-        if (request.userType() != null) entity.setUserType(request.userType());
-        if (request.nationality() != null) entity.setNationality(request.nationality());
-        if (request.companyCode() != null) entity.setCompanyCode(request.companyCode());
+        if (request.userType() != null)
+            entity.setUserType(request.userType());
+        if (request.nationality() != null)
+            entity.setNationality(request.nationality());
+        if (request.companyCode() != null)
+            entity.setCompanyCode(request.companyCode());
         entity.setUser(user);
 
         UserOnboarding saved = onboardingRepository.save(entity);
@@ -61,14 +64,13 @@ public class OnboardingController {
 
     private UserOnboardingResponse toResponse(UserOnboarding entity) {
         return new UserOnboardingResponse(
-            entity.getId(),
-            entity.getUserType(),
-            entity.getNationality(),
-            entity.getCompanyCode(),
-            entity.getCompletedAt(),
-            entity.getUser() != null ? entity.getUser().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getUserType(),
+                entity.getNationality(),
+                entity.getCompanyCode(),
+                entity.getCompletedAt(),
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 }

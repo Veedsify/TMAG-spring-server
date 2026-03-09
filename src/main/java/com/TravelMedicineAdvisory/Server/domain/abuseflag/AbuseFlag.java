@@ -3,14 +3,12 @@ package com.TravelMedicineAdvisory.Server.domain.abuseflag;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "abuse_flags")
 @SQLDelete(sql = "UPDATE abuse_flags SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class AbuseFlag extends BaseEntity {
 
     private String type;

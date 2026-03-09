@@ -3,7 +3,6 @@ package com.TravelMedicineAdvisory.Server.domain.travelplan;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -11,7 +10,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 @Entity
 @Table(name = "travel_plans")
 @SQLDelete(sql = "UPDATE travel_plans SET deleted_at =   CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class TravelPlan extends BaseEntity {
 
     private String destination;

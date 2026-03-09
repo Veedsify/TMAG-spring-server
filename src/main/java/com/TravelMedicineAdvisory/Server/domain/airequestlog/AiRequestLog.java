@@ -3,7 +3,6 @@ package com.TravelMedicineAdvisory.Server.domain.airequestlog;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.math.BigDecimal;
@@ -11,7 +10,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "ai_request_logs")
 @SQLDelete(sql = "UPDATE ai_request_logs SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class AiRequestLog extends BaseEntity {
 
     private String destination;

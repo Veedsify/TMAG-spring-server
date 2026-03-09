@@ -3,13 +3,10 @@ package com.TravelMedicineAdvisory.Server.domain.translation;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
-
 
 @Entity
 @Table(name = "translations")
 @SQLDelete(sql = "UPDATE translations SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class Translation extends BaseEntity {
 
     @Column(name = "setting_key")
@@ -20,7 +17,6 @@ public class Translation extends BaseEntity {
     @Column(name = "model_id")
     private Long modelId;
     private String language;
-
 
     public String getKey() {
         return key;

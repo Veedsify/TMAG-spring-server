@@ -6,8 +6,7 @@ import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,12 +26,13 @@ import java.util.NoSuchElementException;
 @Service
 public class AuthService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    // private static final Logger logger =
+    // LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final JwtService jwtService; // Ensure JwtService is properly defined
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final EmailService emailService;
@@ -41,9 +41,9 @@ public class AuthService {
     private String frontendUrl;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
-                       PasswordEncoder passwordEncoder, JwtService jwtService,
-                       AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
-                       EmailService emailService) {
+            PasswordEncoder passwordEncoder, JwtService jwtService,
+            AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -81,7 +81,6 @@ public class AuthService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setUsername(request.getUsername());
-        user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setOnboardingStage(0);
@@ -105,8 +104,7 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
@@ -114,7 +112,8 @@ public class AuthService {
         // Block unverified users and send a verification email
         if (Boolean.FALSE.equals(user.getVerified())) {
             sendVerificationEmail(user);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email not verified. A new verification link has been sent.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Email not verified. A new verification link has been sent.");
         }
 
         user.setLastLogin(LocalDateTime.now());
@@ -138,18 +137,20 @@ public class AuthService {
 
         String resetLink = frontendUrl + "/reset-password?token=" + token + "&email=" + email;
         String title = "Reset your password";
-        String content = String.format("""
-            <p>Hi %s,</p>
-            <p>We received a request to reset your password. Click the button below to set a new password:</p>
-            <div style="text-align: center;">
-                <a href="%s" style="display: inline-block; padding: 12px 32px; background-color: #2a1e14; color: #f6f0e9 !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; margin: 24px 0;">Reset Password</a>
-            </div>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #2a7a6a; font-size: 14px;">%s</p>
-            <p>This link will expire in 15 minutes.</p>
-            <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
-        """, user.getFirstName(), resetLink, resetLink);
-        
+        String content = String.format(
+                """
+                            <p>Hi %s,</p>
+                            <p>We received a request to reset your password. Click the button below to set a new password:</p>
+                            <div style="text-align: center;">
+                                <a href="%s" style="display: inline-block; padding: 12px 32px; background-color: #2a1e14; color: #f6f0e9 !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; margin: 24px 0;">Reset Password</a>
+                            </div>
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="word-break: break-all; color: #2a7a6a; font-size: 14px;">%s</p>
+                            <p>This link will expire in 15 minutes.</p>
+                            <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+                        """,
+                user.getFirstName(), resetLink, resetLink);
+
         emailService.sendHtmlEmail(email, title, getEmailHtmlWrapper(title, content));
     }
 
@@ -172,11 +173,13 @@ public class AuthService {
         userRepository.save(user);
 
         String title = "Password Reset Confirmation";
-        String content = String.format("""
-            <p>Hi %s,</p>
-            <p>Your password has been successfully reset. If you did not make this change, please contact support immediately.</p>
-        """, user.getFirstName());
-        
+        String content = String.format(
+                """
+                            <p>Hi %s,</p>
+                            <p>Your password has been successfully reset. If you did not make this change, please contact support immediately.</p>
+                        """,
+                user.getFirstName());
+
         emailService.sendHtmlEmail(email, title, getEmailHtmlWrapper(title, content));
     }
 
@@ -197,7 +200,8 @@ public class AuthService {
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid verification token"));
 
-        if (user.getVerificationTokenExpiry() == null || user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getVerificationTokenExpiry() == null
+                || user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.GONE, "Verification link has expired");
         }
 
@@ -215,54 +219,58 @@ public class AuthService {
 
         String verifyLink = frontendUrl + "/auth/verify-email?token=" + token;
         String title = "Verify your email address";
-        String content = String.format("""
-            <p>Hi %s,</p>
-            <p>Please verify your email address by clicking the button below:</p>
-            <div style="text-align: center;">
-                <a href="%s" style="display: inline-block; padding: 12px 32px; background-color: #2a1e14; color: #f6f0e9 !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; margin: 24px 0;">Verify Email</a>
-            </div>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #2a7a6a; font-size: 14px;">%s</p>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you did not create an account, you can safely ignore this email.</p>
-        """, user.getFirstName(), verifyLink, verifyLink);
+        String content = String.format(
+                """
+                            <p>Hi %s,</p>
+                            <p>Please verify your email address by clicking the button below:</p>
+                            <div style="text-align: center;">
+                                <a href="%s" style="display: inline-block; padding: 12px 32px; background-color: #2a1e14; color: #f6f0e9 !important; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; margin: 24px 0;">Verify Email</a>
+                            </div>
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="word-break: break-all; color: #2a7a6a; font-size: 14px;">%s</p>
+                            <p>This link will expire in 24 hours.</p>
+                            <p>If you did not create an account, you can safely ignore this email.</p>
+                        """,
+                user.getFirstName(), verifyLink, verifyLink);
 
         emailService.sendHtmlEmail(user.getEmail(), title, getEmailHtmlWrapper(title, content));
     }
 
     private String getEmailHtmlWrapper(String title, String content) {
-        return String.format("""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #2c3e50; margin: 0; padding: 0; background-color: #f6f0e9; }
-                    .container { max-width: 600px; margin: 20px auto; padding: 40px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-                    .header { text-align: center; margin-bottom: 40px; }
-                    .logo { font-size: 24px; font-weight: bold; color: #2a1e14; text-decoration: none; }
-                    .title { font-size: 22px; color: #2a1e14; margin-bottom: 24px; font-weight: 600; }
-                    .content { font-size: 16px; color: #4a5568; }
-                    .footer { text-align: center; margin-top: 40px; font-size: 14px; color: #a0aec0; }
-                    .divider { height: 1px; background-color: #e2e8f0; margin: 32px 0; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <a href="%s" class="logo">TMAG GLOBAL</a>
-                    </div>
-                    <div class="title">%s</div>
-                    <div class="content">
-                        %s
-                    </div>
-                    <div class="divider"></div>
-                    <div class="footer">
-                        &copy; %d Travel Medicine Advisory Global. All rights reserved.
-                    </div>
-                </div>
-            </body>
-            </html>
-        """, frontendUrl, title, content, java.time.Year.now().getValue());
+        return String.format(
+                """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <style>
+                                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #2c3e50; margin: 0; padding: 0; background-color: #f6f0e9; }
+                                    .container { max-width: 600px; margin: 20px auto; padding: 40px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+                                    .header { text-align: center; margin-bottom: 40px; }
+                                    .logo { font-size: 24px; font-weight: bold; color: #2a1e14; text-decoration: none; }
+                                    .title { font-size: 22px; color: #2a1e14; margin-bottom: 24px; font-weight: 600; }
+                                    .content { font-size: 16px; color: #4a5568; }
+                                    .footer { text-align: center; margin-top: 40px; font-size: 14px; color: #a0aec0; }
+                                    .divider { height: 1px; background-color: #e2e8f0; margin: 32px 0; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <a href="%s" class="logo">TMAG GLOBAL</a>
+                                    </div>
+                                    <div class="title">%s</div>
+                                    <div class="content">
+                                        %s
+                                    </div>
+                                    <div class="divider"></div>
+                                    <div class="footer">
+                                        &copy; %d Travel Medicine Advisory Global. All rights reserved.
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                        """,
+                frontendUrl, title, content, java.time.Year.now().getValue());
     }
 
     private String generateToken(int byteLength) {
@@ -295,8 +303,7 @@ public class AuthService {
 
         Map<String, Object> extendedResponse = Map.of(
                 "role_id", user.getRole().getId(),
-                "role_name", user.getRole().getName()
-        );
+                "role_name", user.getRole().getName());
 
         if (user.getRole() != null) {
             response.setExtend(extendedResponse);

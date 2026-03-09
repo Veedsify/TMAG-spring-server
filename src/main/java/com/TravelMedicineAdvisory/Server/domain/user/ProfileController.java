@@ -39,10 +39,14 @@ public class ProfileController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
-        if (request.firstName() != null) user.setFirstName(request.firstName());
-        if (request.lastName() != null) user.setLastName(request.lastName());
-        if (request.username() != null) user.setUsername(request.username());
-        if (request.phone() != null) user.setPhone(request.phone());
+        if (request.firstName() != null)
+            user.setFirstName(request.firstName());
+        if (request.lastName() != null)
+            user.setLastName(request.lastName());
+        if (request.username() != null)
+            user.setUsername(request.username());
+        if (request.phone() != null)
+            user.setPhone(request.phone());
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("success", true, "data", toResponse(user)));
     }
@@ -74,7 +78,8 @@ public class ProfileController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Current password is incorrect"));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Current password is incorrect"));
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
@@ -83,19 +88,19 @@ public class ProfileController {
 
     private ProfileResponse toResponse(User user) {
         return new ProfileResponse(
-            user.getId(),
-            user.getEmail(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getUsername(),
-            user.getPhone(),
-            user.getName(),
-            user.getAvatarUrl(),
-            user.getType(),
-            user.getOnboarded(),
-            user.getOnboardingStage(),
-            user.getCredits(),
-            user.getRole() != null ? user.getRole().getId() : null
-        );
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getUsername(),
+                user.getPhone(),
+                user.getName(),
+                user.getAvatarUrl(),
+                user.getType(),
+                user.getOnboarded(),
+                user.getOnboardingStage(),
+                user.getCredits(),
+                user.getVerified(),
+                user.getRole() != null ? user.getRole().getId() : null);
     }
 }

@@ -3,7 +3,6 @@ package com.TravelMedicineAdvisory.Server.domain.blogpost;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.time.LocalDateTime;
@@ -11,7 +10,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "blog_posts")
 @SQLDelete(sql = "UPDATE blog_posts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class BlogPost extends BaseEntity {
 
     private String title;
@@ -27,15 +25,14 @@ public class BlogPost extends BaseEntity {
     private Boolean isPublished;
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-    
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "featured_image_id")
     private Attachment featuredImage;
-
 
     public String getTitle() {
         return title;
