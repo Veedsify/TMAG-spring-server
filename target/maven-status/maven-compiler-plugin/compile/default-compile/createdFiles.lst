@@ -14,6 +14,7 @@ com/TravelMedicineAdvisory/Server/domain/credit/Credit.class
 com/TravelMedicineAdvisory/Server/domain/rolepermission/RolePermissionService.class
 com/TravelMedicineAdvisory/Server/domain/resourceaccess/ResourceAccessResponse.class
 com/TravelMedicineAdvisory/Server/domain/planusageledger/PlanUsageLedgerService.class
+com/TravelMedicineAdvisory/Server/domain/useronboarding/QuestionnaireProgressService.class
 com/TravelMedicineAdvisory/Server/domain/travelplan/TravelPlanResponse.class
 com/TravelMedicineAdvisory/Server/domain/role/RoleRepository.class
 com/TravelMedicineAdvisory/Server/domain/travelrequest/TravelRequestRepository.class
@@ -29,6 +30,7 @@ com/TravelMedicineAdvisory/Server/core/websocket/WebSocketConfig.class
 com/TravelMedicineAdvisory/Server/domain/airequestlog/AiRequestLogRepository.class
 com/TravelMedicineAdvisory/Server/domain/invoice/InvoiceService.class
 com/TravelMedicineAdvisory/Server/domain/company/CompanyRepository.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueMessage.class
 com/TravelMedicineAdvisory/Server/domain/countryaccommodation/CountryAccommodation.class
 com/TravelMedicineAdvisory/Server/domain/blogpost/BlogPost.class
 com/TravelMedicineAdvisory/Server/domain/systemsetting/SystemSetting.class
@@ -45,7 +47,9 @@ com/TravelMedicineAdvisory/Server/domain/employee/EmployeeRepository.class
 com/TravelMedicineAdvisory/Server/domain/planusageledger/PlanUsageLedgerRepository.class
 com/TravelMedicineAdvisory/Server/domain/auth/ResendVerificationRequest.class
 com/TravelMedicineAdvisory/Server/domain/systemlog/SystemLogRequest.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueService$QueueStats.class
 com/TravelMedicineAdvisory/Server/domain/companyuser/CompanyUserRequest.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueService.class
 com/TravelMedicineAdvisory/Server/domain/translation/TranslationRepository.class
 com/TravelMedicineAdvisory/Server/domain/useronboarding/UserOnboardingController.class
 com/TravelMedicineAdvisory/Server/domain/invoice/InvoiceController.class
@@ -85,6 +89,7 @@ com/TravelMedicineAdvisory/Server/domain/user/ProfileResponse.class
 com/TravelMedicineAdvisory/Server/domain/country/CountryService.class
 com/TravelMedicineAdvisory/Server/domain/role/RoleRequest.class
 com/TravelMedicineAdvisory/Server/core/storage/LocalStorageService.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueService$1.class
 com/TravelMedicineAdvisory/Server/domain/employee/EmployeeRequest.class
 com/TravelMedicineAdvisory/Server/domain/user/UserRepository.class
 com/TravelMedicineAdvisory/Server/ServerApplication.class
@@ -126,6 +131,7 @@ com/TravelMedicineAdvisory/Server/domain/systemsetting/SystemSettingRequest.clas
 com/TravelMedicineAdvisory/Server/domain/user/ProfileController.class
 com/TravelMedicineAdvisory/Server/core/exceptions/ErrorResponse.class
 com/TravelMedicineAdvisory/Server/domain/credit/CreditResponse.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueWorker.class
 com/TravelMedicineAdvisory/Server/core/events/EventPublisher.class
 com/TravelMedicineAdvisory/Server/domain/resourcepermission/ResourcePermissionRepository.class
 com/TravelMedicineAdvisory/Server/domain/useronboarding/UserOnboardingService.class
@@ -138,6 +144,7 @@ com/TravelMedicineAdvisory/Server/domain/travelplan/TravelPlanRepository.class
 com/TravelMedicineAdvisory/Server/domain/resourcepermission/ResourcePermissionRequest.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItemService.class
 com/TravelMedicineAdvisory/Server/domain/resourcepermission/ResourcePermissionResponse.class
+com/TravelMedicineAdvisory/Server/core/queue/QueueWorker$1.class
 com/TravelMedicineAdvisory/Server/domain/resourceaccess/ResourceAccessRepository.class
 com/TravelMedicineAdvisory/Server/security/CustomUserDetailsService.class
 com/TravelMedicineAdvisory/Server/domain/pricingplan/PricingPlanRequest.class
@@ -145,6 +152,7 @@ com/TravelMedicineAdvisory/Server/domain/airequestlog/AiRequestLogService.class
 com/TravelMedicineAdvisory/Server/domain/airequestlog/AiRequestLog.class
 com/TravelMedicineAdvisory/Server/domain/countryhealthalert/CountryHealthAlertRepository.class
 com/TravelMedicineAdvisory/Server/domain/companyuser/CompanyUserController.class
+com/TravelMedicineAdvisory/Server/core/seeder/OnboardingQuestionSeeder.class
 com/TravelMedicineAdvisory/Server/domain/countryaccommodation/CountryAccommodationRequest.class
 com/TravelMedicineAdvisory/Server/domain/healthprofile/HealthProfileResponse.class
 com/TravelMedicineAdvisory/Server/domain/notification/NotificationController.class
@@ -152,11 +160,14 @@ com/TravelMedicineAdvisory/Server/domain/permission/PermissionService.class
 com/TravelMedicineAdvisory/Server/domain/useronboarding/UserOnboardingRepository.class
 com/TravelMedicineAdvisory/Server/domain/systemlog/SystemLogResponse.class
 com/TravelMedicineAdvisory/Server/domain/user/UserService.class
+com/TravelMedicineAdvisory/Server/config/AsyncConfig.class
 com/TravelMedicineAdvisory/Server/core/scheduler/SchedulerConfig.class
 com/TravelMedicineAdvisory/Server/domain/countryhealthalert/CountryHealthAlert.class
 com/TravelMedicineAdvisory/Server/middlewares/WebMvcConfigurer.class
+com/TravelMedicineAdvisory/Server/core/email/EmailTemplates.class
 com/TravelMedicineAdvisory/Server/domain/systemlog/SystemLogRepository.class
 com/TravelMedicineAdvisory/Server/domain/rolepermission/RolePermissionRepository.class
+com/TravelMedicineAdvisory/Server/domain/useronboarding/OnboardingQuestionCategory.class
 com/TravelMedicineAdvisory/Server/domain/rolepermission/RolePermissionResponse.class
 com/TravelMedicineAdvisory/Server/domain/translation/TranslationRequest.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItemController.class
@@ -182,6 +193,7 @@ com/TravelMedicineAdvisory/Server/domain/travelplan/TravelPlanRequest.class
 com/TravelMedicineAdvisory/Server/domain/invoice/InvoiceRepository.class
 com/TravelMedicineAdvisory/Server/domain/countryaccommodation/CountryAccommodationResponse.class
 com/TravelMedicineAdvisory/Server/domain/country/CountryResponse.class
+com/TravelMedicineAdvisory/Server/core/queue/JobType.class
 com/TravelMedicineAdvisory/Server/core/seeder/DataSeeder.class
 com/TravelMedicineAdvisory/Server/domain/company/Company.class
 com/TravelMedicineAdvisory/Server/core/storage/StorageService.class
@@ -192,6 +204,7 @@ com/TravelMedicineAdvisory/Server/domain/auth/RegisterRequest.class
 com/TravelMedicineAdvisory/Server/domain/resourcepermission/ResourcePermissionController.class
 com/TravelMedicineAdvisory/Server/domain/faqitem/FaqItemResponse.class
 com/TravelMedicineAdvisory/Server/domain/blogpost/BlogPostController.class
+com/TravelMedicineAdvisory/Server/domain/useronboarding/OnboardingQuestionCategoryRepository.class
 com/TravelMedicineAdvisory/Server/domain/country/Country.class
 com/TravelMedicineAdvisory/Server/domain/role/Role.class
 com/TravelMedicineAdvisory/Server/domain/employee/EmployeeService.class

@@ -3,14 +3,12 @@ package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_onboardings")
 @SQLDelete(sql = "UPDATE user_onboardings SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class UserOnboarding extends BaseEntity {
 
     @Column(name = "user_type")
@@ -20,11 +18,14 @@ public class UserOnboarding extends BaseEntity {
     private String companyCode;
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
-    
+    @Column(name = "responses_json", columnDefinition = "TEXT")
+    private String responsesJson;
+    @Column(name = "questionnaire_completed")
+    private Boolean questionnaireCompleted;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-
 
     public String getUserType() {
         return userType;
@@ -56,6 +57,22 @@ public class UserOnboarding extends BaseEntity {
 
     public void setCompletedAt(LocalDateTime completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public String getResponsesJson() {
+        return responsesJson;
+    }
+
+    public void setResponsesJson(String responsesJson) {
+        this.responsesJson = responsesJson;
+    }
+
+    public Boolean getQuestionnaireCompleted() {
+        return questionnaireCompleted;
+    }
+
+    public void setQuestionnaireCompleted(Boolean questionnaireCompleted) {
+        this.questionnaireCompleted = questionnaireCompleted;
     }
 
     public User getUser() {

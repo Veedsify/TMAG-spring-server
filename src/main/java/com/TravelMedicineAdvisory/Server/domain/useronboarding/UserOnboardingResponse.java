@@ -10,5 +10,6 @@ public record UserOnboardingResponse(
     LocalDateTime completedAt,
     Long userId,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    Boolean questionnaireCompleted
 ) {}

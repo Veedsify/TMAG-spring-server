@@ -1,7 +1,7 @@
 package com.TravelMedicineAdvisory.Server.config;
 
-import com.TravelMedicineAdvisory.Server.security.CustomUserDetailsService;
-import com.TravelMedicineAdvisory.Server.security.JwtAuthenticationFilter;
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import com.TravelMedicineAdvisory.Server.security.CustomUserDetailsService;
+import com.TravelMedicineAdvisory.Server.security.JwtAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -40,9 +41,6 @@ public class SecurityConfig {
 
     @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS,PATCH,HEAD}")
     private String allowedMethods;
-
-    @Value("${app.cors.allowed-headers:Origin,Content-Type,Accept,Authorization,X-Api-Key,Base-Orgid}")
-    private String allowedHeaders;
 
     @Value("${app.cors.expose-headers:Content-Length,Content-Type}")
     private String exposeHeaders;
@@ -65,6 +63,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/public/**",
@@ -100,9 +99,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         if (corsEnabled) {
-            configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            // setAllowedOriginPatterns is required in Spring Security 6 when allowCredentials=true;
+            // setAllowedOrigins causes a validation failure with credentials in newer versions.
+            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
             configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
-            configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+            configuration.addAllowedHeader("*");
             configuration.setExposedHeaders(Arrays.asList(exposeHeaders.split(",")));
             configuration.setAllowCredentials(allowCredentials);
             configuration.setMaxAge(maxAge);

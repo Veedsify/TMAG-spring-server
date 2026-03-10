@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -20,10 +22,20 @@ public class ProfileController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CompanyUserService companyUserService;
 
-    public ProfileController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public ProfileController(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            CompanyUserService companyUserService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.companyUserService = companyUserService;
+    }
+
+    @GetMapping("/companies")
+    public ResponseEntity<?> getMyCompanies() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<Map<String, Object>> companies = companyUserService.findMyCompanies(email);
+        return ResponseEntity.ok(Map.of("success", true, "data", companies));
     }
 
     @GetMapping
@@ -87,6 +99,11 @@ public class ProfileController {
     }
 
     private ProfileResponse toResponse(User user) {
+
+        Map<String, Object> extendedResponse = Map.of(
+                "role_id", user.getRole().getId(),
+                "role_name", user.getRole().getName());
+
         return new ProfileResponse(
                 user.getId(),
                 user.getEmail(),
@@ -98,6 +115,7 @@ public class ProfileController {
                 user.getAvatarUrl(),
                 user.getType(),
                 user.getOnboarded(),
+                extendedResponse,
                 user.getOnboardingStage(),
                 user.getCredits(),
                 user.getVerified(),

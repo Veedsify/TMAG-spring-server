@@ -26,8 +26,7 @@ public class CompanyUserController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
+                page.getTotalPages());
         PaginatedResponse<CompanyUserResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }

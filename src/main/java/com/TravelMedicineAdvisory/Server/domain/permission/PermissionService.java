@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.permission;
 
 import java.util.NoSuchElementException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,14 +52,13 @@ public class PermissionService {
 
     private PermissionResponse toResponse(Permission entity) {
         return new PermissionResponse(
-            entity.getId(),
-            entity.getName(),
-            entity.getDescription(),
-            entity.getResourceType(),
-            entity.getAction(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getResourceType(),
+                entity.getAction(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(PermissionRequest request, Permission entity) {

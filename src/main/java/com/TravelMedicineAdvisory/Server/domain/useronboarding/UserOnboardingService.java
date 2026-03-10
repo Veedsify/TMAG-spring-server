@@ -55,15 +55,15 @@ public class UserOnboardingService {
 
     private UserOnboardingResponse toResponse(UserOnboarding entity) {
         return new UserOnboardingResponse(
-            entity.getId(),
-            entity.getUserType(),
-            entity.getNationality(),
-            entity.getCompanyCode(),
-            entity.getCompletedAt(),
-            entity.getUser() != null ? entity.getUser().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getUserType(),
+                entity.getNationality(),
+                entity.getCompanyCode(),
+                entity.getCompletedAt(),
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt(),
+                entity.getQuestionnaireCompleted());
     }
 
     private void mapRequestToEntity(UserOnboardingRequest request, UserOnboarding entity) {

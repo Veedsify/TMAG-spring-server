@@ -2,6 +2,8 @@ package com.TravelMedicineAdvisory.Server.domain.user;
 
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.useronboarding.QuestionnaireProgressService;
+import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,10 +16,16 @@ public class UserService {
 
     private final UserRepository repository;
     private final RoleRepository roleRepository;
+    private final UserOnboardingRepository onboardingRepository;
+    private final QuestionnaireProgressService progressService;
 
-    public UserService(UserRepository repository, RoleRepository roleRepository) {
+    public UserService(UserRepository repository, RoleRepository roleRepository,
+            UserOnboardingRepository onboardingRepository,
+            QuestionnaireProgressService progressService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
+        this.onboardingRepository = onboardingRepository;
+        this.progressService = progressService;
     }
 
     public Page<UserResponse> findAll(Pageable pageable) {
@@ -47,32 +55,36 @@ public class UserService {
     }
 
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new NoSuchElementException("User not found");
-        }
+        User user = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        // Clean up onboarding data: Redis progress + DB onboarding record
+        progressService.delete(id);
+        onboardingRepository.findByUser_Email(user.getEmail())
+                .ifPresent(onboardingRepository::delete);
+
         repository.deleteById(id);
     }
 
     private UserResponse toResponse(User entity) {
         return new UserResponse(
-            entity.getId(),
-            entity.getFirstName(),
-            entity.getLastName(),
-            entity.getName(),
-            entity.getUsername(),
-            entity.getPhone(),
-            entity.getEmail(),
-            entity.getOnboardingStage(),
-            entity.getOnboarded(),
-            entity.getVerified(),
-            entity.getLastLogin(),
-            entity.getAvatarUrl(),
-            entity.getCredits(),
-            entity.getType(),
-            entity.getRole() != null ? entity.getRole().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getFirstName(),
+                entity.getLastName(),
+                entity.getName(),
+                entity.getUsername(),
+                entity.getPhone(),
+                entity.getEmail(),
+                entity.getOnboardingStage(),
+                entity.getOnboarded(),
+                entity.getVerified(),
+                entity.getLastLogin(),
+                entity.getAvatarUrl(),
+                entity.getCredits(),
+                entity.getType(),
+                entity.getRole() != null ? entity.getRole().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(UserRequest request, User entity) {

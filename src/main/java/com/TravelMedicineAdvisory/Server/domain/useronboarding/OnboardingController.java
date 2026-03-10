@@ -1,14 +1,21 @@
 package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 
+import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
+import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/onboarding")
@@ -16,10 +23,30 @@ public class OnboardingController {
 
     private final UserOnboardingRepository onboardingRepository;
     private final UserRepository userRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyUserRepository companyUserRepository;
+    private final EmployeeRepository employeeRepository;
+    private final OnboardingQuestionCategoryRepository questionCategoryRepository;
+    private final QuestionnaireProgressService progressService;
+    private final ObjectMapper objectMapper;
 
-    public OnboardingController(UserOnboardingRepository onboardingRepository, UserRepository userRepository) {
+    public OnboardingController(
+            UserOnboardingRepository onboardingRepository,
+            UserRepository userRepository,
+            CompanyRepository companyRepository,
+            CompanyUserRepository companyUserRepository,
+            EmployeeRepository employeeRepository,
+            OnboardingQuestionCategoryRepository questionCategoryRepository,
+            QuestionnaireProgressService progressService,
+            ObjectMapper objectMapper) {
         this.onboardingRepository = onboardingRepository;
         this.userRepository = userRepository;
+        this.companyRepository = companyRepository;
+        this.companyUserRepository = companyUserRepository;
+        this.employeeRepository = employeeRepository;
+        this.questionCategoryRepository = questionCategoryRepository;
+        this.progressService = progressService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping
@@ -39,14 +66,49 @@ public class OnboardingController {
         UserOnboarding entity = onboardingRepository.findByUser_Email(email)
                 .orElseGet(UserOnboarding::new);
 
-        if (request.userType() != null)
+        if (request.userType() != null) {
             entity.setUserType(request.userType());
+            user.setType(request.userType());
+            userRepository.save(user);
+        }
         if (request.nationality() != null)
             entity.setNationality(request.nationality());
-        if (request.companyCode() != null)
-            entity.setCompanyCode(request.companyCode());
-        entity.setUser(user);
 
+        // Validate and link company code when provided
+        if (request.companyCode() != null && !request.companyCode().isBlank()) {
+            Company company = companyRepository.findByCompanyCode(request.companyCode()).orElse(null);
+            if (company == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Invalid company code. Please check and try again."));
+            }
+            entity.setCompanyCode(request.companyCode());
+
+            String fullName = ((user.getFirstName() != null ? user.getFirstName() : "") +
+                    (user.getLastName() != null ? " " + user.getLastName() : "")).trim();
+            String resolvedName = fullName.isEmpty() ? user.getEmail() : fullName;
+            String userRoleName = user.getRole() != null ? user.getRole().getName() : "Employee";
+
+            // Create or update the Employee record (HR/payroll view)
+            Employee employee = employeeRepository.findByUser(user).orElseGet(Employee::new);
+            employee.setUser(user);
+            employee.setCompany(company);
+            employee.setName(resolvedName);
+            employee.setEmail(user.getEmail());
+            if (employee.getStatus() == null) employee.setStatus("active");
+            if (employee.getCreditsUsed() == null) employee.setCreditsUsed(0);
+            if (employee.getCreditsAllocated() == null) employee.setCreditsAllocated(0);
+            if (employee.getPlansGenerated() == null) employee.setPlansGenerated(0);
+            employeeRepository.save(employee);
+
+            // Create or update the CompanyUser record (authorization/company membership)
+            CompanyUser companyUser = companyUserRepository.findByUser(user).orElseGet(CompanyUser::new);
+            companyUser.setUser(user);
+            companyUser.setCompany(company);
+            companyUser.setRole(userRoleName);
+            companyUserRepository.save(companyUser);
+        }
+
+        entity.setUser(user);
         UserOnboarding saved = onboardingRepository.save(entity);
         return ResponseEntity.ok(Map.of("success", true, "data", toResponse(saved)));
     }
@@ -58,8 +120,108 @@ public class OnboardingController {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         Integer stage = body.get("stage");
         user.setOnboardingStage(stage);
+        if (stage != null && stage >= 5) {
+            user.setOnboarded(true);
+        }
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("success", true, "data", Map.of("stage", stage)));
+        String roleName = user.getRole() != null ? user.getRole().getName() : "";
+        return ResponseEntity.ok(Map.of("success", true, "data", Map.of("stage", stage, "role", roleName)));
+    }
+
+    // ─── Questionnaire Questions ─────────────────────────────────
+
+    @GetMapping("/questions")
+    public ResponseEntity<?> getQuestions() {
+        List<OnboardingQuestionCategory> categories = questionCategoryRepository.findAllByOrderByDisplayOrderAsc();
+
+        List<Map<String, Object>> result = categories.stream().map(cat -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", cat.getId());
+            m.put("category_key", cat.getCategoryKey());
+            m.put("category_name", cat.getCategoryName());
+            m.put("category_icon", cat.getCategoryIcon());
+            m.put("category_description", cat.getCategoryDescription());
+            m.put("display_order", cat.getDisplayOrder());
+            m.put("is_optional", cat.getIsOptional());
+            m.put("questions", cat.getQuestions());
+            return m;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Map.of("success", true, "data", result));
+    }
+
+    // ─── Questionnaire Responses ─────────────────────────────────
+
+    @PostMapping("/questionnaire")
+    public ResponseEntity<?> saveQuestionnaireResponses(@RequestBody Map<String, Object> body) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        UserOnboarding entity = onboardingRepository.findByUser_Email(email)
+                .orElseGet(UserOnboarding::new);
+
+        String responsesJson = "{}";
+        try {
+            Object responses = body.get("responses");
+            responsesJson = responses instanceof String
+                    ? (String) responses
+                    : objectMapper.writeValueAsString(responses);
+        } catch (Exception ignored) {
+        }
+
+        boolean complete = Boolean.TRUE.equals(body.get("complete"));
+
+        entity.setUser(user);
+        entity.setResponsesJson(responsesJson);
+
+        if (complete) {
+            entity.setQuestionnaireCompleted(true);
+            entity.setCompletedAt(LocalDateTime.now());
+            user.setOnboardingStage(5);
+            userRepository.save(user);
+            progressService.delete(user.getId());
+        }
+
+        UserOnboarding saved = onboardingRepository.save(entity);
+        return ResponseEntity.ok(Map.of("success", true, "data", toResponse(saved)));
+    }
+
+    // ─── Progress (Redis with fallback) ──────────────────────────
+
+    @PostMapping("/progress")
+    public ResponseEntity<?> saveProgress(@RequestBody Map<String, Object> body) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        try {
+            String progressJson = objectMapper.writeValueAsString(body);
+            progressService.save(user.getId(), progressJson);
+        } catch (Exception ignored) {
+        }
+
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/progress")
+    public ResponseEntity<?> getProgress() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        String progress = progressService.get(user.getId());
+
+        if (progress == null) {
+            return ResponseEntity.ok(Map.of("success", true, "data", Map.of()));
+        }
+
+        try {
+            Object parsed = objectMapper.readValue(progress, Object.class);
+            return ResponseEntity.ok(Map.of("success", true, "data", parsed));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", true, "data", Map.of()));
+        }
     }
 
     private UserOnboardingResponse toResponse(UserOnboarding entity) {
@@ -71,6 +233,7 @@ public class OnboardingController {
                 entity.getCompletedAt(),
                 entity.getUser() != null ? entity.getUser().getId() : null,
                 entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                entity.getQuestionnaireCompleted());
     }
 }

@@ -39,7 +39,7 @@ public class User extends BaseEntity {
     private Boolean onboarded = false;
 
     @Column(name = "is_verified")
-    private Boolean isVerified = false;
+    private Boolean is_verified = false;
 
     @Column(name = "verification_token")
     private String verificationToken;
@@ -124,11 +124,11 @@ public class User extends BaseEntity {
     }
 
     public Boolean getVerified() {
-        return isVerified;
+        return is_verified;
     }
 
     public void setVerified(Boolean verified) {
-        isVerified = verified;
+        is_verified = verified;
     }
 
     public String getVerificationToken() {
