@@ -180,24 +180,22 @@ public class OnboardingController {
             entity.setCompletedAt(LocalDateTime.now());
             user.setOnboardingStage(5);
             userRepository.save(user);
-            progressService.delete(user.getId());
+            progressService.delete(email);
         }
 
         UserOnboarding saved = onboardingRepository.save(entity);
         return ResponseEntity.ok(Map.of("success", true, "data", toResponse(saved)));
     }
 
-    // ─── Progress (Redis with fallback) ──────────────────────────
+    // ─── Progress (Redis) ─────────────────────────────────────────
 
     @PostMapping("/progress")
     public ResponseEntity<?> saveProgress(@RequestBody Map<String, Object> body) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         try {
             String progressJson = objectMapper.writeValueAsString(body);
-            progressService.save(user.getId(), progressJson);
+            progressService.save(email, progressJson);
         } catch (Exception ignored) {
         }
 
@@ -207,10 +205,8 @@ public class OnboardingController {
     @GetMapping("/progress")
     public ResponseEntity<?> getProgress() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        String progress = progressService.get(user.getId());
+        String progress = progressService.get(email);
 
         if (progress == null) {
             return ResponseEntity.ok(Map.of("success", true, "data", Map.of()));

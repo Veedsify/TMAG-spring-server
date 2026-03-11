@@ -33,8 +33,11 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (!seederEnabled)
             return;
-        if (repository.count() > 0)
-            return;
+        // Always re-seed to pick up question structure changes
+        if (repository.count() > 0) {
+            repository.deleteAll();
+            logger.info("Clearing existing onboarding questions for re-seed...");
+        }
 
         logger.info("Seeding onboarding questions...");
 
@@ -111,45 +114,10 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     private static final String TRAVEL_QUESTIONS = """
             [
               {
-                "key": "trip_type",
-                "text": "What type of trip are you planning?",
-                "description": "Helps us tailor destination-specific protocols for single vs. multi-country itineraries.",
-                "type": "radio",
-                "required": true,
-                "options": [
-                  {"value": "one_country", "label": "One Country"},
-                  {"value": "return_trip", "label": "Return Trip"},
-                  {"value": "multiple", "label": "Multiple Destinations"}
-                ]
-              },
-              {
-                "key": "destination_country",
-                "text": "Destination Country",
-                "description": "We assess country-specific vaccine requirements, disease risks, and entry health rules.",
-                "type": "text",
-                "required": true,
-                "placeholder": "e.g. Ghana"
-              },
-              {
-                "key": "destination_city",
-                "text": "City or Region",
-                "description": "Regional risk levels can vary significantly within a country.",
-                "type": "text",
-                "required": false,
-                "placeholder": "e.g. Accra, Northern Region"
-              },
-              {
-                "key": "departure_date",
-                "text": "Departure Date",
-                "description": "Time before departure determines which vaccines can be administered in time.",
-                "type": "date",
-                "required": true
-              },
-              {
-                "key": "return_date",
-                "text": "Return Date",
-                "description": "Trip duration affects dosing schedules and medication quantities needed.",
-                "type": "date",
+                "key": "trip_itinerary",
+                "text": "Trip Itinerary",
+                "description": "Select your trip type and provide your destination details, cities, and travel dates.",
+                "type": "trip_itinerary",
                 "required": true
               },
               {
@@ -471,9 +439,9 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
                 "key": "previous_travel_destinations",
                 "text": "Where did you travel to?",
                 "description": "Prior destinations may have conferred natural immunity to certain diseases.",
-                "type": "text",
+                "type": "multi_country",
                 "required": false,
-                "placeholder": "e.g. Nigeria, India, Thailand",
+                "placeholder": "e.g. Nigeria",
                 "conditionalOn": {"previous_travel": "yes"}
               },
               {

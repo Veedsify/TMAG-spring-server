@@ -12,6 +12,7 @@ public record CompanyResponse(
     String plan,
     String companyCode,
     Long logoId,
+    BillingCurrency billingCurrency,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}

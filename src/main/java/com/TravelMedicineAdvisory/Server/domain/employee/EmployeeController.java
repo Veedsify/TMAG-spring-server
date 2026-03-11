@@ -20,8 +20,8 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
-        Page<EmployeeResponse> page = service.findAll(pageable);
+    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable) {
+        Page<EmployeeResponse> page = service.findAll(companyId, pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,

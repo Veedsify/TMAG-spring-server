@@ -1,17 +1,18 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
 @SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class User extends BaseEntity {
 
     @Column(name = "first_name")
@@ -62,6 +63,13 @@ public class User extends BaseEntity {
     private Integer credits = 0;
 
     private String type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_currency")
+    private BillingCurrency billingCurrency = BillingCurrency.NGN;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Credit> creditHistory;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")
@@ -211,11 +219,27 @@ public class User extends BaseEntity {
         this.type = type;
     }
 
+    public BillingCurrency getBillingCurrency() {
+        return billingCurrency;
+    }
+
+    public void setBillingCurrency(BillingCurrency billingCurrency) {
+        this.billingCurrency = billingCurrency;
+    }
+
     public Boolean getOnboarded() {
         return onboarded;
     }
 
     public void setOnboarded(Boolean onboarded) {
         this.onboarded = onboarded;
+    }
+
+    public List<Credit> getCreditHistory() {
+        return creditHistory;
+    }
+
+    public void setCreditHistory(List<Credit> creditHistory) {
+        this.creditHistory = creditHistory;
     }
 }

@@ -88,6 +88,7 @@ public class CompanyUserService {
                     m.put("total_credits", c.getTotalCredits());
                     m.put("used_credits", c.getUsedCredits());
                     m.put("employee_count", c.getEmployeeCount());
+                    m.put("billing_currency", c.getBillingCurrency());
                     m.put("role", cu.getRole());
                     return m;
                 })

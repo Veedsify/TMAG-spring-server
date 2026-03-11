@@ -24,7 +24,11 @@ public class EmployeeService {
         this.userRepository = userRepository;
     }
 
-    public Page<EmployeeResponse> findAll(Pageable pageable) {
+    public Page<EmployeeResponse> findAll(Long companyId, Pageable pageable) {
+        if (companyId != null) {
+            return repository.findAllByCompanyId(companyId, pageable)
+                    .map(this::toResponse);
+        }
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }

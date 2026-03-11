@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.company;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record CompanyRequest(
     String name,
     String industry,
@@ -8,5 +10,6 @@ public record CompanyRequest(
     Integer employeeCount,
     String plan,
     String companyCode,
-    Long logoId
+    Long logoId,
+    @JsonProperty("billing_currency") BillingCurrency billingCurrency
 ) {}

@@ -11,15 +11,14 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "credits")
 @SQLDelete(sql = "UPDATE credits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class Credit extends BaseEntity {
 
     @Column(precision = 10, scale = 2)
-    private BigDecimal amount;
+    private Integer amount;
     private String type;
     private String reference;
     @Column(name = "balance_after", precision = 10, scale = 2)
-    private BigDecimal balanceAfter;
+    private Integer balanceAfter;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
@@ -30,11 +29,11 @@ public class Credit extends BaseEntity {
     private User user;
 
 
-    public BigDecimal getAmount() {
+    public Integer getAmount() {
         return amount;
     }
 
-    public void setAmount(BigDecimal amount) {
+    public void setAmount(Integer amount) {
         this.amount = amount;
     }
 
@@ -54,11 +53,11 @@ public class Credit extends BaseEntity {
         this.reference = reference;
     }
 
-    public BigDecimal getBalanceAfter() {
+    public Integer getBalanceAfter() {
         return balanceAfter;
     }
 
-    public void setBalanceAfter(BigDecimal balanceAfter) {
+    public void setBalanceAfter(Integer balanceAfter) {
         this.balanceAfter = balanceAfter;
     }
 

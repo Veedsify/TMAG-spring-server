@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+
 public record UserRequest(
     String firstName,
     String lastName,
@@ -13,5 +15,6 @@ public record UserRequest(
     String avatarUrl,
     Integer credits,
     String type,
-    Long roleId
+    Long roleId,
+    BillingCurrency billingCurrency
 ) {}

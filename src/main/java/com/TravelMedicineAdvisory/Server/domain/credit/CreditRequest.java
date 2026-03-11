@@ -3,10 +3,10 @@ package com.TravelMedicineAdvisory.Server.domain.credit;
 import java.math.BigDecimal;
 
 public record CreditRequest(
-    BigDecimal amount,
+    Integer amount,
     String type,
     String reference,
-    BigDecimal balanceAfter,
+    Integer balanceAfter,
     Long companyId,
     Long userId
 ) {}

@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AuthResponse {
@@ -39,6 +40,9 @@ public class AuthResponse {
     private Long exp;
     private Object extend;
 
+    @JsonProperty("billing_currency")
+    private BillingCurrency billingCurrency;
+
     public AuthResponse() {}
 
     public Long getId() { return id; }
@@ -71,4 +75,6 @@ public class AuthResponse {
     public void setExp(Long exp) { this.exp = exp; }
     public Object getExtend() { return extend; }
     public void setExtend(Object extend) { this.extend = extend; }
+    public BillingCurrency getBillingCurrency() { return billingCurrency; }
+    public void setBillingCurrency(BillingCurrency billingCurrency) { this.billingCurrency = billingCurrency; }
 }

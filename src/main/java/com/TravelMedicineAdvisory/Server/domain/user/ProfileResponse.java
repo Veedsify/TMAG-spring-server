@@ -2,6 +2,7 @@ package com.TravelMedicineAdvisory.Server.domain.user;
 
 import java.util.Map;
 
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record ProfileResponse(
@@ -19,5 +20,6 @@ public record ProfileResponse(
         @JsonProperty("onboarding_stage") Integer onboardingStage,
         Integer credits,
         @JsonProperty("is_verified") Boolean isVerified,
-        @JsonProperty("role_id") Long roleId) {
+        @JsonProperty("role_id") Long roleId,
+        @JsonProperty("billing_currency") BillingCurrency billingCurrency) {
 }

@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import java.time.LocalDateTime;
 
 public record UserResponse(
@@ -18,6 +19,7 @@ public record UserResponse(
     Integer credits,
     String type,
     Long roleId,
+    BillingCurrency billingCurrency,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}

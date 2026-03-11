@@ -2,6 +2,9 @@ package com.TravelMedicineAdvisory.Server.domain.auth;
 
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -23,6 +26,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -34,6 +38,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final QueueService queueService;
+    private final CreditRepository creditRepository;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -41,8 +46,9 @@ public class AuthService {
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder, JwtService jwtService,
             AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
-            QueueService queueService) {
+            QueueService queueService, CreditRepository creditRepository ) {
         this.userRepository = userRepository;
+        this.creditRepository=  creditRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -72,6 +78,8 @@ public class AuthService {
 
         Role role = determineUserRole();
 
+        Credit newAssignedCredits = new Credit();
+
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -82,11 +90,20 @@ public class AuthService {
         user.setOnboarded(false);
         user.setVerified(false);
         user.setType("INDIVIDUAL");
-        user.setCredits(0);
+        user.setCredits(1);
+        user.setBillingCurrency(BillingCurrency.NGN);
         user.setRole(role);
         user.setLastLogin(LocalDateTime.now());
 
         User savedUser = userRepository.save(user);
+
+        newAssignedCredits.setUser(user);
+        newAssignedCredits.setType("new-user-bonus");
+        newAssignedCredits.setReference(UUID.randomUUID().toString());
+        newAssignedCredits.setBalanceAfter(1);
+        newAssignedCredits.setAmount(1);
+
+        creditRepository.save(newAssignedCredits);
 
         // Token saved synchronously; email dispatched to queue
         dispatchVerificationEmail(savedUser);
@@ -254,6 +271,7 @@ public class AuthService {
         response.setLastLogin(user.getLastLogin() != null ? user.getLastLogin().toString() : null);
         response.setAccessToken(jwtToken);
         response.setExp(System.currentTimeMillis() + jwtService.getJwtExpiration());
+        response.setBillingCurrency(user.getBillingCurrency());
 
         return response;
     }

@@ -22,7 +22,11 @@ public class Company extends BaseEntity {
     private String plan;
     @Column(name = "company_code", unique = true)
     private String companyCode;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_currency")
+    private BillingCurrency billingCurrency = BillingCurrency.NGN;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "logo_id")
     private Attachment logo;
@@ -88,6 +92,14 @@ public class Company extends BaseEntity {
 
     public void setCompanyCode(String companyCode) {
         this.companyCode = companyCode;
+    }
+
+    public BillingCurrency getBillingCurrency() {
+        return billingCurrency;
+    }
+
+    public void setBillingCurrency(BillingCurrency billingCurrency) {
+        this.billingCurrency = billingCurrency;
     }
 
     public Attachment getLogo() {

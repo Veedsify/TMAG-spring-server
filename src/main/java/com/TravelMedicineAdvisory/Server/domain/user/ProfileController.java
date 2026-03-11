@@ -59,6 +59,8 @@ public class ProfileController {
             user.setUsername(request.username());
         if (request.phone() != null)
             user.setPhone(request.phone());
+        if (request.billingCurrency() != null)
+            user.setBillingCurrency(request.billingCurrency());
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("success", true, "data", toResponse(user)));
     }
@@ -119,6 +121,7 @@ public class ProfileController {
                 user.getOnboardingStage(),
                 user.getCredits(),
                 user.getVerified(),
-                user.getRole() != null ? user.getRole().getId() : null);
+                user.getRole() != null ? user.getRole().getId() : null,
+                user.getBillingCurrency());
     }
 }

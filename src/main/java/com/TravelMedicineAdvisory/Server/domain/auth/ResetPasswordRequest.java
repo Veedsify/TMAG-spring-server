@@ -1,9 +1,12 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ResetPasswordRequest {
 
     private String email;
     private String token;
+    @JsonProperty(value = "new_password")
     private String newPassword;
 
     public ResetPasswordRequest() {}

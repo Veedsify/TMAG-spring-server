@@ -28,7 +28,11 @@ public class TravelPlanService {
         this.userRepository = userRepository;
     }
 
-    public Page<TravelPlanResponse> findAll(Pageable pageable) {
+    public Page<TravelPlanResponse> findAll(Long companyId, Pageable pageable) {
+        if (companyId != null) {
+            return repository.findAllByCompanyId(companyId, pageable)
+                    .map(this::toResponse);
+        }
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
@@ -42,6 +46,7 @@ public class TravelPlanService {
     public TravelPlanResponse create(TravelPlanRequest request) {
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
+        entity.setStatus("pending");
         TravelPlan saved = repository.save(entity);
         return toResponse(saved);
     }

@@ -159,6 +159,7 @@ com/TravelMedicineAdvisory/Server/domain/notification/NotificationController.cla
 com/TravelMedicineAdvisory/Server/domain/permission/PermissionService.class
 com/TravelMedicineAdvisory/Server/domain/useronboarding/UserOnboardingRepository.class
 com/TravelMedicineAdvisory/Server/domain/systemlog/SystemLogResponse.class
+com/TravelMedicineAdvisory/Server/core/utils/RandomNumberGenerator.class
 com/TravelMedicineAdvisory/Server/domain/user/UserService.class
 com/TravelMedicineAdvisory/Server/config/AsyncConfig.class
 com/TravelMedicineAdvisory/Server/core/scheduler/SchedulerConfig.class

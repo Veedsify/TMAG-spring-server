@@ -5,10 +5,10 @@ import java.time.LocalDateTime;
 
 public record CreditResponse(
     Long id,
-    BigDecimal amount,
+    Integer amount,
     String type,
     String reference,
-    BigDecimal balanceAfter,
+    Integer balanceAfter,
     Long companyId,
     Long userId,
     LocalDateTime createdAt,

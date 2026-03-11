@@ -24,7 +24,11 @@ public class CreditService {
         this.userRepository = userRepository;
     }
 
-    public Page<CreditResponse> findAll(Pageable pageable) {
+    public Page<CreditResponse> findAll(Long companyId, Pageable pageable) {
+        if (companyId != null) {
+            return repository.findAllByCompanyId(companyId, pageable)
+                    .map(this::toResponse);
+        }
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }

@@ -59,7 +59,7 @@ public class UserService {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         // Clean up onboarding data: Redis progress + DB onboarding record
-        progressService.delete(id);
+        progressService.delete(user.getEmail());
         onboardingRepository.findByUser_Email(user.getEmail())
                 .ifPresent(onboardingRepository::delete);
 
@@ -83,6 +83,7 @@ public class UserService {
                 entity.getCredits(),
                 entity.getType(),
                 entity.getRole() != null ? entity.getRole().getId() : null,
+                entity.getBillingCurrency(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }
@@ -100,6 +101,9 @@ public class UserService {
         entity.setAvatarUrl(request.avatarUrl());
         entity.setCredits(request.credits());
         entity.setType(request.type());
+        if (request.billingCurrency() != null) {
+            entity.setBillingCurrency(request.billingCurrency());
+        }
         if (request.roleId() != null) {
             Role role = roleRepository.findById(request.roleId())
                     .orElseThrow(() -> new NoSuchElementException("Role not found"));

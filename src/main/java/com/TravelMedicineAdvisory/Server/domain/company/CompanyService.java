@@ -73,6 +73,7 @@ public class CompanyService {
                 entity.getPlan(),
                 entity.getCompanyCode(),
                 entity.getLogo() != null ? entity.getLogo().getId() : null,
+                entity.getBillingCurrency(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }
@@ -85,5 +86,8 @@ public class CompanyService {
         entity.setEmployeeCount(request.employeeCount());
         entity.setPlan(request.plan());
         entity.setCompanyCode(request.companyCode());
+        if (request.billingCurrency() != null) {
+            entity.setBillingCurrency(request.billingCurrency());
+        }
     }
 }
