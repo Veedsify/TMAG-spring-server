@@ -54,6 +54,20 @@ public class EmployeeService {
         return toResponse(saved);
     }
 
+    public EmployeeResponse allocateCredits(Long id, Integer creditsAllocated) {
+        Employee entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Employee not found"));
+        entity.setCreditsAllocated(creditsAllocated);
+        return toResponse(repository.save(entity));
+    }
+
+    public EmployeeResponse updateStatus(Long id, String status) {
+        Employee entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Employee not found"));
+        entity.setStatus(status);
+        return toResponse(repository.save(entity));
+    }
+
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Employee not found");

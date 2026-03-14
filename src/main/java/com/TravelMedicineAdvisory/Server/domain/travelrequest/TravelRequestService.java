@@ -54,6 +54,20 @@ public class TravelRequestService {
         return toResponse(saved);
     }
 
+    public TravelRequestResponse approve(Long id) {
+        TravelRequest entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("TravelRequest not found"));
+        entity.setStatus("approved");
+        return toResponse(repository.save(entity));
+    }
+
+    public TravelRequestResponse reject(Long id) {
+        TravelRequest entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("TravelRequest not found"));
+        entity.setStatus("rejected");
+        return toResponse(repository.save(entity));
+    }
+
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("TravelRequest not found");

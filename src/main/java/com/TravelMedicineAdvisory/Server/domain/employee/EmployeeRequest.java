@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.employee;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record EmployeeRequest(
     String name,
     String email,
@@ -8,6 +10,8 @@ public record EmployeeRequest(
     Integer creditsAllocated,
     String status,
     Integer plansGenerated,
-    Long companyId,
-    Long userId
+        @JsonProperty("company_id")
+        Long companyId,
+        @JsonProperty("user_id")
+        Long userId
 ) {}

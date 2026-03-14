@@ -48,6 +48,16 @@ public class TravelRequestController {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<SuccessResponse> approve(@PathVariable Long id) {
+        return ResponseEntity.ok(new SuccessResponse("Approved", service.approve(id)));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<SuccessResponse> reject(@PathVariable Long id) {
+        return ResponseEntity.ok(new SuccessResponse("Rejected", service.reject(id)));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);

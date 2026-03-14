@@ -9,16 +9,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 
 @Service
 @Transactional
 public class CompanyService {
 
     private final CompanyRepository repository;
+    private final CreditRepository creditRepository;
     private final RandomNumberGenerator randomNumberGenerator;
 
-    public CompanyService(CompanyRepository repository, RandomNumberGenerator randomNumberGenerator) {
+    public CompanyService(CompanyRepository repository, CreditRepository creditRepository, RandomNumberGenerator randomNumberGenerator) {
         this.repository = repository;
+        this.creditRepository = creditRepository;
         this.randomNumberGenerator = randomNumberGenerator;
     }
 
@@ -53,6 +57,28 @@ public class CompanyService {
         mapRequestToEntity(request, entity);
         Company saved = repository.save(entity);
         return toResponse(saved);
+    }
+
+    public boolean validateCompanyCode(String code) {
+        return repository.findByCompanyCode(code).isPresent();
+    }
+
+    public CompanyResponse purchaseCredits(Long id, Integer amount, String reference) {
+        Company company = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+        int newTotal = (company.getTotalCredits() != null ? company.getTotalCredits() : 0) + amount;
+        company.setTotalCredits(newTotal);
+        repository.save(company);
+
+        Credit credit = new Credit();
+        credit.setCompany(company);
+        credit.setAmount(amount);
+        credit.setType("purchase");
+        credit.setReference(reference != null ? reference : "Credit purchase");
+        credit.setBalanceAfter(newTotal);
+        creditRepository.save(credit);
+
+        return toResponse(company);
     }
 
     public void delete(Long id) {

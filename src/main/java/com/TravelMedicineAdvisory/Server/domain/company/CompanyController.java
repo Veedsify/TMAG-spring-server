@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/companies")
 public class CompanyController {
@@ -46,6 +48,19 @@ public class CompanyController {
     @PutMapping("/{id}")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody CompanyRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
+    }
+
+    @PostMapping("/{id}/purchase-credits")
+    public ResponseEntity<SuccessResponse> purchaseCredits(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Integer amount = (Integer) body.get("amount");
+        String reference = (String) body.getOrDefault("reference", "Credit purchase");
+        return ResponseEntity.ok(new SuccessResponse("Credits purchased", service.purchaseCredits(id, amount, reference)));
+    }
+
+    @GetMapping("/validate-code")
+    public ResponseEntity<SuccessResponse> validateCode(@RequestParam String code) {
+        boolean valid = service.validateCompanyCode(code);
+        return ResponseEntity.ok(new SuccessResponse("Validated", Map.of("valid", valid)));
     }
 
     @DeleteMapping("/{id}")

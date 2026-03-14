@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/employees")
 public class EmployeeController {
@@ -46,6 +48,16 @@ public class EmployeeController {
     @PutMapping("/{id}")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody EmployeeRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
+    }
+
+    @PutMapping("/{id}/credits")
+    public ResponseEntity<SuccessResponse> allocateCredits(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+        return ResponseEntity.ok(new SuccessResponse("Credits allocated", service.allocateCredits(id, body.get("creditsAllocated"))));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<SuccessResponse> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(new SuccessResponse("Status updated", service.updateStatus(id, body.get("status"))));
     }
 
     @DeleteMapping("/{id}")

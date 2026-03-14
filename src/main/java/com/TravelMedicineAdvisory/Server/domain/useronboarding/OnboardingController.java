@@ -1,21 +1,32 @@
 package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/onboarding")
@@ -86,7 +97,6 @@ public class OnboardingController {
             String fullName = ((user.getFirstName() != null ? user.getFirstName() : "") +
                     (user.getLastName() != null ? " " + user.getLastName() : "")).trim();
             String resolvedName = fullName.isEmpty() ? user.getEmail() : fullName;
-            String userRoleName = user.getRole() != null ? user.getRole().getName() : "Employee";
 
             // Create or update the Employee record (HR/payroll view)
             Employee employee = employeeRepository.findByUser(user).orElseGet(Employee::new);
@@ -104,7 +114,7 @@ public class OnboardingController {
             CompanyUser companyUser = companyUserRepository.findByUser(user).orElseGet(CompanyUser::new);
             companyUser.setUser(user);
             companyUser.setCompany(company);
-            companyUser.setRole(userRoleName);
+            companyUser.setRole(String.valueOf(Roles.Individual));
             companyUserRepository.save(companyUser);
         }
 
