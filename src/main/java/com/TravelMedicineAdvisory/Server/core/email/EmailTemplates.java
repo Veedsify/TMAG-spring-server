@@ -36,49 +36,73 @@ public class EmailTemplates {
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <meta http-equiv="X-UA-Compatible" content="IE=edge">
               <title>TMAG</title>
+              <!-- Google Fonts: matches the client app -->
+              <link rel="preconnect" href="https://fonts.googleapis.com">
+              <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+              <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+              <style>
+                /* Fallback @import for clients that block <link> but allow <style> */
+                @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap');
+              </style>
             </head>
-            <body style="margin:0;padding:0;background-color:#f6f0e9;font-family:'Segoe UI',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+            <body style="margin:0;padding:0;background-color:#f6f0e9;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
               <!-- Preheader text (hidden) -->
               <span style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f6f0e9;line-height:1px;">{preheader}&#8203;&nbsp;&#847;&nbsp;</span>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f6f0e9;">
                 <tr>
-                  <td align="center" style="padding:40px 16px;">
+                  <td align="center" style="padding:48px 16px;">
                     <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;">
 
                       <!-- ====== HEADER ====== -->
                       <tr>
-                        <td style="background-color:#1a1008;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+                        <td style="background-color:#1a1008;border-radius:16px 16px 0 0;padding:0;text-align:center;">
                           <!-- Gradient accent bar: teal → deep teal → gold -->
-                          <div style="height:3px;background:linear-gradient(90deg,#2a7a6a 0%,#1a6a7a 55%,#c4953a 100%);border-radius:2px;margin-bottom:24px;"></div>
-                          <a href="{frontendUrl}" style="text-decoration:none;">
-                            <span style="display:block;font-size:10px;font-weight:700;letter-spacing:4px;color:#8a7968;text-transform:uppercase;margin-bottom:6px;">Travel Medicine</span>
-                            <span style="display:block;font-size:30px;font-weight:800;color:#f6f0e9;letter-spacing:3px;">TMAG</span>
-                            <span style="display:block;font-size:10px;color:#c4953a;letter-spacing:3px;text-transform:uppercase;margin-top:6px;">Global Advisory</span>
-                          </a>
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                              <td style="height:4px;background:linear-gradient(90deg,#2a7a6a 0%,#1a6a7a 55%,#c4953a 100%);border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</td>
+                            </tr>
+                            <tr>
+                              <td style="padding:32px 40px 36px;text-align:center;">
+                                <a href="{frontendUrl}" style="text-decoration:none;">
+                                  <span style="display:block;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:5px;color:#8a7968;text-transform:uppercase;margin-bottom:10px;">Travel Medicine</span>
+                                  <span style="display:block;font-family:'Fraunces',Georgia,serif;font-size:36px;font-weight:800;color:#f6f0e9;letter-spacing:4px;">TMAG</span>
+                                  <span style="display:block;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:10px;font-weight:500;color:#c4953a;letter-spacing:4px;text-transform:uppercase;margin-top:10px;">Global Advisory</span>
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
 
                       <!-- ====== CONTENT CARD ====== -->
                       <tr>
-                        <td style="background-color:#ffffff;padding:48px 40px;border-left:1px solid #e8ddd3;border-right:1px solid #e8ddd3;">
+                        <td style="background-color:#ffffff;padding:52px 48px;border-left:1px solid #e8ddd3;border-right:1px solid #e8ddd3;">
                           {content}
                         </td>
                       </tr>
 
                       <!-- ====== FOOTER ====== -->
                       <tr>
-                        <td style="background-color:#1a1008;border-radius:0 0 16px 16px;padding:28px 40px;text-align:center;">
-                          <p style="margin:0 0 12px;font-size:12px;color:#8a7968;line-height:1.6;">
+                        <td style="background-color:#1a1008;border-radius:0 0 16px 16px;padding:32px 48px;text-align:center;">
+                          <p style="margin:0 0 16px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:400;color:#8a7968;line-height:1.7;letter-spacing:0.3px;">
                             Trusted health guidance for every journey
                           </p>
-                          <p style="margin:0 0 16px;font-size:12px;line-height:1.6;">
-                            <a href="{frontendUrl}/privacy" style="color:#2a7a6a;text-decoration:none;margin:0 8px;">Privacy</a>
-                            <span style="color:#4a3e32;">&bull;</span>
-                            <a href="{frontendUrl}/terms" style="color:#2a7a6a;text-decoration:none;margin:0 8px;">Terms</a>
-                            <span style="color:#4a3e32;">&bull;</span>
-                            <a href="{frontendUrl}/contact" style="color:#2a7a6a;text-decoration:none;margin:0 8px;">Contact</a>
-                          </p>
-                          <p style="margin:0;font-size:11px;color:#4a3e32;">&copy; {year} Travel Medicine Advisory Global. All rights reserved.</p>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 20px;">
+                            <tr>
+                              <td style="padding:0 10px;">
+                                <a href="{frontendUrl}/privacy" style="font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#2a7a6a;text-decoration:none;">Privacy</a>
+                              </td>
+                              <td style="color:#4a3e32;font-size:12px;">&bull;</td>
+                              <td style="padding:0 10px;">
+                                <a href="{frontendUrl}/terms" style="font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#2a7a6a;text-decoration:none;">Terms</a>
+                              </td>
+                              <td style="color:#4a3e32;font-size:12px;">&bull;</td>
+                              <td style="padding:0 10px;">
+                                <a href="{frontendUrl}/contact" style="font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#2a7a6a;text-decoration:none;">Contact</a>
+                              </td>
+                            </tr>
+                          </table>
+                          <p style="margin:0;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:11px;font-weight:300;color:#4a3e32;letter-spacing:0.2px;">&copy; {year} Travel Medicine Advisory Global. All rights reserved.</p>
                         </td>
                       </tr>
 
@@ -97,13 +121,16 @@ public class EmailTemplates {
     // Public template methods
     // -------------------------------------------------------------------------
 
+    private static final String P_STYLE = "margin:0 0 16px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:16px;font-weight:400;color:#8a7968;line-height:1.75;";
+    private static final String STRONG_STYLE = "color:#3d2c1e;font-weight:600;";
+
     /** Email verification — teal gradient CTA button */
     public String verificationEmail(String firstName, String verifyLink) {
         String content =
                 badge("Account Activation") +
                 heading("Verify your email address") +
-                "<p style=\"margin:0 0 16px;font-size:16px;color:#8a7968;line-height:1.7;\">Hi <strong style=\"color:#3d2c1e;\">" + esc(firstName) + "</strong>,</p>" +
-                "<p style=\"margin:0 0 32px;font-size:16px;color:#8a7968;line-height:1.7;\">Welcome to TMAG! Please verify your email address to activate your account and start getting personalized travel health plans.</p>" +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Welcome to TMAG! Please verify your email address to activate your account and start getting personalized travel health plans.</p>" +
                 tealButton("Verify Email Address", verifyLink) +
                 copyLink(verifyLink) +
                 divider() +
@@ -117,8 +144,8 @@ public class EmailTemplates {
         String content =
                 badge("Security") +
                 heading("Reset your password") +
-                "<p style=\"margin:0 0 16px;font-size:16px;color:#8a7968;line-height:1.7;\">Hi <strong style=\"color:#3d2c1e;\">" + esc(firstName) + "</strong>,</p>" +
-                "<p style=\"margin:0 0 32px;font-size:16px;color:#8a7968;line-height:1.7;\">We received a request to reset your password. Click below to set a new password. If you didn't request this, you can safely ignore this email.</p>" +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">We received a request to reset your password. Click below to set a new password. If you didn't request this, you can safely ignore this email.</p>" +
                 darkButton("Reset Password", resetLink) +
                 copyLink(resetLink) +
                 divider() +
@@ -132,8 +159,8 @@ public class EmailTemplates {
         String content =
                 badge("Security Notice") +
                 heading("Password changed successfully") +
-                "<p style=\"margin:0 0 16px;font-size:16px;color:#8a7968;line-height:1.7;\">Hi <strong style=\"color:#3d2c1e;\">" + esc(firstName) + "</strong>,</p>" +
-                "<p style=\"margin:0 0 32px;font-size:16px;color:#8a7968;line-height:1.7;\">Your TMAG account password has been successfully changed. You can now log in with your new password.</p>" +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Your TMAG account password has been successfully changed. You can now log in with your new password.</p>" +
                 infoBox("If you did not make this change, please reset your password immediately and contact our support team.") +
                 divider() +
                 fine("For security, this notification was sent to the email address associated with your account.");
@@ -145,7 +172,7 @@ public class EmailTemplates {
     public String genericEmail(String subject, String htmlContent) {
         String content =
                 heading(esc(subject)) +
-                "<div style=\"font-size:16px;color:#8a7968;line-height:1.7;\">" + htmlContent + "</div>" +
+                "<div style=\"font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:16px;font-weight:400;color:#8a7968;line-height:1.75;\">" + htmlContent + "</div>" +
                 divider() +
                 fine("You received this email because you have an account with Travel Medicine Advisory Global.");
 
@@ -165,52 +192,54 @@ public class EmailTemplates {
     }
 
     private String heading(String text) {
-        return "<h2 style=\"margin:0 0 24px;font-size:24px;font-weight:700;color:#3d2c1e;line-height:1.3;\">" + text + "</h2>";
+        return "<h2 style=\"margin:0 0 20px;font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:400;color:#3d2c1e;line-height:1.25;\">" + text + "</h2>";
     }
 
     private String badge(String label) {
-        return "<p style=\"margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;color:#c4953a;text-transform:uppercase;\">" + label + "</p>";
+        return "<p style=\"margin:0 0 10px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;color:#c4953a;text-transform:uppercase;\">" + label + "</p>";
     }
 
     private String tealButton(String label, String url) {
-        return "<div style=\"text-align:center;margin:0 0 32px;\">" +
-               "<a href=\"" + url + "\" style=\"display:inline-block;padding:14px 44px;" +
-               "background:linear-gradient(135deg,#2a7a6a 0%,#1a6a7a 50%,#246858 100%);" +
+        return "<table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"margin:0 auto 36px;\">" +
+               "<tr><td style=\"border-radius:12px;background:linear-gradient(135deg,#2a7a6a 0%,#1a6a7a 50%,#246858 100%);\">" +
+               "<a href=\"" + url + "\" style=\"display:inline-block;padding:15px 48px;" +
+               "font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;" +
                "color:#ffffff;text-decoration:none;border-radius:12px;" +
-               "font-weight:700;font-size:16px;letter-spacing:0.5px;" +
-               "box-shadow:0 4px 12px rgba(42,122,106,0.3);\">" + esc(label) + "</a>" +
-               "</div>";
+               "font-weight:700;font-size:15px;letter-spacing:0.5px;\">" + esc(label) + "</a>" +
+               "</td></tr></table>";
     }
 
     private String darkButton(String label, String url) {
-        return "<div style=\"text-align:center;margin:0 0 32px;\">" +
-               "<a href=\"" + url + "\" style=\"display:inline-block;padding:14px 44px;" +
-               "background-color:#2a1e14;" +
+        return "<table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"margin:0 auto 36px;\">" +
+               "<tr><td style=\"border-radius:12px;background-color:#2a1e14;\">" +
+               "<a href=\"" + url + "\" style=\"display:inline-block;padding:15px 48px;" +
+               "font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;" +
                "color:#f6f0e9;text-decoration:none;border-radius:12px;" +
-               "font-weight:700;font-size:16px;letter-spacing:0.5px;" +
-               "box-shadow:0 4px 12px rgba(42,30,20,0.25);\">" + esc(label) + "</a>" +
-               "</div>";
+               "font-weight:700;font-size:15px;letter-spacing:0.5px;\">" + esc(label) + "</a>" +
+               "</td></tr></table>";
     }
 
     private String copyLink(String url) {
-        return "<p style=\"margin:0 0 8px;font-size:13px;color:#8a7968;\">Or copy this link into your browser:</p>" +
-               "<p style=\"margin:0 0 24px;word-break:break-all;font-size:12px;color:#2a7a6a;" +
-               "background:#fcf6ef;padding:12px 16px;border-radius:8px;border:1px solid #d4c4b4;\">" + url + "</p>";
+        return "<p style=\"margin:0 0 8px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:13px;font-weight:400;color:#8a7968;\">Or copy this link into your browser:</p>" +
+               "<p style=\"margin:0 0 28px;word-break:break-all;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;color:#2a7a6a;" +
+               "background:#fcf6ef;padding:14px 16px;border-radius:8px;border:1px solid #d4c4b4;line-height:1.6;\">" + url + "</p>";
     }
 
     private String infoBox(String message) {
-        return "<div style=\"background:#fcf6ef;border-left:4px solid #c4953a;padding:16px 20px;" +
-               "border-radius:0 8px 8px 0;margin:0 0 32px;\">" +
-               "<p style=\"margin:0;font-size:14px;color:#3d2c1e;line-height:1.6;\">" + message + "</p>" +
-               "</div>";
+        return "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin:0 0 36px;\">" +
+               "<tr><td style=\"background:#fcf6ef;border-left:4px solid #c4953a;padding:16px 20px;border-radius:0 8px 8px 0;\">" +
+               "<p style=\"margin:0;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:14px;font-weight:400;color:#3d2c1e;line-height:1.7;\">" + message + "</p>" +
+               "</td></tr></table>";
     }
 
     private String divider() {
-        return "<div style=\"height:1px;background:#e8ddd3;margin:8px 0 24px;\"></div>";
+        return "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin:12px 0 28px;\">" +
+               "<tr><td style=\"height:1px;background-color:#e8ddd3;font-size:0;line-height:0;\">&nbsp;</td></tr>" +
+               "</table>";
     }
 
     private String fine(String text) {
-        return "<p style=\"margin:0;font-size:13px;color:#b0a090;line-height:1.6;\">" + text + "</p>";
+        return "<p style=\"margin:0;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:13px;font-weight:400;color:#b0a090;line-height:1.7;\">" + text + "</p>";
     }
 
     /** Minimal HTML escaping for user-provided values inserted into HTML attributes/text. */

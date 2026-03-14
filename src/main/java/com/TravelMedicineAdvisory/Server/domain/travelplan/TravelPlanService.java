@@ -43,10 +43,23 @@ public class TravelPlanService {
         return toResponse(entity);
     }
 
+    @Transactional
     public TravelPlanResponse create(TravelPlanRequest request) {
+        Long currentUserId = request.userId();
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getCredits() < 1) {
+            throw new RuntimeException("Insufficient credits");
+        }
+
+        user.setCredits(user.getCredits() - 1);
+        userRepository.save(user);
+
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
-        entity.setStatus("pending");
+        entity.setStatus(String.valueOf(TRAVEL_PLAN.PENDING));
+
         TravelPlan saved = repository.save(entity);
         return toResponse(saved);
     }

@@ -1,4 +1,4 @@
-### Queue System
+****### Queue System
 
 Jobs are pushed into Redis and processed by a background worker every 5 seconds.
 

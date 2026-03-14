@@ -239,6 +239,7 @@ public class DataSeeder implements CommandLineRunner {
 //        logger.info("Seeding admin user...");
 
         Role superAdminRole = roleRepository.findByName("SuperAdmin").orElse(null);
+        Role userRole = roleRepository.findByName("Individual").orElse(null);
 
         User admin = new User();
         admin.setFirstName("Super");
@@ -251,6 +252,18 @@ public class DataSeeder implements CommandLineRunner {
         admin.setOnboardingStage(5);
 
         userRepository.save(admin);
+
+        User user = new User();
+        user.setFirstName("Dike");
+        user.setLastName("Wisdom");
+        user.setEmail("dikewisdom787@gmail.com");
+        user.setUsername("dikewisdom");
+        user.setRole(userRole);
+        user.setPassword(passwordEncoder.encode("password"));
+        user.setVerified(false);
+        user.setOnboardingStage(0);
+
+        userRepository.save(user);
 //        logger.info("Seeded admin user.");
     }
 
