@@ -86,6 +86,8 @@ public class QueueWorker {
                     handleEmailJob(msg, "password_reset");
                 case EMAIL_PASSWORD_CHANGED ->
                     handleEmailJob(msg, "password_changed");
+                case EMAIL_EMPLOYEE_INVITATION ->
+                    handleEmailJob(msg, "employee_invitation");
                 case EMAIL_GENERIC ->
                     handleEmailJob(msg, "generic");
             }
@@ -132,6 +134,8 @@ public class QueueWorker {
         String firstName = vars.getOrDefault("firstName", "there");
         String link = vars.getOrDefault("link", "#");
 
+        String companyName = vars.getOrDefault("companyName", "");
+
         String html = switch (templateType) {
             case "verification" ->
                 emailTemplates.verificationEmail(firstName, link);
@@ -139,6 +143,8 @@ public class QueueWorker {
                 emailTemplates.passwordResetEmail(firstName, link);
             case "password_changed" ->
                 emailTemplates.passwordChangedEmail(firstName);
+            case "employee_invitation" ->
+                emailTemplates.employeeInvitationEmail(firstName, companyName, link);
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

@@ -56,4 +56,10 @@ public class AuthController {
         authService.verifyEmail(token);
         return ResponseEntity.ok(new SuccessResponse("Email verified successfully", true, null));
     }
+
+    @PostMapping("/accept-invitation")
+    public ResponseEntity<Map<String, Object>> acceptInvitation(@RequestBody AcceptInvitationRequest request) {
+        AuthResponse data = authService.acceptInvitation(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("success", true, "data", data));
+    }
 }

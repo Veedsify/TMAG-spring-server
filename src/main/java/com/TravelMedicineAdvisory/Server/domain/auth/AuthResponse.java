@@ -40,6 +40,9 @@ public class AuthResponse {
     private Long exp;
     private Object extend;
 
+    @JsonProperty("must_change_password")
+    private Boolean mustChangePassword;
+
     @JsonProperty("billing_currency")
     private BillingCurrency billingCurrency;
 
@@ -77,4 +80,6 @@ public class AuthResponse {
     public void setExtend(Object extend) { this.extend = extend; }
     public BillingCurrency getBillingCurrency() { return billingCurrency; }
     public void setBillingCurrency(BillingCurrency billingCurrency) { this.billingCurrency = billingCurrency; }
+    public Boolean getMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
 }

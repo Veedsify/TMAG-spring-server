@@ -1,5 +1,20 @@
 package com.TravelMedicineAdvisory.Server.core.seeder;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlert;
@@ -18,17 +33,6 @@ import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -264,6 +268,22 @@ public class DataSeeder implements CommandLineRunner {
         user.setOnboardingStage(0);
 
         userRepository.save(user);
+
+        Role hrRole = roleRepository.findByName("HR").orElse(null);
+
+        User hrUser = new User();
+        hrUser.setFirstName("HR");
+        hrUser.setLastName("Manager");
+        hrUser.setEmail("hr@tmag.com");
+        hrUser.setUsername("hrmanager");
+        hrUser.setRole(hrRole);
+        hrUser.setPassword(passwordEncoder.encode("password"));
+        hrUser.setVerified(true);
+        hrUser.setVerificationTokenExpiry(null);
+        hrUser.setOnboardingStage(5);
+        hrUser.setOnboarded(true);
+
+        userRepository.save(hrUser);
 //        logger.info("Seeded admin user.");
     }
 

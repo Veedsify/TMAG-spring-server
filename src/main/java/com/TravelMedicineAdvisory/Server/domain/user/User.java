@@ -54,6 +54,15 @@ public class User extends BaseEntity {
     @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
+    @Column(name = "invitation_token")
+    private String invitationToken;
+
+    @Column(name = "invitation_token_expiry")
+    private LocalDateTime invitationTokenExpiry;
+
+    @Column(name = "must_change_password")
+    private Boolean mustChangePassword = false;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
@@ -241,5 +250,29 @@ public class User extends BaseEntity {
 
     public void setCreditHistory(List<Credit> creditHistory) {
         this.creditHistory = creditHistory;
+    }
+
+    public String getInvitationToken() {
+        return invitationToken;
+    }
+
+    public void setInvitationToken(String invitationToken) {
+        this.invitationToken = invitationToken;
+    }
+
+    public LocalDateTime getInvitationTokenExpiry() {
+        return invitationTokenExpiry;
+    }
+
+    public void setInvitationTokenExpiry(LocalDateTime invitationTokenExpiry) {
+        this.invitationTokenExpiry = invitationTokenExpiry;
+    }
+
+    public Boolean getMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(Boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

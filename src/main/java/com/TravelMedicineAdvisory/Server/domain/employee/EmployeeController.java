@@ -39,6 +39,12 @@ public class EmployeeController {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
     }
 
+    @PostMapping("/invite")
+    public ResponseEntity<SuccessResponse> invite(@RequestBody EmployeeInviteRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new SuccessResponse("Employee invited successfully", service.invite(request)));
+    }
+
     @PostMapping
     public ResponseEntity<SuccessResponse> create(@RequestBody EmployeeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)

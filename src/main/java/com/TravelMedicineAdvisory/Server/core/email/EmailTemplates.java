@@ -168,6 +168,22 @@ public class EmailTemplates {
         return wrap("Your TMAG account password has been changed.", content);
     }
 
+    /** Employee invitation — teal CTA button with company branding */
+    public String employeeInvitationEmail(String firstName, String companyName, String inviteLink) {
+        String content =
+                badge("You're Invited") +
+                heading("Join " + esc(companyName) + " on TMAG") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your company <strong style=\"" + STRONG_STYLE + "\">" + esc(companyName) + "</strong> has invited you to join TMAG — the AI-powered travel health advisory platform.</p>" +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Click below to set your password and get started with personalised travel health recommendations.</p>" +
+                tealButton("Accept Invitation", inviteLink) +
+                copyLink(inviteLink) +
+                divider() +
+                fine("This invitation expires in <strong>7 days</strong>. If you weren't expecting this, you can safely ignore this email.");
+
+        return wrap("You've been invited to join " + companyName + " on TMAG.", content);
+    }
+
     /** Generic email — for ad-hoc messages */
     public String genericEmail(String subject, String htmlContent) {
         String content =

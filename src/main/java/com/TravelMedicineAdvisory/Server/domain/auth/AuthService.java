@@ -207,6 +207,30 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public AuthResponse acceptInvitation(String token, String newPassword) {
+        User user = userRepository.findByInvitationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid invitation token"));
+
+        if (user.getInvitationTokenExpiry() == null
+                || user.getInvitationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invitation has expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setVerified(true);
+        user.setMustChangePassword(false);
+        user.setInvitationToken(null);
+        user.setInvitationTokenExpiry(null);
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String jwtToken = jwtService.generateToken(userDetails);
+
+        return buildAuthResponse(user, jwtToken);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -272,6 +296,7 @@ public class AuthService {
         response.setAccessToken(jwtToken);
         response.setExp(System.currentTimeMillis() + jwtService.getJwtExpiration());
         response.setBillingCurrency(user.getBillingCurrency());
+        response.setMustChangePassword(user.getMustChangePassword() != null ? user.getMustChangePassword() : false);
 
         return response;
     }
