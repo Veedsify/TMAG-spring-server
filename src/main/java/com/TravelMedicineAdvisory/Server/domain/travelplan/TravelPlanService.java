@@ -1,16 +1,18 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
+import java.util.NoSuchElementException;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import java.util.NoSuchElementException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -58,7 +60,7 @@ public class TravelPlanService {
 
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
-        entity.setStatus(String.valueOf(TRAVEL_PLAN.PENDING));
+        entity.setStatus(String.valueOf(Travel_Plan.PENDING));
 
         TravelPlan saved = repository.save(entity);
         return toResponse(saved);

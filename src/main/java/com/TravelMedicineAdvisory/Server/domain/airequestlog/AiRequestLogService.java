@@ -1,14 +1,16 @@
 package com.TravelMedicineAdvisory.Server.domain.airequestlog;
 
-import com.TravelMedicineAdvisory.Server.domain.company.Company;
-import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.util.NoSuchElementException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -30,6 +32,9 @@ public class AiRequestLogService {
     }
 
     public AiRequestLogResponse findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("AiRequestLog ID cannot be null");
+        }
         AiRequestLog entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("AiRequestLog not found"));
         return toResponse(entity);
@@ -43,6 +48,9 @@ public class AiRequestLogService {
     }
 
     public AiRequestLogResponse update(Long id, AiRequestLogRequest request) {
+        if (id == null) {
+            throw new IllegalArgumentException("AiRequestLog ID cannot be null");
+        }
         AiRequestLog entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("AiRequestLog not found"));
         mapRequestToEntity(request, entity);
@@ -51,6 +59,9 @@ public class AiRequestLogService {
     }
 
     public void delete(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("AiRequestLog ID cannot be null");
+        }
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("AiRequestLog not found");
         }

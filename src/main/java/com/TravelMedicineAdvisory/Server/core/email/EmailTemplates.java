@@ -124,19 +124,18 @@ public class EmailTemplates {
     private static final String P_STYLE = "margin:0 0 16px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:16px;font-weight:400;color:#8a7968;line-height:1.75;";
     private static final String STRONG_STYLE = "color:#3d2c1e;font-weight:600;";
 
-    /** Email verification — teal gradient CTA button */
-    public String verificationEmail(String firstName, String verifyLink) {
+    /** Email verification — 6-digit code */
+    public String verificationEmail(String firstName, String code) {
         String content =
                 badge("Account Activation") +
                 heading("Verify your email address") +
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
-                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Welcome to TMAG! Please verify your email address to activate your account and start getting personalized travel health plans.</p>" +
-                tealButton("Verify Email Address", verifyLink) +
-                copyLink(verifyLink) +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Welcome to TMAG! Enter the code below to verify your email and activate your account.</p>" +
+                verificationCode(code) +
                 divider() +
-                fine("This link expires in <strong>24 hours</strong>. If you didn't create an account, you can safely ignore this email.");
+                fine("This code expires in <strong>15 minutes</strong>. If you didn't create an account, you can safely ignore this email.");
 
-        return wrap("Verify your email to activate your TMAG account.", content);
+        return wrap("Your TMAG verification code is " + code, content);
     }
 
     /** Password reset — dark button (security action) */
@@ -233,6 +232,18 @@ public class EmailTemplates {
                "color:#f6f0e9;text-decoration:none;border-radius:12px;" +
                "font-weight:700;font-size:15px;letter-spacing:0.5px;\">" + esc(label) + "</a>" +
                "</td></tr></table>";
+    }
+
+    private String verificationCode(String code) {
+        StringBuilder digits = new StringBuilder();
+        for (char c : code.toCharArray()) {
+            digits.append("<td style=\"width:48px;height:56px;background:#fcf6ef;border:2px solid #d4c4b4;border-radius:10px;text-align:center;vertical-align:middle;")
+                  .append("font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:700;color:#3d2c1e;letter-spacing:0;\">")
+                  .append(c)
+                  .append("</td><td style=\"width:8px;\"></td>");
+        }
+        return "<table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"margin:0 auto 36px;\">" +
+               "<tr>" + digits + "</tr></table>";
     }
 
     private String copyLink(String url) {

@@ -133,12 +133,13 @@ public class QueueWorker {
 
         String firstName = vars.getOrDefault("firstName", "there");
         String link = vars.getOrDefault("link", "#");
+        String code = vars.getOrDefault("code", "");
 
         String companyName = vars.getOrDefault("companyName", "");
 
         String html = switch (templateType) {
             case "verification" ->
-                emailTemplates.verificationEmail(firstName, link);
+                emailTemplates.verificationEmail(firstName, code);
             case "password_reset" ->
                 emailTemplates.passwordResetEmail(firstName, link);
             case "password_changed" ->

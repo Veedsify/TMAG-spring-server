@@ -192,13 +192,17 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(String token) {
-        User user = userRepository.findByVerificationToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid verification token"));
+    public void verifyEmail(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.getVerificationToken() == null || !user.getVerificationToken().equals(code)) {
+            throw new IllegalArgumentException("Invalid verification code");
+        }
 
         if (user.getVerificationTokenExpiry() == null
                 || user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Verification link has expired");
+            throw new ResponseStatusException(HttpStatus.GONE, "Verification code has expired");
         }
 
         user.setVerified(true);
@@ -236,19 +240,22 @@ public class AuthService {
     // -------------------------------------------------------------------------
 
     private void dispatchVerificationEmail(User user) {
-        String token = generateToken(16);
-        user.setVerificationToken(token);
-        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        String code = generateVerificationCode();
+        user.setVerificationToken(code);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
-
-        String verifyLink = frontendUrl + "/auth/verify-email?token=" + token;
 
         queueService.dispatch(JobType.EMAIL_VERIFICATION, Map.of(
                 "to", user.getEmail(),
-                "subject", "Verify your email address",
+                "subject", "Your verification code",
                 "variables", Map.of(
                         "firstName", user.getFirstName() != null ? user.getFirstName() : "there",
-                        "link", verifyLink)));
+                        "code", code)));
+    }
+
+    private String generateVerificationCode() {
+        int code = new SecureRandom().nextInt(900000) + 100000;
+        return String.valueOf(code);
     }
 
     private String generateToken(int byteLength) {

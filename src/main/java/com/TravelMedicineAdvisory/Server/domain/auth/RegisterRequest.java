@@ -1,8 +1,12 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class RegisterRequest {
+    @JsonProperty("first_name")
     private String firstName;
+
+    @JsonProperty("last_name")
     private String lastName;
     private String username;
     private String email;

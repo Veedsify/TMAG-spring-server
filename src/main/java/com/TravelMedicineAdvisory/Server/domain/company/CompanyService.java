@@ -1,7 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.company;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,11 +26,17 @@ public class CompanyService {
     }
 
     public Page<CompanyResponse> findAll(Pageable pageable) {
+        if (pageable == null) {
+            throw new IllegalArgumentException("Pageable cannot be null");
+        }
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
     public CompanyResponse findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Company ID cannot be null");
+        }
         Company entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
         return toResponse(entity);
@@ -52,11 +57,19 @@ public class CompanyService {
     }
 
     public CompanyResponse update(Long id, CompanyRequest request) {
+        if (id == null) {
+            throw new IllegalArgumentException("Company ID cannot be null");
+        }
         Company entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
         mapRequestToEntity(request, entity);
-        Company saved = repository.save(entity);
-        return toResponse(saved);
+
+        if (entity != null) {
+            Company saved = repository.save(entity);
+            return toResponse(saved);
+        }
+
+        throw new IllegalArgumentException("Invalid company entity");
     }
 
     public boolean validateCompanyCode(String code) {
@@ -64,6 +77,9 @@ public class CompanyService {
     }
 
     public CompanyResponse purchaseCredits(Long id, Integer amount, String reference) {
+        if (id == null) {
+            throw new IllegalArgumentException("Company ID cannot be null");
+        }
         Company company = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
         int newTotal = (company.getTotalCredits() != null ? company.getTotalCredits() : 0) + amount;
@@ -82,6 +98,9 @@ public class CompanyService {
     }
 
     public void delete(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Company ID cannot be null");
+        }
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Company not found");
         }

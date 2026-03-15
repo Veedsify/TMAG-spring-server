@@ -1,6 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
-public enum TRAVEL_PLAN {
+public enum Travel_Plan {
     PROCESSING,
     PENDING,
     COMPLETED,
