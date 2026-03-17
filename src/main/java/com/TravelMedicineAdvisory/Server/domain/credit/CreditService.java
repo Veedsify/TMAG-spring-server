@@ -1,14 +1,16 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
-import com.TravelMedicineAdvisory.Server.domain.company.Company;
-import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.util.NoSuchElementException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -29,6 +31,7 @@ public class CreditService {
             return repository.findAllByCompanyId(companyId, pageable)
                     .map(this::toResponse);
         }
+
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }

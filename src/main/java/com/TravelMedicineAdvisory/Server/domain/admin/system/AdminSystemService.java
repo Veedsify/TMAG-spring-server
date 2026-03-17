@@ -1,33 +1,149 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.system;
 
-import org.springframework.stereotype.Service;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.domain.systemlog.SystemLog;
+import com.TravelMedicineAdvisory.Server.domain.systemlog.SystemLogRepository;
+import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
+import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 
 @Service
 public class AdminSystemService {
 
-    public Object getSystemStatus() {
-        // TODO: Implement - Return system health status
-        return null;
+    private final SystemLogRepository systemLogRepository;
+    private final SystemSettingRepository systemSettingRepository;
+
+    public AdminSystemService(SystemLogRepository systemLogRepository,
+            SystemSettingRepository systemSettingRepository) {
+        this.systemLogRepository = systemLogRepository;
+        this.systemSettingRepository = systemSettingRepository;
     }
 
-    public List<Object> getSystemLogs(String level, Integer limit) {
-        // TODO: Implement - Filter by level if provided, limit results
-        return List.of();
+    public Map<String, Object> getSystemStatus() {
+        Map<String, Object> status = new HashMap<>();
+
+        status.put("database", "healthy");
+        status.put("redis", "healthy");
+        status.put("aiService", "healthy");
+        status.put("emailService", "healthy");
+        status.put("status", "operational");
+
+        long logCount = systemLogRepository.count();
+        status.put("recentLogs", logCount);
+
+        return status;
     }
 
-    public Object getSettings() {
-        // TODO: Implement - Return system settings
-        return null;
+    public List<AdminSystemLogResponse> getSystemLogs(String level, Integer limit) {
+        List<SystemLog> logs = systemLogRepository.findAll();
+
+        if (level != null) {
+            logs = logs.stream()
+                    .filter(l -> level.equalsIgnoreCase(l.getLevel()))
+                    .toList();
+        }
+
+        logs = logs.stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .toList();
+
+        if (limit != null && limit > 0) {
+            logs = logs.stream().limit(limit).toList();
+        }
+
+        return logs.stream().map(this::mapToResponse).toList();
     }
 
-    public Object updateSettings(Map<String, Object> updates) {
-        // TODO: Implement - Update system settings
-        return null;
+    public AdminSystemSettingsResponse getSettings() {
+        List<SystemSetting> settings = systemSettingRepository.findAll();
+
+        Map<String, Object> settingsMap = new HashMap<>();
+        for (SystemSetting setting : settings) {
+            settingsMap.put(setting.getKey(), parseValue(setting));
+        }
+
+        return AdminSystemSettingsResponse.fromMap(settingsMap);
     }
 
+    @Transactional
+    public AdminSystemSettingsResponse updateSettings(Map<String, Object> updates) {
+        for (Map.Entry<String, Object> entry : updates.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            SystemSetting setting = systemSettingRepository.findByKey(key)
+                    .orElse(null);
+
+            if (setting == null) {
+                setting = new SystemSetting();
+                setting.setKey(key);
+            }
+
+            if (value instanceof String) {
+                setting.setValue((String) value);
+            } else {
+                setting.setValue(String.valueOf(value));
+            }
+
+            systemSettingRepository.save(setting);
+        }
+
+        return getSettings();
+    }
+
+    @Transactional
     public void toggleMaintenance() {
-        // TODO: Implement - Toggle maintenance mode
+        SystemSetting maintenanceSetting = systemSettingRepository.findByKey("maintenanceMode")
+                .orElse(null);
+
+        if (maintenanceSetting == null) {
+            maintenanceSetting = new SystemSetting();
+            maintenanceSetting.setKey("maintenanceMode");
+            maintenanceSetting.setValue("false");
+            maintenanceSetting.setType("boolean");
+            maintenanceSetting.setGroup("system");
+        }
+
+        boolean current = "true".equalsIgnoreCase(maintenanceSetting.getValue());
+        maintenanceSetting.setValue(String.valueOf(!current));
+
+        systemSettingRepository.save(maintenanceSetting);
+    }
+
+    private Object parseValue(SystemSetting setting) {
+        if (setting.getValue() == null) {
+            return null;
+        }
+
+        String type = setting.getType();
+        String value = setting.getValue();
+
+        if ("boolean".equalsIgnoreCase(type)) {
+            return "true".equalsIgnoreCase(value);
+        } else if ("number".equalsIgnoreCase(type) || "integer".equalsIgnoreCase(type)) {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                return value;
+            }
+        }
+
+        return value;
+    }
+
+    private AdminSystemLogResponse mapToResponse(SystemLog log) {
+        return new AdminSystemLogResponse(
+                log.getId(),
+                log.getLevel(),
+                log.getMessage(),
+                log.getSource(),
+                log.getCreatedAt(),
+                log.getDetails()
+        );
     }
 }

@@ -1,12 +1,17 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
-import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
-import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
+import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
-import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "credits")

@@ -4,6 +4,8 @@ import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
 import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -24,8 +26,23 @@ public class Company extends BaseEntity {
     private String companyCode;
 
     @Enumerated(EnumType.STRING)
+    private Tier tier = Tier.STANDARD;
+
+    @Column(name = "contract_renewal")
+    private LocalDateTime contractRenewal;
+
+    private String website;
+    private String address;
+    private String contactEmail;
+    private String contactPhone;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "billing_currency")
     private BillingCurrency billingCurrency = BillingCurrency.NGN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_status")
+    private BillingStatus billingStatus = BillingStatus.ACTIVE;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "logo_id")
@@ -94,12 +111,68 @@ public class Company extends BaseEntity {
         this.companyCode = companyCode;
     }
 
+    public Tier getTier() {
+        return tier;
+    }
+
+    public void setTier(Tier tier) {
+        this.tier = tier;
+    }
+
+    public LocalDateTime getContractRenewal() {
+        return contractRenewal;
+    }
+
+    public void setContractRenewal(LocalDateTime contractRenewal) {
+        this.contractRenewal = contractRenewal;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getContactPhone() {
+        return contactPhone;
+    }
+
+    public void setContactPhone(String contactPhone) {
+        this.contactPhone = contactPhone;
+    }
+
     public BillingCurrency getBillingCurrency() {
         return billingCurrency;
     }
 
     public void setBillingCurrency(BillingCurrency billingCurrency) {
         this.billingCurrency = billingCurrency;
+    }
+
+    public BillingStatus getBillingStatus() {
+        return billingStatus;
+    }
+
+    public void setBillingStatus(BillingStatus billingStatus) {
+        this.billingStatus = billingStatus;
     }
 
     public Attachment getLogo() {

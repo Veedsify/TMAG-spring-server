@@ -1,16 +1,16 @@
 package com.TravelMedicineAdvisory.Server.domain.role;
 
+import org.hibernate.annotations.SQLDelete;
+
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "roles")
 @SQLDelete(sql = "UPDATE roles SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class Role extends BaseEntity {
 
     @Column(nullable = false, unique = true)
