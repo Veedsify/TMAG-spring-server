@@ -3,12 +3,14 @@ package com.TravelMedicineAdvisory.Server.domain.admin.adminusers;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/admin-users")
+@PreAuthorize("hasAuthority('all')")
 public class AdminAdminUserController {
 
     private final AdminAdminUserService service;

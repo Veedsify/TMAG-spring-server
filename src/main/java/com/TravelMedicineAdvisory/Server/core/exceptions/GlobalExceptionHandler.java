@@ -82,6 +82,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(new ErrorResponse(ex.getMessage(), false, null), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+        logger.error("Runtime exception: {}", ex.getMessage(), ex);
+        return new ResponseEntity<>(new ErrorResponse(ex.getMessage(), false, null), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex) {
         return new ResponseEntity<>(new ErrorResponse(ex.getReason(), false, null), HttpStatus.valueOf(ex.getStatusCode().value()));

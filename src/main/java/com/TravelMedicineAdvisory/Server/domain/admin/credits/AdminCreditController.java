@@ -2,12 +2,14 @@ package com.TravelMedicineAdvisory.Server.domain.admin.credits;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/ledger")
+@PreAuthorize("hasAuthority('all')")
 public class AdminCreditController {
 
     private final AdminCreditService service;

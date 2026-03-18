@@ -5,6 +5,8 @@ import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
+import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermission;
+import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermissionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,16 +17,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminAuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -32,11 +38,13 @@ public class AdminAuthService {
     private final ObjectMapper objectMapper;
 
     public AdminAuthService(UserRepository userRepository, RoleRepository roleRepository,
+                          RolePermissionRepository rolePermissionRepository,
                           PasswordEncoder passwordEncoder, JwtService jwtService,
                           AuthenticationManager authenticationManager,
                           UserDetailsService userDetailsService, ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.rolePermissionRepository = rolePermissionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
@@ -55,6 +63,12 @@ public class AdminAuthService {
             throw new RuntimeException("User does not have admin permissions");
         }
 
+        boolean hasAllPermission = hasAdminAllPermission(user);
+
+        if (!hasAllPermission) {
+            throw new RuntimeException("Access denied. Super admin privileges required.");
+        }
+
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -69,11 +83,51 @@ public class AdminAuthService {
         return response;
     }
 
+    private boolean hasAdminAllPermission(User user) {
+        Role role = user.getRole();
+        
+        if (role == null) {
+            return false;
+        }
+
+        if ("SuperAdmin".equalsIgnoreCase(role.getName())) {
+            return true;
+        }
+
+        if (role.getPermissions() != null) {
+            try {
+                List<String> permissions = objectMapper.readValue(role.getPermissions(),
+                        new TypeReference<List<String>>() {});
+                if (permissions.contains("all")) {
+                    return true;
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(role.getId());
+        for (RolePermission rp : rolePermissions) {
+            if (rp.getPermission() != null && "all".equals(rp.getPermission().getName())) {
+                return true;
+            }
+        }
+
+        long totalPermissions = rolePermissions.size();
+        if (totalPermissions >= 130) {
+            return true;
+        }
+
+        return false;
+    }
+
     public void logout() {
     }
 
     public Map<String, Object> getCurrentUser() {
-        return mapUserToResponse(null);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return mapUserToResponse(user);
     }
 
     private Map<String, Object> mapUserToResponse(User user) {
@@ -91,8 +145,20 @@ public class AdminAuthService {
             }
         }
 
+        if (permissions.isEmpty() && user.getRole() != null) {
+            try {
+                List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(user.getRole().getId());
+                permissions = rolePermissions.stream()
+                        .map(rp -> rp.getPermission() != null ? rp.getPermission().getName() : null)
+                        .filter(p -> p != null)
+                        .collect(Collectors.toList());
+            } catch (Exception e) {
+                permissions = List.of();
+            }
+        }
+
         String role = "support_admin";
-        if (permissions.contains("all")) {
+        if (permissions.contains("all") || ("SuperAdmin".equalsIgnoreCase(user.getRole().getName()))) {
             role = "super_admin";
         } else if (permissions.contains("users.write")) {
             role = "client_admin";

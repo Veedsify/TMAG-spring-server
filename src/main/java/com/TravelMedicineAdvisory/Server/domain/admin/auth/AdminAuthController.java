@@ -2,6 +2,7 @@ package com.TravelMedicineAdvisory.Server.domain.admin.auth;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;

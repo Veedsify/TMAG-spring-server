@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.admin.users;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
+@PreAuthorize("hasAuthority('all')")
 public class AdminUserController {
 
     private final AdminUserService service;

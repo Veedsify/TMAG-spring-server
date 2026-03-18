@@ -2,10 +2,12 @@ package com.TravelMedicineAdvisory.Server.domain.admin.abuse;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/abuse")
+@PreAuthorize("hasAuthority('all')")
 public class AdminAbuseController {
 
     private final AdminAbuseService service;

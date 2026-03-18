@@ -2,12 +2,14 @@ package com.TravelMedicineAdvisory.Server.domain.admin.companies;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/companies")
+@PreAuthorize("hasAuthority('all')")
 public class AdminCompanyController {
 
     private final AdminCompanyService service;
