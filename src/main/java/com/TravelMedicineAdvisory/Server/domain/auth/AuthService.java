@@ -109,7 +109,7 @@ public class AuthService {
         dispatchVerificationEmail(savedUser);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
+        String jwtToken = jwtService.generateToken(Map.of("userId", savedUser.getId()), userDetails);
 
         return buildAuthResponse(savedUser, jwtToken);
     }
@@ -129,7 +129,7 @@ public class AuthService {
         userRepository.save(user);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
+        String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
         return buildAuthResponse(user, jwtToken);
     }
@@ -230,7 +230,7 @@ public class AuthService {
         userRepository.save(user);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
+        String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
         return buildAuthResponse(user, jwtToken);
     }

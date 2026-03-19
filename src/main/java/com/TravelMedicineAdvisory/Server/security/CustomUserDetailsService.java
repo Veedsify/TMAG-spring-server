@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -33,11 +34,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-        // Add role authority (e.g. ROLE_SUPERADMIN)
         if (user.getRole() != null && user.getRole().getName() != null) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase()));
 
-            // Load all permissions for this role (e.g. users:read, countries:write)
             List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(user.getRole().getId());
             for (RolePermission rp : rolePermissions) {
                 if (rp.getPermission() != null && rp.getPermission().getName() != null) {
@@ -48,10 +47,22 @@ public class CustomUserDetailsService implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
 
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getEmail())
+        return AppUserDetails.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
                 .password(user.getPassword() != null ? user.getPassword() : "")
                 .authorities(authorities)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public Long getUserIdByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.map(User::getId).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 }
