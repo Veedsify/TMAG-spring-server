@@ -96,7 +96,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         safety.setCategoryName("Safety & Preparedness");
         safety.setCategoryIcon("shield-check");
         safety.setCategoryDescription(
-                "These final questions allow us to provide comprehensive and personalised advice. All responses are confidential.");
+                "This section covers some personal topics. Your answers, like everything else you've shared, are completely confidential and help us give you the most accurate advice possible.");
         safety.setDisplayOrder(5);
         safety.setIsOptional(true);
         safety.setQuestions(SAFETY_QUESTIONS);
@@ -219,6 +219,14 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
 
     private static final String MEDICAL_QUESTIONS = """
             [
+              {
+                "key": "date_of_birth",
+                "text": "What is your date of birth?",
+                "description": "Age is critical for vaccine schedules and malaria prophylaxis recommendations — children and over-65s require different protocols.",
+                "type": "date",
+                "required": true,
+                "placeholder": "DD/MM/YYYY"
+              },
               {
                 "key": "medical_conditions",
                 "text": "Do you have any ongoing medical conditions?",
