@@ -73,6 +73,11 @@ public class User extends BaseEntity {
 
     private String type;
 
+    private String provider;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "billing_currency")
     private BillingCurrency billingCurrency = BillingCurrency.NGN;
@@ -274,5 +279,21 @@ public class User extends BaseEntity {
 
     public void setMustChangePassword(Boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
     }
 }

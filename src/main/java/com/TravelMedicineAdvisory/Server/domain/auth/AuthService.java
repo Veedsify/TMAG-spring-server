@@ -11,8 +11,14 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,10 +26,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -42,6 +52,17 @@ public class AuthService {
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    @Value("${google.client-id:}")
+    private String googleClientId;
+
+    @Value("${google.client-secret:}")
+    private String googleClientSecret;
+
+    @Value("${google.redirect-uri:}")
+    private String googleRedirectUri;
+
+    private final WebClient webClient = WebClient.create();
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder, JwtService jwtService,
@@ -132,6 +153,138 @@ public class AuthService {
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
         return buildAuthResponse(user, jwtToken);
+    }
+
+    public String googleAuthUrl() {
+        if (googleClientId == null || googleClientId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
+        }
+
+        String scope = URLEncoder.encode("openid email profile", StandardCharsets.UTF_8);
+        String redirectUri = URLEncoder.encode(googleRedirectUri, StandardCharsets.UTF_8);
+        String state = generateToken(16);
+
+        return "https://accounts.google.com/o/oauth2/v2/auth"
+                + "?client_id=" + googleClientId
+                + "&redirect_uri=" + redirectUri
+                + "&response_type=code"
+                + "&scope=" + scope
+                + "&access_type=offline"
+                + "&state=" + state
+                + "&prompt=select_account";
+    }
+
+    @Transactional
+    public AuthResponse googleCallback(String code) {
+        if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null || googleClientSecret.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
+        }
+
+        try {
+            // Exchange authorization code for tokens
+            Map<String, Object> tokenResponse = webClient.post()
+                    .uri("https://oauth2.googleapis.com/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .bodyValue("code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                            + "&client_id=" + URLEncoder.encode(googleClientId, StandardCharsets.UTF_8)
+                            + "&client_secret=" + URLEncoder.encode(googleClientSecret, StandardCharsets.UTF_8)
+                            + "&redirect_uri=" + URLEncoder.encode(googleRedirectUri, StandardCharsets.UTF_8)
+                            + "&grant_type=authorization_code")
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (tokenResponse == null || tokenResponse.get("id_token") == null) {
+                throw new IllegalArgumentException("Failed to exchange Google authorization code");
+            }
+
+            String idTokenString = (String) tokenResponse.get("id_token");
+
+            // Verify the ID token
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken == null) {
+                throw new IllegalArgumentException("Invalid Google ID token");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String googleUserId = payload.getSubject();
+            String email = (String) payload.getEmail();
+            String firstName = (String) payload.get("given_name");
+            String lastName = (String) payload.get("family_name");
+            String pictureUrl = (String) payload.get("picture");
+            boolean emailVerified = payload.getEmailVerified();
+
+            // Find or create user
+            User user = userRepository.findByProviderAndProviderId("google", googleUserId).orElse(null);
+
+            if (user == null) {
+                user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) {
+                    user.setProvider("google");
+                    user.setProviderId(googleUserId);
+                }
+            }
+
+            if (user == null) {
+                Role role = determineUserRole();
+
+                user = new User();
+                user.setFirstName(firstName);
+                user.setLastName(lastName);
+                user.setName((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : ""));
+                user.setEmail(email);
+                user.setUsername(email.split("@")[0] + googleUserId.substring(0, Math.min(4, googleUserId.length())));
+                user.setPassword(null);
+                user.setProvider("google");
+                user.setProviderId(googleUserId);
+                user.setOnboardingStage(0);
+                user.setOnboarded(false);
+                user.setVerified(emailVerified);
+                user.setType("INDIVIDUAL");
+                user.setCredits(1);
+                user.setBillingCurrency(BillingCurrency.NGN);
+                user.setRole(role);
+                user.setLastLogin(LocalDateTime.now());
+                if (pictureUrl != null) {
+                    user.setAvatarUrl(pictureUrl);
+                }
+
+                user = userRepository.save(user);
+
+                Credit newAssignedCredits = new Credit();
+                newAssignedCredits.setUser(user);
+                newAssignedCredits.setType("new-user-bonus");
+                newAssignedCredits.setReference(UUID.randomUUID().toString());
+                newAssignedCredits.setBalanceAfter(1);
+                newAssignedCredits.setAmount(1);
+                creditRepository.save(newAssignedCredits);
+            } else {
+                user.setLastLogin(LocalDateTime.now());
+                if (pictureUrl != null && user.getAvatarUrl() == null) {
+                    user.setAvatarUrl(pictureUrl);
+                }
+                if (user.getProvider() == null) {
+                    user.setProvider("google");
+                    user.setProviderId(googleUserId);
+                }
+                user = userRepository.save(user);
+            }
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+            String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
+
+            return buildAuthResponse(user, jwtToken);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google authentication failed: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -286,11 +439,10 @@ public class AuthService {
         response.setPhone(user.getPhone());
         response.setEmail(user.getEmail());
 
-        Map<String, Object> extendedResponse = Map.of(
-                "role_id", user.getRole().getId(),
-                "role_name", user.getRole().getName());
-
         if (user.getRole() != null) {
+            Map<String, Object> extendedResponse = Map.of(
+                    "role_id", user.getRole().getId(),
+                    "role_name", user.getRole().getName());
             response.setExtend(extendedResponse);
             response.setRoleId(user.getRole().getId());
             response.setRoleName(user.getRole().getName());

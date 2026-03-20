@@ -62,4 +62,16 @@ public class AuthController {
         AuthResponse data = authService.acceptInvitation(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok(Map.of("success", true, "data", data));
     }
+
+    @GetMapping("/google/url")
+    public ResponseEntity<Map<String, Object>> googleAuthUrl() {
+        String url = authService.googleAuthUrl();
+        return ResponseEntity.ok(Map.of("success", true, "data", Map.of("url", url)));
+    }
+
+    @PostMapping("/google/callback")
+    public ResponseEntity<Map<String, Object>> googleCallback(@RequestBody GoogleCallbackRequest request) {
+        AuthResponse data = authService.googleCallback(request.getCode());
+        return ResponseEntity.ok(Map.of("success", true, "data", data));
+    }
 }
