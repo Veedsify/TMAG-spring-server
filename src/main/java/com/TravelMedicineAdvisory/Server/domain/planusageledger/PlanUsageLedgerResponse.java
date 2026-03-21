@@ -8,6 +8,8 @@ public record PlanUsageLedgerResponse(
     String ipAddress,
     String userAgent,
     Long travelPlanId,
+    String travelPlanDestination,
+    String travelPlanCountry,
     Long userId,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

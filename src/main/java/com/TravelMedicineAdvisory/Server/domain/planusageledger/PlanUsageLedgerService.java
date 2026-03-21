@@ -4,6 +4,7 @@ import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -57,6 +58,30 @@ public class PlanUsageLedgerService {
         repository.deleteById(id);
     }
 
+    public List<PlanUsageLedgerResponse> findByUserId(Long userId) {
+        return repository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public Page<PlanUsageLedgerResponse> findByUserId(Long userId, Pageable pageable) {
+        return repository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(this::toResponse);
+    }
+
+    public List<PlanUsageLedgerResponse> findByEmployeeId(Long employeeId) {
+        return repository.findByEmployeeIdOrderByCreatedAtDesc(employeeId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public Page<PlanUsageLedgerResponse> findByEmployeeId(Long employeeId, Pageable pageable) {
+        return repository.findByEmployeeIdOrderByCreatedAtDesc(employeeId, pageable)
+                .map(this::toResponse);
+    }
+
     private PlanUsageLedgerResponse toResponse(PlanUsageLedger entity) {
         return new PlanUsageLedgerResponse(
             entity.getId(),
@@ -64,6 +89,8 @@ public class PlanUsageLedgerService {
             entity.getIpAddress(),
             entity.getUserAgent(),
             entity.getTravelPlan() != null ? entity.getTravelPlan().getId() : null,
+            entity.getTravelPlan() != null ? entity.getTravelPlan().getDestination() : null,
+            entity.getTravelPlan() != null ? entity.getTravelPlan().getCountry() : null,
             entity.getUser() != null ? entity.getUser().getId() : null,
             entity.getCreatedAt(),
             entity.getUpdatedAt()
