@@ -83,19 +83,36 @@ public class EmployeeService {
         return toResponse(saved);
     }
 
-    public EmployeeResponse allocateCredits(Long id, Integer creditsAllocated) {
+    public EmployeeResponse allocateCredits(Long id, Integer creditsAllocated, Integer companyId) {
+
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
         entity.setCreditsAllocated(creditsAllocated);
+
+        Company company = companyRepository.findById(companyId.longValue())
+                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+
+        int totalCredits = company.getTotalCredits() != null ? company.getTotalCredits() : 0;
+        int creditsToAllocate = creditsAllocated;
+
+        if (totalCredits < creditsToAllocate) {
+            throw new IllegalArgumentException("Not enough credits available");
+        }
 
         // Sync credits to CompanyUser as well
         if (entity.getUser() != null) {
             companyUserRepository.findByUser(entity.getUser())
                     .ifPresent(cu -> {
-                        cu.setCreditsAllocated(creditsAllocated);
+                        Integer currentCredits = cu.getCreditsAllocated() != null ? cu.getCreditsAllocated() : 0;
+                        cu.setCreditsAllocated(currentCredits + creditsAllocated);
                         companyUserRepository.save(cu);
                     });
         }
+
+        int usedCredits = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
+        company.setUsedCredits(usedCredits + creditsToAllocate);
+        company.setTotalCredits(totalCredits - creditsToAllocate);
+        companyRepository.save(company);
 
         return toResponse(repository.save(entity));
     }
@@ -124,7 +141,8 @@ public class EmployeeService {
         int availableCredits = totalCredits - usedCredits;
         if (creditsToAllocate > availableCredits) {
             throw new IllegalArgumentException(
-                "Insufficient company credits. Available: " + availableCredits + ", requested: " + creditsToAllocate);
+                    "Insufficient company credits. Available: " + availableCredits + ", requested: "
+                            + creditsToAllocate);
         }
 
         // Map frontend role name to Role entity name (e.g. "HR" → "Hr")
@@ -174,7 +192,8 @@ public class EmployeeService {
 
         // Create CompanyUser link
         String assignedRole = request.role() != null && !request.role().isBlank()
-                ? request.role() : "Individual";
+                ? request.role()
+                : "Individual";
         CompanyUser companyUser = new CompanyUser();
         companyUser.setRole(assignedRole);
         companyUser.setCreditsAllocated(creditsToAllocate);
@@ -255,20 +274,19 @@ public class EmployeeService {
                     .orElse(null);
         }
         return new EmployeeResponse(
-            entity.getId(),
-            entity.getName(),
-            entity.getEmail(),
-            entity.getDepartment(),
-            role,
-            entity.getCreditsUsed(),
-            entity.getCreditsAllocated(),
-            entity.getStatus(),
-            entity.getPlansGenerated(),
-            entity.getCompany() != null ? entity.getCompany().getId() : null,
-            entity.getUser() != null ? entity.getUser().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getName(),
+                entity.getEmail(),
+                entity.getDepartment(),
+                role,
+                entity.getCreditsUsed(),
+                entity.getCreditsAllocated(),
+                entity.getStatus(),
+                entity.getPlansGenerated(),
+                entity.getCompany() != null ? entity.getCompany().getId() : null,
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(EmployeeRequest request, Employee entity) {

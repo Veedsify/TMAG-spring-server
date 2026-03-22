@@ -28,8 +28,7 @@ public class EmployeeController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
+                page.getTotalPages());
         PaginatedResponse<EmployeeResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
@@ -57,8 +56,10 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}/credits")
-    public ResponseEntity<SuccessResponse> allocateCredits(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
-        return ResponseEntity.ok(new SuccessResponse("Credits allocated", service.allocateCredits(id, body.get("creditsAllocated"))));
+    public ResponseEntity<SuccessResponse> allocateCredits(@PathVariable Long id,
+            @RequestBody Map<String, Integer> body) {
+        return ResponseEntity.ok(new SuccessResponse("Credits allocated",
+                service.allocateCredits(id, body.get("creditsAllocated"), body.get("companyId"))));
     }
 
     @PutMapping("/{id}/status")
