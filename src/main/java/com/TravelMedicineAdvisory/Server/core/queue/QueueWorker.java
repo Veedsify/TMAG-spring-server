@@ -145,7 +145,7 @@ public class QueueWorker {
             case "password_changed" ->
                 emailTemplates.passwordChangedEmail(firstName);
             case "employee_invitation" ->
-                emailTemplates.employeeInvitationEmail(firstName, companyName, link);
+                emailTemplates.employeeInvitationEmail(firstName, companyName, vars.getOrDefault("role", "Individual"), link);
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

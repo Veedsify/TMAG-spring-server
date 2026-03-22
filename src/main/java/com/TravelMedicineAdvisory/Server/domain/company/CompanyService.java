@@ -124,13 +124,27 @@ public class CompanyService {
     }
 
     private void mapRequestToEntity(CompanyRequest request, Company entity) {
-        entity.setName(request.name());
-        entity.setIndustry(request.industry());
-        entity.setTotalCredits(request.totalCredits());
-        entity.setUsedCredits(request.usedCredits());
-        entity.setEmployeeCount(request.employeeCount());
-        entity.setPlan(request.plan());
-        entity.setCompanyCode(request.companyCode());
+        if (request.name() != null) {
+            entity.setName(request.name());
+        }
+        if (request.industry() != null) {
+            entity.setIndustry(request.industry());
+        }
+        if (request.totalCredits() != null) {
+            entity.setTotalCredits(request.totalCredits());
+        }
+        if (request.usedCredits() != null) {
+            entity.setUsedCredits(request.usedCredits());
+        }
+        if (request.employeeCount() != null) {
+            entity.setEmployeeCount(request.employeeCount());
+        }
+        if (request.plan() != null) {
+            entity.setPlan(request.plan());
+        }
+        if (request.companyCode() != null) {
+            entity.setCompanyCode(request.companyCode());
+        }
         if (request.billingCurrency() != null) {
             entity.setBillingCurrency(request.billingCurrency());
         }

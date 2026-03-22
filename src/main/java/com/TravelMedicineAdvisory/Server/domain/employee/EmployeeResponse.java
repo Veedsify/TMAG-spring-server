@@ -7,6 +7,7 @@ public record EmployeeResponse(
     String name,
     String email,
     String department,
+    String role,
     Integer creditsUsed,
     Integer creditsAllocated,
     String status,

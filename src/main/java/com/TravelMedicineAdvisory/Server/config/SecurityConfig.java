@@ -84,6 +84,8 @@ public class SecurityConfig {
                                 "/api/v1/public/**",
                                 "/api/v1/admin/auth/login",
                                 "/api/v1/admin/auth/logout",
+                                "/api/v1/company-admin/auth/login",
+                                "/api/v1/company-admin/auth/logout",
                                 "/api/v1/payments/webhook/**",
                                 "/ws/**",
                                 "/swagger-ui/**",

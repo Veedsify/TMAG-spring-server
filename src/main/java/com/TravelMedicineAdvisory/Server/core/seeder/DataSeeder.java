@@ -14,10 +14,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
+import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlert;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlertRepository;
+import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
+import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItem;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItemRepository;
 import com.TravelMedicineAdvisory.Server.domain.permission.Permission;
@@ -43,30 +50,42 @@ public class DataSeeder implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
+    private final CompanyUserRepository companyUserRepository;
     private final CountryRepository countryRepository;
     private final CountryHealthAlertRepository countryHealthAlertRepository;
     private final SystemSettingRepository systemSettingRepository;
     private final FaqItemRepository faqItemRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RandomNumberGenerator randomNumberGenerator;
 
     public DataSeeder(UserRepository userRepository,
             RoleRepository roleRepository,
             PermissionRepository permissionRepository,
             RolePermissionRepository rolePermissionRepository,
+            CompanyRepository companyRepository,
+            EmployeeRepository employeeRepository,
+            CompanyUserRepository companyUserRepository,
             CountryRepository countryRepository,
             CountryHealthAlertRepository countryHealthAlertRepository,
             SystemSettingRepository systemSettingRepository,
             FaqItemRepository faqItemRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            RandomNumberGenerator randomNumberGenerator) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.companyRepository = companyRepository;
+        this.employeeRepository = employeeRepository;
+        this.companyUserRepository = companyUserRepository;
         this.countryRepository = countryRepository;
         this.countryHealthAlertRepository = countryHealthAlertRepository;
         this.systemSettingRepository = systemSettingRepository;
         this.faqItemRepository = faqItemRepository;
         this.passwordEncoder = passwordEncoder;
+        this.randomNumberGenerator = randomNumberGenerator;
     }
 
     @Override
@@ -81,6 +100,7 @@ public class DataSeeder implements CommandLineRunner {
         this.seedRoles();
         seedPermissions();
         seedRolePermissions();
+        seedCompany();
         seedAdminUser();
         seedCountries();
         seedCountryHealthAlerts();
@@ -235,57 +255,183 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
+    // ======================== COMPANY ========================
+
+    @Transactional
+    protected void seedCompany() {
+        if (companyRepository.count() > 0)
+            return;
+
+        Company company = new Company();
+        company.setName("TechCorp Global");
+        company.setIndustry("Technology");
+        company.setPlan("Pro");
+        company.setTotalCredits(500);
+        company.setUsedCredits(0);
+        company.setEmployeeCount(0);
+        company.setCompanyCode("TMA-" + randomNumberGenerator.generateNumber());
+        company.setBillingStatus(com.TravelMedicineAdvisory.Server.domain.company.BillingStatus.ACTIVE);
+        company.setContactEmail("admin@techcorp.com");
+        company.setContactPhone("+1 234 567 8900");
+        company.setAddress("123 Business St, San Francisco, CA 94105");
+        company.setWebsite("https://techcorp.com");
+
+        companyRepository.save(company);
+    }
+
     // ======================== ADMIN USER ========================
 
     @Transactional
     protected void seedAdminUser() {
-        if (userRepository.count() > 0)
+        if (userRepository.count() > 1)
             return;
-        // logger.info("Seeding admin user...");
 
         Role superAdminRole = roleRepository.findByName("SuperAdmin").orElse(null);
         Role userRole = roleRepository.findByName("Individual").orElse(null);
-
-        User admin = new User();
-        admin.setFirstName("Super");
-        admin.setLastName("Admin");
-        admin.setEmail("admin@tmag.com");
-        admin.setUsername("admin");
-        admin.setPassword(passwordEncoder.encode("admin123"));
-        admin.setRole(superAdminRole);
-        admin.setVerified(true);
-        admin.setOnboardingStage(5);
-
-        userRepository.save(admin);
-
-        User user = new User();
-        user.setFirstName("Dike");
-        user.setLastName("Wisdom");
-        user.setEmail("dikewisdom787@gmail.com");
-        user.setUsername("dikewisdom");
-        user.setRole(userRole);
-        user.setPassword(passwordEncoder.encode("password"));
-        user.setVerified(false);
-        user.setOnboardingStage(0);
-
-        userRepository.save(user);
-
+        Role adminRole = roleRepository.findByName("Administrator").orElse(null);
         Role hrRole = roleRepository.findByName("HR").orElse(null);
 
+        Company company = companyRepository.findAll().stream().findFirst().orElse(null);
+
+        // 1. SuperAdmin — platform-level, no company
+        User superAdmin = new User();
+        superAdmin.setFirstName("Super");
+        superAdmin.setLastName("Admin");
+        superAdmin.setEmail("super@tmag.com");
+        superAdmin.setUsername("super-admin");
+        superAdmin.setPassword(passwordEncoder.encode("admin123"));
+        superAdmin.setRole(superAdminRole);
+        superAdmin.setType("INDIVIDUAL");
+        superAdmin.setVerified(true);
+        superAdmin.setOnboardingStage(5);
+        superAdmin.setOnboarded(true);
+        userRepository.save(superAdmin);
+
+        // 2. Administrator — tied to company
+        User admin = new User();
+        admin.setFirstName("Admin");
+        admin.setLastName("User");
+        admin.setEmail("admin@tmag.com");
+        admin.setUsername("admin-user");
+        admin.setPassword(passwordEncoder.encode("admin123"));
+        admin.setRole(adminRole);
+        admin.setType("COMPANY");
+        admin.setVerified(true);
+        admin.setOnboardingStage(5);
+        admin.setOnboarded(true);
+        userRepository.save(admin);
+
+        if (company != null) {
+            Employee adminEmployee = new Employee();
+            adminEmployee.setName("Admin User");
+            adminEmployee.setEmail("admin@tmag.com");
+            adminEmployee.setDepartment("Management");
+            adminEmployee.setStatus("active");
+            adminEmployee.setCreditsUsed(0);
+            adminEmployee.setCreditsAllocated(100);
+            adminEmployee.setPlansGenerated(0);
+            adminEmployee.setCompany(company);
+            adminEmployee.setUser(admin);
+            employeeRepository.save(adminEmployee);
+
+            CompanyUser adminCompanyUser = new CompanyUser();
+            adminCompanyUser.setUser(admin);
+            adminCompanyUser.setCompany(company);
+            adminCompanyUser.setRole("Administrator");
+            companyUserRepository.save(adminCompanyUser);
+
+            company.setEmployeeCount(company.getEmployeeCount() + 1);
+            companyRepository.save(company);
+        }
+
+        // 3. HR Manager — tied to company
         User hrUser = new User();
         hrUser.setFirstName("HR");
         hrUser.setLastName("Manager");
         hrUser.setEmail("hr@tmag.com");
         hrUser.setUsername("hrmanager");
         hrUser.setRole(hrRole);
+        hrUser.setType("COMPANY");
         hrUser.setPassword(passwordEncoder.encode("password"));
         hrUser.setVerified(true);
-        hrUser.setVerificationTokenExpiry(null);
         hrUser.setOnboardingStage(5);
         hrUser.setOnboarded(true);
-
         userRepository.save(hrUser);
-        // logger.info("Seeded admin user.");
+
+        if (company != null) {
+            Employee hrEmployee = new Employee();
+            hrEmployee.setName("HR Manager");
+            hrEmployee.setEmail("hr@tmag.com");
+            hrEmployee.setDepartment("Human Resources");
+            hrEmployee.setStatus("active");
+            hrEmployee.setCreditsUsed(0);
+            hrEmployee.setCreditsAllocated(50);
+            hrEmployee.setPlansGenerated(0);
+            hrEmployee.setCompany(company);
+            hrEmployee.setUser(hrUser);
+            employeeRepository.save(hrEmployee);
+
+            CompanyUser hrCompanyUser = new CompanyUser();
+            hrCompanyUser.setUser(hrUser);
+            hrCompanyUser.setCompany(company);
+            hrCompanyUser.setRole("HR");
+            companyUserRepository.save(hrCompanyUser);
+
+            company.setEmployeeCount(company.getEmployeeCount() + 1);
+            companyRepository.save(company);
+        }
+
+        // 4. Default User — tied to company as Individual
+        User user = new User();
+        user.setFirstName("Dike");
+        user.setLastName("Wisdom");
+        user.setEmail("dikewisdom787@gmail.com");
+        user.setUsername("dikewisdom");
+        user.setRole(userRole);
+        user.setType("COMPANY");
+        user.setPassword(passwordEncoder.encode("password"));
+        user.setVerified(true);
+        user.setOnboardingStage(5);
+        user.setOnboarded(true);
+        userRepository.save(user);
+
+        if (company != null) {
+            Employee userEmployee = new Employee();
+            userEmployee.setName("Dike Wisdom");
+            userEmployee.setEmail("dikewisdom787@gmail.com");
+            userEmployee.setDepartment("Engineering");
+            userEmployee.setStatus("active");
+            userEmployee.setCreditsUsed(0);
+            userEmployee.setCreditsAllocated(25);
+            userEmployee.setPlansGenerated(0);
+            userEmployee.setCompany(company);
+            userEmployee.setUser(user);
+            employeeRepository.save(userEmployee);
+
+            CompanyUser userCompanyUser = new CompanyUser();
+            userCompanyUser.setUser(user);
+            userCompanyUser.setCompany(company);
+            userCompanyUser.setRole("Individual");
+            companyUserRepository.save(userCompanyUser);
+
+            company.setEmployeeCount(company.getEmployeeCount() + 1);
+            companyRepository.save(company);
+        }
+
+        // 5. Pure Individual User — not tied to any company
+        User individualUser = new User();
+        individualUser.setFirstName("Jane");
+        individualUser.setLastName("Traveler");
+        individualUser.setEmail("jane@example.com");
+        individualUser.setUsername("jane-traveler");
+        individualUser.setRole(userRole);
+        individualUser.setType("INDIVIDUAL");
+        individualUser.setPassword(passwordEncoder.encode("password"));
+        individualUser.setVerified(true);
+        individualUser.setOnboardingStage(5);
+        individualUser.setOnboarded(true);
+        individualUser.setCredits(1);
+        userRepository.save(individualUser);
     }
 
     // ======================== COUNTRIES ========================

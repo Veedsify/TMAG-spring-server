@@ -25,6 +25,9 @@ public class CreditPurchase extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "company_id")
+    private Long companyId;
+
     @Column(name = "credits_purchased", nullable = false)
     private Integer creditsPurchased;
 
@@ -84,6 +87,14 @@ public class CreditPurchase extends BaseEntity {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
     }
 
     public Integer getCreditsPurchased() {

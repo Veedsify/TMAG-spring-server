@@ -30,4 +30,6 @@ public interface CreditPurchaseRepository extends JpaRepository<CreditPurchase, 
     
     @Query("SELECT COUNT(cp) FROM CreditPurchase cp WHERE cp.user.id = :userId AND cp.status = 'completed'")
     long countCompletedByUserId(@Param("userId") Long userId);
+
+    List<CreditPurchase> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 }

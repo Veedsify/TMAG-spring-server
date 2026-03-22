@@ -53,7 +53,7 @@ public class CreditPricingSeeder implements CommandLineRunner {
                 ngnDiscountTier1Threshold, ngnDiscountTier1Amount,
                 ngnDiscountTier2Threshold, ngnDiscountTier2Amount,
                 ngnDiscountTier3Threshold, ngnDiscountTier3Amount,
-                1, 100, 1
+                1, 10000, 1
             ),
             createPricingWithDiscounts(
                 BillingCurrency.USD, "$",
@@ -64,7 +64,7 @@ public class CreditPricingSeeder implements CommandLineRunner {
                 ngnDiscountTier2Amount.divide(new BigDecimal("1550"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Threshold.divide(new BigDecimal("1550"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Amount.divide(new BigDecimal("1550"), 2, RoundingMode.HALF_UP),
-                1, 100, 2
+                1, 10000, 2
             ),
             createPricingWithDiscounts(
                 BillingCurrency.EUR, "€",
@@ -75,7 +75,7 @@ public class CreditPricingSeeder implements CommandLineRunner {
                 ngnDiscountTier2Amount.divide(new BigDecimal("1700"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Threshold.divide(new BigDecimal("1700"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Amount.divide(new BigDecimal("1700"), 2, RoundingMode.HALF_UP),
-                1, 100, 3
+                1, 10000, 3
             ),
             createPricingWithDiscounts(
                 BillingCurrency.GBP, "£",
@@ -86,7 +86,7 @@ public class CreditPricingSeeder implements CommandLineRunner {
                 ngnDiscountTier2Amount.divide(new BigDecimal("1950"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Threshold.divide(new BigDecimal("1950"), 2, RoundingMode.HALF_UP),
                 ngnDiscountTier3Amount.divide(new BigDecimal("1950"), 2, RoundingMode.HALF_UP),
-                1, 100, 4
+                1, 10000, 4
             )
         );
 

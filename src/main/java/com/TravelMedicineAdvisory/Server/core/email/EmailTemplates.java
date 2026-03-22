@@ -168,12 +168,13 @@ public class EmailTemplates {
     }
 
     /** Employee invitation — teal CTA button with company branding */
-    public String employeeInvitationEmail(String firstName, String companyName, String inviteLink) {
+    public String employeeInvitationEmail(String firstName, String companyName, String role, String inviteLink) {
         String content =
                 badge("You're Invited") +
                 heading("Join " + esc(companyName) + " on TMAG") +
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\">Your company <strong style=\"" + STRONG_STYLE + "\">" + esc(companyName) + "</strong> has invited you to join TMAG — the AI-powered travel health advisory platform.</p>" +
+                roleBadge(role) +
                 "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Click below to set your password and get started with personalised travel health recommendations.</p>" +
                 tealButton("Accept Invitation", inviteLink) +
                 copyLink(inviteLink) +
@@ -250,6 +251,14 @@ public class EmailTemplates {
         return "<p style=\"margin:0 0 8px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:13px;font-weight:400;color:#8a7968;\">Or copy this link into your browser:</p>" +
                "<p style=\"margin:0 0 28px;word-break:break-all;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;color:#2a7a6a;" +
                "background:#fcf6ef;padding:14px 16px;border-radius:8px;border:1px solid #d4c4b4;line-height:1.6;\">" + url + "</p>";
+    }
+
+    private String roleBadge(String role) {
+        return "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin:0 0 28px;\">" +
+               "<tr><td style=\"background:#f0faf7;border:1px solid #b8e0d6;border-radius:10px;padding:14px 20px;text-align:center;\">" +
+               "<p style=\"margin:0 0 2px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:#8a7968;text-transform:uppercase;\">Your Role</p>" +
+               "<p style=\"margin:0;font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:600;color:#2a7a6a;\">" + esc(role) + "</p>" +
+               "</td></tr></table>";
     }
 
     private String infoBox(String message) {

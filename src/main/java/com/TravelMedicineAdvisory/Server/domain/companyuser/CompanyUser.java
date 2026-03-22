@@ -1,7 +1,12 @@
 package com.TravelMedicineAdvisory.Server.domain.companyuser;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import org.hibernate.annotations.SQLDelete;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -12,11 +17,17 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 public class CompanyUser extends BaseEntity {
 
     private String role;
-    
+
+    @Column(name = "credits_allocated", nullable = false)
+    private Integer creditsAllocated = 0;
+
+    @Column(name = "credits_used", nullable = false)
+    private Integer creditsUsed = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -28,6 +39,22 @@ public class CompanyUser extends BaseEntity {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Integer getCreditsAllocated() {
+        return creditsAllocated;
+    }
+
+    public void setCreditsAllocated(Integer creditsAllocated) {
+        this.creditsAllocated = creditsAllocated;
+    }
+
+    public Integer getCreditsUsed() {
+        return creditsUsed;
+    }
+
+    public void setCreditsUsed(Integer creditsUsed) {
+        this.creditsUsed = creditsUsed;
     }
 
     public Company getCompany() {

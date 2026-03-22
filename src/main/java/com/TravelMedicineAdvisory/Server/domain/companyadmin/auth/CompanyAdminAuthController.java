@@ -1,4 +1,4 @@
-package com.TravelMedicineAdvisory.Server.domain.admin.auth;
+package com.TravelMedicineAdvisory.Server.domain.companyadmin.auth;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
@@ -7,18 +7,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/admin/auth")
-public class AdminAuthController {
+@RequestMapping("/api/v1/company-admin/auth")
+public class CompanyAdminAuthController {
 
-    private final AdminAuthService service;
+    private final CompanyAdminAuthService service;
 
-    public AdminAuthController(AdminAuthService service) {
+    public CompanyAdminAuthController(CompanyAdminAuthService service) {
         this.service = service;
     }
 
     @PostMapping("/login")
     public ResponseEntity<SuccessResponse> login(@RequestBody Map<String, String> credentials) {
-        return ResponseEntity.ok(new SuccessResponse("Login successful", 
+        return ResponseEntity.ok(new SuccessResponse("Login successful",
             service.login(credentials.get("email"), credentials.get("password"))));
     }
 

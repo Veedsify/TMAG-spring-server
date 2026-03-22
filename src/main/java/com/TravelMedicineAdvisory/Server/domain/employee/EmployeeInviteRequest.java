@@ -6,6 +6,7 @@ public record EmployeeInviteRequest(
     String name,
     String email,
     String department,
+    String role,
     @JsonProperty("creditsAllocated")
     Integer creditsAllocated,
     @JsonProperty("companyId")

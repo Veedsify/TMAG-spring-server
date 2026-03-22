@@ -4,6 +4,8 @@ import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermission;
 import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermissionRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,10 +22,12 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final ObjectMapper objectMapper;
 
-    public CustomUserDetailsService(UserRepository userRepository, RolePermissionRepository rolePermissionRepository) {
+    public CustomUserDetailsService(UserRepository userRepository, RolePermissionRepository rolePermissionRepository, ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -35,7 +39,22 @@ public class CustomUserDetailsService implements UserDetailsService {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
         if (user.getRole() != null && user.getRole().getName() != null) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase()));
+            String roleName = user.getRole().getName();
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName.toUpperCase()));
+
+            if ("SuperAdmin".equalsIgnoreCase(roleName)) {
+                authorities.add(new SimpleGrantedAuthority("all"));
+            }
+
+            if (user.getRole().getPermissions() != null && !user.getRole().getPermissions().isEmpty()) {
+                try {
+                    List<String> perms = objectMapper.readValue(user.getRole().getPermissions(),
+                            new TypeReference<List<String>>() {});
+                    for (String perm : perms) {
+                        authorities.add(new SimpleGrantedAuthority(perm));
+                    }
+                } catch (Exception ignored) {}
+            }
 
             List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(user.getRole().getId());
             for (RolePermission rp : rolePermissions) {

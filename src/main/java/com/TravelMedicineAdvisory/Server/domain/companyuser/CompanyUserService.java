@@ -66,6 +66,8 @@ public class CompanyUserService {
         return new CompanyUserResponse(
                 entity.getId(),
                 entity.getRole(),
+                entity.getCreditsAllocated(),
+                entity.getCreditsUsed(),
                 entity.getCompany() != null ? entity.getCompany().getId() : null,
                 entity.getUser() != null ? entity.getUser().getId() : null,
                 entity.getCreatedAt(),
@@ -76,7 +78,7 @@ public class CompanyUserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         return repository.findAllByUser(user).stream()
-                .filter(cu -> cu.getCompany() != null)
+                .filter(cu -> cu.getCompany() != null)  
                 .map(cu -> {
                     Company c = cu.getCompany();
                     Map<String, Object> m = new LinkedHashMap<>();
@@ -90,6 +92,8 @@ public class CompanyUserService {
                     m.put("employee_count", c.getEmployeeCount());
                     m.put("billing_currency", c.getBillingCurrency());
                     m.put("role", cu.getRole());
+                    m.put("credits_allocated", cu.getCreditsAllocated());
+                    m.put("credits_used", cu.getCreditsUsed());
                     return m;
                 })
                 .collect(Collectors.toList());

@@ -47,13 +47,12 @@ public class Company extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "logo_id")
     private Attachment logo;
-    
+
     @OneToMany(mappedBy = "company")
     private List<com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser> companyUsers;
-    
+
     @OneToMany(mappedBy = "company")
     private List<com.TravelMedicineAdvisory.Server.domain.employee.Employee> employees;
-
 
     public String getName() {
         return name;

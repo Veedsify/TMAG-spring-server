@@ -6,6 +6,8 @@ import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -32,6 +34,7 @@ public class EmployeeService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
+    private final CreditRepository creditRepository;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -39,7 +42,7 @@ public class EmployeeService {
     public EmployeeService(EmployeeRepository repository, CompanyRepository companyRepository,
             UserRepository userRepository, CompanyUserRepository companyUserRepository,
             RoleRepository roleRepository, PasswordEncoder passwordEncoder,
-            QueueService queueService) {
+            QueueService queueService, CreditRepository creditRepository) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
@@ -47,6 +50,7 @@ public class EmployeeService {
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.queueService = queueService;
+        this.creditRepository = creditRepository;
     }
 
     public Page<EmployeeResponse> findAll(Long companyId, Pageable pageable) {
@@ -83,6 +87,16 @@ public class EmployeeService {
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
         entity.setCreditsAllocated(creditsAllocated);
+
+        // Sync credits to CompanyUser as well
+        if (entity.getUser() != null) {
+            companyUserRepository.findByUser(entity.getUser())
+                    .ifPresent(cu -> {
+                        cu.setCreditsAllocated(creditsAllocated);
+                        companyUserRepository.save(cu);
+                    });
+        }
+
         return toResponse(repository.save(entity));
     }
 
@@ -102,7 +116,21 @@ public class EmployeeService {
             throw new IllegalArgumentException("A user with this email already exists");
         }
 
-        Role role = roleRepository.findByName("Individual").orElse(null);
+        int creditsToAllocate = request.creditsAllocated() != null ? request.creditsAllocated() : 0;
+
+        // Validate company has enough available credits
+        int totalCredits = company.getTotalCredits() != null ? company.getTotalCredits() : 0;
+        int usedCredits = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
+        int availableCredits = totalCredits - usedCredits;
+        if (creditsToAllocate > availableCredits) {
+            throw new IllegalArgumentException(
+                "Insufficient company credits. Available: " + availableCredits + ", requested: " + creditsToAllocate);
+        }
+
+        // Map frontend role name to Role entity name (e.g. "HR" → "Hr")
+        String roleName = normalizeRoleName(request.role());
+        Role role = roleRepository.findByName(roleName).orElse(
+                roleRepository.findByName("Individual").orElse(null));
 
         // Split name into first/last
         String[] nameParts = request.name().trim().split("\\s+", 2);
@@ -112,7 +140,7 @@ public class EmployeeService {
         // Generate invitation token
         String invitationToken = generateToken(32);
 
-        // Create User with temporary password
+        // Create User with credits pre-allocated
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -127,7 +155,7 @@ public class EmployeeService {
         user.setInvitationToken(invitationToken);
         user.setInvitationTokenExpiry(LocalDateTime.now().plusDays(7));
         user.setType("COMPANY");
-        user.setCredits(0);
+        user.setCredits(creditsToAllocate);
         user.setRole(role);
         User savedUser = userRepository.save(user);
 
@@ -136,7 +164,7 @@ public class EmployeeService {
         employee.setName(request.name());
         employee.setEmail(request.email());
         employee.setDepartment(request.department());
-        employee.setCreditsAllocated(request.creditsAllocated() != null ? request.creditsAllocated() : 0);
+        employee.setCreditsAllocated(creditsToAllocate);
         employee.setCreditsUsed(0);
         employee.setPlansGenerated(0);
         employee.setStatus("active");
@@ -145,11 +173,30 @@ public class EmployeeService {
         Employee savedEmployee = repository.save(employee);
 
         // Create CompanyUser link
+        String assignedRole = request.role() != null && !request.role().isBlank()
+                ? request.role() : "Individual";
         CompanyUser companyUser = new CompanyUser();
-        companyUser.setRole("Individual");
+        companyUser.setRole(assignedRole);
+        companyUser.setCreditsAllocated(creditsToAllocate);
+        companyUser.setCreditsUsed(0);
         companyUser.setCompany(company);
         companyUser.setUser(savedUser);
         companyUserRepository.save(companyUser);
+
+        // Record credit allocation in ledger and update company usedCredits
+        if (creditsToAllocate > 0) {
+            Credit credit = new Credit();
+            credit.setAmount(creditsToAllocate);
+            credit.setType("allocate");
+            credit.setReference("Invite: " + request.email());
+            credit.setBalanceAfter(creditsToAllocate);
+            credit.setUser(savedUser);
+            credit.setCompany(company);
+            creditRepository.save(credit);
+
+            company.setUsedCredits(usedCredits + creditsToAllocate);
+            companyRepository.save(company);
+        }
 
         // Queue invitation email
         String inviteLink = frontendUrl + "/accept-invitation?token=" + invitationToken;
@@ -159,9 +206,28 @@ public class EmployeeService {
                 "variables", Map.of(
                         "firstName", firstName,
                         "companyName", company.getName(),
+                        "role", assignedRole,
                         "link", inviteLink)));
 
         return toResponse(savedEmployee);
+    }
+
+    /**
+     * Maps frontend role names to Role entity names.
+     * Frontend sends "HR", but the Roles enum stores "Hr".
+     */
+    private String normalizeRoleName(String role) {
+        if (role == null || role.isBlank()) {
+            return "Individual";
+        }
+        return switch (role.trim().toUpperCase()) {
+            case "HR" -> "Hr";
+            case "ADMINISTRATOR" -> "Administrator";
+            case "INDIVIDUAL" -> "Individual";
+            case "SUPERADMIN" -> "SuperAdmin";
+            case "CUSTOMERSUPPORT" -> "CustomerSupport";
+            default -> role.trim();
+        };
     }
 
     private String generateToken(int byteLength) {
@@ -182,11 +248,18 @@ public class EmployeeService {
     }
 
     private EmployeeResponse toResponse(Employee entity) {
+        String role = null;
+        if (entity.getUser() != null) {
+            role = companyUserRepository.findByUser(entity.getUser())
+                    .map(CompanyUser::getRole)
+                    .orElse(null);
+        }
         return new EmployeeResponse(
             entity.getId(),
             entity.getName(),
             entity.getEmail(),
             entity.getDepartment(),
+            role,
             entity.getCreditsUsed(),
             entity.getCreditsAllocated(),
             entity.getStatus(),

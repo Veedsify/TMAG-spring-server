@@ -1,8 +1,10 @@
-package com.TravelMedicineAdvisory.Server.domain.admin.auth;
+package com.TravelMedicineAdvisory.Server.domain.companyadmin.auth;
 
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
 import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermission;
 import com.TravelMedicineAdvisory.Server.domain.rolepermission.RolePermissionRepository;
@@ -10,11 +12,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
-
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -23,21 +24,25 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class AdminAuthService {
+public class CompanyAdminAuthService {
 
     private final UserRepository userRepository;
+    private final CompanyUserRepository companyUserRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
 
-    public AdminAuthService(UserRepository userRepository,
-                          RolePermissionRepository rolePermissionRepository,
-                          JwtService jwtService,
-                          AuthenticationManager authenticationManager,
-                          UserDetailsService userDetailsService, ObjectMapper objectMapper) {
+    public CompanyAdminAuthService(UserRepository userRepository,
+                                   CompanyUserRepository companyUserRepository,
+                                   RolePermissionRepository rolePermissionRepository,
+                                   JwtService jwtService,
+                                   AuthenticationManager authenticationManager,
+                                   UserDetailsService userDetailsService,
+                                   ObjectMapper objectMapper) {
         this.userRepository = userRepository;
+        this.companyUserRepository = companyUserRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
@@ -53,11 +58,11 @@ public class AdminAuthService {
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
         if (user.getRole() == null) {
-            throw new RuntimeException("User does not have admin permissions");
+            throw new RuntimeException("User does not have the required permissions");
         }
 
-        if (!isSuperAdmin(user)) {
-            throw new RuntimeException("Access denied. Super admin privileges required.");
+        if (!hasCompanyAdminAccess(user)) {
+            throw new RuntimeException("Access denied. SuperAdmin or Administrator privileges required.");
         }
 
         user.setLastLogin(LocalDateTime.now());
@@ -74,12 +79,14 @@ public class AdminAuthService {
         return response;
     }
 
-    private boolean isSuperAdmin(User user) {
+    private boolean hasCompanyAdminAccess(User user) {
         Role role = user.getRole();
         if (role == null) return false;
 
-        // Direct SuperAdmin role name check
-        if ("SuperAdmin".equalsIgnoreCase(role.getName())) {
+        String roleName = role.getName();
+
+        // SuperAdmin and Administrator roles have direct access
+        if ("SuperAdmin".equalsIgnoreCase(roleName) || "Administrator".equalsIgnoreCase(roleName)) {
             return true;
         }
 
@@ -95,7 +102,7 @@ public class AdminAuthService {
             }
         }
 
-        // Check for "all" permission in role-permission junction table
+        // Check for "all" permission via role-permission junction table
         List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(role.getId());
         for (RolePermission rp : rolePermissions) {
             if (rp.getPermission() != null && "all".equals(rp.getPermission().getName())) {
@@ -121,38 +128,69 @@ public class AdminAuthService {
             return new HashMap<>();
         }
 
-        List<String> permissions = List.of();
-        if (user.getRole() != null && user.getRole().getPermissions() != null) {
-            try {
-                permissions = objectMapper.readValue(user.getRole().getPermissions(),
-                        new TypeReference<List<String>>() {});
-            } catch (Exception e) {
-                permissions = List.of();
-            }
-        }
+        List<String> permissions = resolvePermissions(user);
 
-        if (permissions.isEmpty() && user.getRole() != null) {
-            try {
-                List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(user.getRole().getId());
-                permissions = rolePermissions.stream()
-                        .map(rp -> rp.getPermission() != null ? rp.getPermission().getName() : null)
-                        .filter(p -> p != null)
-                        .collect(Collectors.toList());
-            } catch (Exception e) {
-                permissions = List.of();
-            }
-        }
+        String role = resolveRole(user, permissions);
+
+        // Include company info if the user belongs to a company
+        List<CompanyUser> companyLinks = companyUserRepository.findAllByUser(user);
+        List<Map<String, Object>> companies = companyLinks.stream()
+                .filter(cu -> cu.getCompany() != null)
+                .map(cu -> {
+                    Map<String, Object> c = new HashMap<>();
+                    c.put("id", cu.getCompany().getId());
+                    c.put("name", cu.getCompany().getName());
+                    c.put("companyRole", cu.getRole());
+                    return c;
+                })
+                .collect(Collectors.toList());
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", user.getId());
         response.put("name", user.getName() != null ? user.getName() : user.getEmail());
         response.put("email", user.getEmail());
-        response.put("role", "super_admin");
+        response.put("role", role);
         response.put("status", user.getDeletedAt() != null ? "inactive" : "active");
         response.put("lastLogin", user.getLastLogin());
         response.put("createdAt", user.getCreatedAt());
         response.put("permissions", permissions);
+        response.put("companies", companies);
 
         return response;
+    }
+
+    private List<String> resolvePermissions(User user) {
+        if (user.getRole() != null && user.getRole().getPermissions() != null) {
+            try {
+                List<String> perms = objectMapper.readValue(user.getRole().getPermissions(),
+                        new TypeReference<List<String>>() {});
+                if (!perms.isEmpty()) return perms;
+            } catch (Exception e) {
+            }
+        }
+
+        if (user.getRole() != null) {
+            try {
+                return rolePermissionRepository.findByRoleId(user.getRole().getId()).stream()
+                        .map(rp -> rp.getPermission() != null ? rp.getPermission().getName() : null)
+                        .filter(p -> p != null)
+                        .collect(Collectors.toList());
+            } catch (Exception e) {
+            }
+        }
+
+        return List.of();
+    }
+
+    private String resolveRole(User user, List<String> permissions) {
+        String roleName = user.getRole() != null ? user.getRole().getName() : "";
+        if (permissions.contains("all") || "SuperAdmin".equalsIgnoreCase(roleName)) {
+            return "super_admin";
+        } else if ("Administrator".equalsIgnoreCase(roleName)) {
+            return "client_admin";
+        } else if (permissions.contains("users.write")) {
+            return "client_admin";
+        }
+        return "support_admin";
     }
 }
