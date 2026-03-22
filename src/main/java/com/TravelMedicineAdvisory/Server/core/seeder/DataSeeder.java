@@ -265,7 +265,7 @@ public class DataSeeder implements CommandLineRunner {
         Company company = new Company();
         company.setName("TechCorp Global");
         company.setIndustry("Technology");
-        company.setPlan("Pro");
+        company.setPlan("Enterprise");
         company.setTotalCredits(500);
         company.setUsedCredits(0);
         company.setEmployeeCount(0);

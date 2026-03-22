@@ -39,7 +39,7 @@ public class CompanyAdminCreditPurchaseService {
     private final CreditPurchaseRepository purchaseRepository;
     private final FlutterwaveService flutterwaveService;
 
-    @Value("${app.payment.flutterwave.callback-url:http://localhost:5173/admin/credits}")
+    @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
     private String callbackUrl;
 
     public CompanyAdminCreditPurchaseService(
