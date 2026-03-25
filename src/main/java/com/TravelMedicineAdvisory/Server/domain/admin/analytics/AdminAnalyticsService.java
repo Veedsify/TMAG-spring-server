@@ -2,7 +2,6 @@ package com.TravelMedicineAdvisory.Server.domain.admin.analytics;
 
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
-import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
@@ -28,8 +27,8 @@ public class AdminAnalyticsService {
     private final InvoiceRepository invoiceRepository;
 
     public AdminAnalyticsService(UserRepository userRepository, CompanyRepository companyRepository,
-                                 CreditRepository creditRepository, TravelPlanRepository travelPlanRepository,
-                                 AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository) {
+            CreditRepository creditRepository, TravelPlanRepository travelPlanRepository,
+            AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.creditRepository = creditRepository;
@@ -40,10 +39,10 @@ public class AdminAnalyticsService {
 
     public AdminDashboardStatsResponse getDashboardStats() {
         AdminDashboardStatsResponse stats = new AdminDashboardStatsResponse();
-        
+
         stats.setTotalUsers(userRepository.countAllActive());
         stats.setTotalCompanies(companyRepository.countAllActive());
-        
+
         long individualCredits = userRepository.findByType("INDIVIDUAL").stream()
                 .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
                 .sum();
@@ -51,42 +50,42 @@ public class AdminAnalyticsService {
                 .mapToInt(c -> c.getTotalCredits() != null ? c.getTotalCredits() : 0)
                 .sum();
         stats.setTotalCreditsIssued(individualCredits + corporateCredits);
-        
+
         long individualUsed = userRepository.findByType("INDIVIDUAL").stream()
                 .mapToInt(u -> {
-                    List<com.TravelMedicineAdvisory.Server.domain.credit.Credit> credits = 
-                        creditRepository.findLedgerByUserId(u.getId());
+                    List<com.TravelMedicineAdvisory.Server.domain.credit.Credit> credits = creditRepository
+                            .findLedgerByUserId(u.getId());
                     return credits.stream()
-                        .filter(c -> "consume".equals(c.getType()))
-                        .mapToInt(c -> Math.abs(c.getAmount()))
-                        .sum();
+                            .filter(c -> "consume".equals(c.getType()))
+                            .mapToInt(c -> Math.abs(c.getAmount()))
+                            .sum();
                 })
                 .sum();
         stats.setTotalCreditsConsumed(individualUsed);
-        
-        LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+
+        // LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         long aiRequestsToday = aiRequestLogRepository.count();
         stats.setAiRequestsToday(aiRequestsToday);
-        
+
         Long revenue = invoiceRepository.sumPaidInvoices();
         stats.setRevenueOverview(revenue != null ? revenue : 0L);
-        
+
         long failedCalls = aiRequestLogRepository.findAll().stream()
                 .filter(log -> "error".equals(log.getStatus()))
                 .count();
         stats.setFailedAICalls(failedCalls);
-        
+
         stats.setSystemHealthStatus("healthy");
-        
+
         stats.setActiveUsersToday(1L);
         stats.setNewUsersThisWeek(3L);
-        
+
         return stats;
     }
 
     public AdminAnalyticsResponse getAnalytics() {
         AdminAnalyticsResponse analytics = new AdminAnalyticsResponse();
-        
+
         List<Map<String, Object>> topDestinations = new ArrayList<>();
         List<TravelPlan> plans = travelPlanRepository.findAllActive();
         Map<String, Long> destCounts = new HashMap<>();
@@ -106,19 +105,19 @@ public class AdminAnalyticsService {
                     topDestinations.add(entry);
                 });
         analytics.setTopDestinations(topDestinations);
-        
+
         List<User> users = userRepository.findAllActive();
         double avgCredits = users.stream()
                 .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
                 .average()
                 .orElse(0.0);
         analytics.setAvgCreditsPerUser(avgCredits);
-        
+
         Map<String, Long> corpVsInd = new HashMap<>();
         corpVsInd.put("corporate", userRepository.countByType("COMPANY"));
         corpVsInd.put("individual", userRepository.countByType("INDIVIDUAL"));
         analytics.setCorporateVsIndividual(corpVsInd);
-        
+
         List<Map<String, Object>> peakTimes = new ArrayList<>();
         for (int hour = 8; hour <= 17; hour++) {
             Map<String, Object> entry = new HashMap<>();
@@ -127,9 +126,9 @@ public class AdminAnalyticsService {
             peakTimes.add(entry);
         }
         analytics.setPeakUsageTimes(peakTimes);
-        
+
         List<Map<String, Object>> monthly = new ArrayList<>();
-        String[] months = {"Aug", "Sep", "Oct", "Nov", "Dec", "Jan"};
+        String[] months = { "Aug", "Sep", "Oct", "Nov", "Dec", "Jan" };
         for (String month : months) {
             Map<String, Object> entry = new HashMap<>();
             entry.put("month", month);
@@ -138,9 +137,9 @@ public class AdminAnalyticsService {
             monthly.add(entry);
         }
         analytics.setMonthlyRequests(monthly);
-        
+
         List<Map<String, Object>> dailyActive = new ArrayList<>();
-        String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        String[] days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
         for (String day : days) {
             Map<String, Object> entry = new HashMap<>();
             entry.put("day", day);
@@ -148,7 +147,7 @@ public class AdminAnalyticsService {
             dailyActive.add(entry);
         }
         analytics.setDailyActiveUsers(dailyActive);
-        
+
         List<Map<String, Object>> creditUsage = new ArrayList<>();
         Map<String, Object> ind = new HashMap<>();
         ind.put("type", "Individual");
@@ -161,13 +160,13 @@ public class AdminAnalyticsService {
         corp.put("remaining", 560);
         creditUsage.add(corp);
         analytics.setCreditUsageByType(creditUsage);
-        
+
         return analytics;
     }
 
     public List<AdminAIRequestLogResponse> getAILogs(Long userId, String status) {
         List<AiRequestLog> logs;
-        
+
         if (userId != null) {
             logs = aiRequestLogRepository.findAll().stream()
                     .filter(log -> log.getUser() != null && log.getUser().getId().equals(userId))
@@ -199,7 +198,7 @@ public class AdminAnalyticsService {
 
     public List<AdminTravelPlanResponse> getPlans(Long userId, Long companyId) {
         List<TravelPlan> plans;
-        
+
         if (userId != null) {
             plans = travelPlanRepository.findAllActiveByUserId(userId);
         } else if (companyId != null) {
@@ -261,17 +260,17 @@ public class AdminAnalyticsService {
     private AdminAIRequestLogResponse mapAILogToResponse(AiRequestLog log) {
         AdminAIRequestLogResponse response = new AdminAIRequestLogResponse();
         response.setId(log.getId());
-        
+
         if (log.getUser() != null) {
             response.setUserId(log.getUser().getId());
             response.setUserName(log.getUser().getName() != null ? log.getUser().getName() : log.getUser().getEmail());
         }
-        
+
         if (log.getCompany() != null) {
             response.setCompanyId(log.getCompany().getId());
             response.setCompanyName(log.getCompany().getName());
         }
-        
+
         response.setDestination(log.getDestination());
         response.setPromptSummary(log.getPromptSummary());
         response.setOutputSummary(log.getOutputSummary());
@@ -282,63 +281,67 @@ public class AdminAnalyticsService {
         response.setRiskLevel(log.getRiskLevel() != null ? log.getRiskLevel() : "low");
         response.setTimestamp(log.getCreatedAt());
         response.setModelUsed(log.getModelUsed());
-        response.setCreditConsumed(log.getCreditConsumed() != null && log.getCreditConsumed().compareTo(java.math.BigDecimal.ZERO) > 0);
-        
+        response.setCreditConsumed(
+                log.getCreditConsumed() != null && log.getCreditConsumed().compareTo(java.math.BigDecimal.ZERO) > 0);
+
         return response;
     }
 
     private AdminTravelPlanResponse mapPlanToResponse(TravelPlan plan) {
         AdminTravelPlanResponse response = new AdminTravelPlanResponse();
         response.setId(plan.getId());
-        
+
         if (plan.getUser() != null) {
             response.setUserId(plan.getUser().getId());
-            response.setUserName(plan.getUser().getName() != null ? plan.getUser().getName() : plan.getUser().getEmail());
+            response.setUserName(
+                    plan.getUser().getName() != null ? plan.getUser().getName() : plan.getUser().getEmail());
         }
-        
+
         if (plan.getCompany() != null) {
             response.setCompanyId(plan.getCompany().getId());
             response.setCompanyName(plan.getCompany().getName());
         }
-        
+
         response.setDestination(plan.getDestination());
         response.setDuration(plan.getDuration() != null ? plan.getDuration().toString() : "");
         response.setPurpose(plan.getPurpose());
         response.setRiskScore(plan.getRiskScore() != null ? plan.getRiskScore() : 0);
-        
-        List<String> vaccinations = plan.getVaccinations() != null ? 
-                Arrays.asList(plan.getVaccinations().split(",")) : new ArrayList<>();
+
+        List<String> vaccinations = plan.getVaccinations() != null ? Arrays.asList(plan.getVaccinations().split(","))
+                : new ArrayList<>();
         response.setVaccinations(vaccinations);
-        
-        List<String> healthAlerts = plan.getHealthAlerts() != null ?
-                Arrays.asList(plan.getHealthAlerts().split(",")) : new ArrayList<>();
+
+        List<String> healthAlerts = plan.getHealthAlerts() != null ? Arrays.asList(plan.getHealthAlerts().split(","))
+                : new ArrayList<>();
         response.setHealthAlerts(healthAlerts);
-        
-        List<String> safetyAdvisories = plan.getSafetyAdvisories() != null ?
-                Arrays.asList(plan.getSafetyAdvisories().split(",")) : new ArrayList<>();
+
+        List<String> safetyAdvisories = plan.getSafetyAdvisories() != null
+                ? Arrays.asList(plan.getSafetyAdvisories().split(","))
+                : new ArrayList<>();
         response.setSafetyAdvisories(safetyAdvisories);
-        
+
         response.setStatus(plan.getStatus() != null ? plan.getStatus() : "active");
         response.setCreatedAt(plan.getCreatedAt());
         response.setCreditUsed(true);
-        
+
         return response;
     }
 
     private AdminInvoiceResponse mapInvoiceToResponse(Invoice invoice) {
         AdminInvoiceResponse response = new AdminInvoiceResponse();
         response.setId(invoice.getId());
-        
+
         if (invoice.getCompany() != null) {
             response.setCompanyId(invoice.getCompany().getId());
             response.setCompanyName(invoice.getCompany().getName());
         }
-        
+
         if (invoice.getUser() != null) {
             response.setUserId(invoice.getUser().getId());
-            response.setUserName(invoice.getUser().getName() != null ? invoice.getUser().getName() : invoice.getUser().getEmail());
+            response.setUserName(
+                    invoice.getUser().getName() != null ? invoice.getUser().getName() : invoice.getUser().getEmail());
         }
-        
+
         response.setAmount(invoice.getAmount());
         response.setCurrency(invoice.getCurrency());
         response.setStatus(invoice.getStatus() != null ? invoice.getStatus() : "pending");
@@ -347,7 +350,7 @@ public class AdminAnalyticsService {
         response.setPaidAt(invoice.getPaidAt());
         response.setDueDate(invoice.getDueDate());
         response.setPaymentMethod(invoice.getPaymentMethod());
-        
+
         return response;
     }
 }

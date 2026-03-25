@@ -14,6 +14,8 @@ import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 @Transactional
 public class TravelPlanService {
@@ -23,7 +25,8 @@ public class TravelPlanService {
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
 
-    public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository, EmployeeRepository employeeRepository, UserRepository userRepository) {
+    public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
+            EmployeeRepository employeeRepository, UserRepository userRepository) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.employeeRepository = employeeRepository;
@@ -47,9 +50,23 @@ public class TravelPlanService {
 
     @Transactional
     public TravelPlanResponse create(TravelPlanRequest request) {
-        Long currentUserId = request.userId();
-        User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Long userId = request.userId();
+        Long employeeId = request.employeeId();
+
+        User user;
+
+        if (request.employeeId() == null) {
+            user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        } else {
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+            user = employee.getUser();
+        }
+
+        Employee employee = employeeRepository.findByUser(user)
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 
         if (user.getCredits() < 1) {
             throw new RuntimeException("Insufficient credits");
@@ -58,12 +75,13 @@ public class TravelPlanService {
         user.setCredits(user.getCredits() - 1);
         userRepository.save(user);
 
+        employee.setCreditsAllocated(user.getCredits()); // keep in sync, no extra deduction
+        employeeRepository.save(employee);
+
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
         entity.setStatus(String.valueOf(Travel_Plan.PENDING));
-
-        TravelPlan saved = repository.save(entity);
-        return toResponse(saved);
+        return toResponse(repository.save(entity));
     }
 
     public TravelPlanResponse update(Long id, TravelPlanRequest request) {
@@ -83,26 +101,25 @@ public class TravelPlanService {
 
     private TravelPlanResponse toResponse(TravelPlan entity) {
         return new TravelPlanResponse(
-            entity.getId(),
-            entity.getDestination(),
-            entity.getCountry(),
-            entity.getDuration(),
-            entity.getPurpose(),
-            entity.getRiskScore(),
-            entity.getStatus(),
-            entity.getMedicalConsiderations(),
-            entity.getVaccinations(),
-            entity.getHealthAlerts(),
-            entity.getSafetyAdvisories(),
-            entity.getMedications(),
-            entity.getWaterFood(),
-            entity.getEmergencyContacts(),
-            entity.getCompany() != null ? entity.getCompany().getId() : null,
-            entity.getEmployee() != null ? entity.getEmployee().getId() : null,
-            entity.getUser() != null ? entity.getUser().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getDestination(),
+                entity.getCountry(),
+                entity.getDuration(),
+                entity.getPurpose(),
+                entity.getRiskScore(),
+                entity.getStatus(),
+                entity.getMedicalConsiderations(),
+                entity.getVaccinations(),
+                entity.getHealthAlerts(),
+                entity.getSafetyAdvisories(),
+                entity.getMedications(),
+                entity.getWaterFood(),
+                entity.getEmergencyContacts(),
+                entity.getCompany() != null ? entity.getCompany().getId() : null,
+                entity.getEmployee() != null ? entity.getEmployee().getId() : null,
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(TravelPlanRequest request, TravelPlan entity) {

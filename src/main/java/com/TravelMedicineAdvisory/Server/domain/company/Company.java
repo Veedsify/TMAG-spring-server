@@ -181,4 +181,11 @@ public class Company extends BaseEntity {
     public void setLogo(Attachment logo) {
         this.logo = logo;
     }
+
+    @Transient
+    public int getAvailableCredits() {
+        int total = totalCredits != null ? totalCredits : 0;
+        int used = usedCredits != null ? usedCredits : 0;
+        return total - used;
+    }
 }

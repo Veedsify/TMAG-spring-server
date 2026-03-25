@@ -75,8 +75,7 @@ public class SecurityConfig {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write("{\"message\":\"Access denied\"}");
-                        })
-                )
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
@@ -117,8 +116,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         if (corsEnabled) {
-            // setAllowedOriginPatterns is required in Spring Security 6 when allowCredentials=true;
-            // setAllowedOrigins causes a validation failure with credentials in newer versions.
+            // setAllowedOriginPatterns is required in Spring Security 6 when
+            // allowCredentials=true;
+            // setAllowedOrigins causes a validation failure with credentials in newer
+            // versions.
             configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
             configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
             configuration.addAllowedHeader("*");

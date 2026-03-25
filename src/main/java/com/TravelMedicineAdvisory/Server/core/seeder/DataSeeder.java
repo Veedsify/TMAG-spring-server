@@ -317,6 +317,7 @@ public class DataSeeder implements CommandLineRunner {
         admin.setRole(adminRole);
         admin.setType("COMPANY");
         admin.setVerified(true);
+        admin.setCredits(100);
         admin.setOnboardingStage(5);
         admin.setOnboarded(true);
         userRepository.save(admin);
@@ -354,6 +355,7 @@ public class DataSeeder implements CommandLineRunner {
         hrUser.setType("COMPANY");
         hrUser.setPassword(passwordEncoder.encode("password"));
         hrUser.setVerified(true);
+        hrUser.setCredits(50);
         hrUser.setOnboardingStage(5);
         hrUser.setOnboarded(true);
         userRepository.save(hrUser);
@@ -392,6 +394,7 @@ public class DataSeeder implements CommandLineRunner {
         user.setPassword(passwordEncoder.encode("password"));
         user.setVerified(true);
         user.setOnboardingStage(5);
+        user.setCredits(25);
         user.setOnboarded(true);
         userRepository.save(user);
 

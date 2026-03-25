@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,8 +26,7 @@ public class CountryController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
+                page.getTotalPages());
         PaginatedResponse<CountryResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }

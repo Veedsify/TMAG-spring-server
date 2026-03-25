@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class AdminAbuseService {
@@ -20,7 +19,7 @@ public class AdminAbuseService {
 
     public List<AdminAbuseFlagResponse> findAll(Boolean resolved) {
         List<AbuseFlag> flags;
-        
+
         if (resolved != null) {
             flags = abuseFlagRepository.findAll().stream()
                     .filter(f -> resolved.equals(f.getResolved()))
@@ -50,21 +49,20 @@ public class AdminAbuseService {
     private AdminAbuseFlagResponse mapToResponse(AbuseFlag flag) {
         Long userId = null;
         String userName = null;
-        
+
         if (flag.getUser() != null) {
             userId = flag.getUser().getId();
             userName = flag.getUser().getName() != null ? flag.getUser().getName() : flag.getUser().getEmail();
         }
 
         return new AdminAbuseFlagResponse(
-            flag.getId(),
-            userId,
-            userName,
-            flag.getType(),
-            flag.getDescription(),
-            flag.getSeverity(),
-            flag.getResolved(),
-            flag.getCreatedAt()
-        );
+                flag.getId(),
+                userId,
+                userName,
+                flag.getType(),
+                flag.getDescription(),
+                flag.getSeverity(),
+                flag.getResolved(),
+                flag.getCreatedAt());
     }
 }

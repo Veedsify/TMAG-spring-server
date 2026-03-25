@@ -1,7 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.analytics;
 
-import java.util.List;
-import java.util.Map;
 
 public class AdminDashboardStatsResponse {
     private Long totalUsers;

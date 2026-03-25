@@ -42,6 +42,9 @@ public class CompanyAdminCreditPurchaseService {
     @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
     private String callbackUrl;
 
+    @Value("${app.payment.flutterwave.hr-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3000/hr/billing/callback}}")
+    private String hrCallbackUrl;
+
     public CompanyAdminCreditPurchaseService(
             CompanyRepository companyRepository,
             CreditRepository creditRepository,
@@ -152,6 +155,10 @@ public class CompanyAdminCreditPurchaseService {
     ) {}
 
     public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits) {
+        return initiatePurchase(userId, companyId, credits, false);
+    }
+
+    public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits, boolean useHrCallback) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
@@ -183,6 +190,8 @@ public class CompanyAdminCreditPurchaseService {
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
+        String redirectUrl = (useHrCallback ? hrCallbackUrl : callbackUrl) + "?tx_ref=" + txRef;
+
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 priceCalculation.totalPrice(),
                 currency.name(),
@@ -191,7 +200,7 @@ public class CompanyAdminCreditPurchaseService {
                 "TMAG Company Credit Purchase - " + company.getName() + " - " + credits + " credits",
                 txRef,
                 user.getPhone(),
-                callbackUrl + "?tx_ref=" + txRef,
+                redirectUrl,
                 credits,
                 null,
                 userId.toString(),
@@ -201,8 +210,8 @@ public class CompanyAdminCreditPurchaseService {
         FlutterwavePaymentResponse paymentResponse = flutterwaveService.initiatePayment(paymentRequest);
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
-            logger.info("Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}",
-                    txRef, companyId, credits, priceCalculation.totalPrice());
+            logger.info("Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, hr={}",
+                    txRef, companyId, credits, priceCalculation.totalPrice(), useHrCallback);
 
             return new InitiatePurchaseResult(
                     txRef,

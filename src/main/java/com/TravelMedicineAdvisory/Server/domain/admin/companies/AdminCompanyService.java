@@ -11,15 +11,12 @@ import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class AdminCompanyService {
@@ -54,8 +51,8 @@ public class AdminCompanyService {
     }
 
     public List<AdminCompanyResponse> getEmployees(Long id) {
-        Company company = companyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        // Company company = companyRepository.findById(id)
+        //         .orElseThrow(() -> new RuntimeException("Company not found"));
         
         List<Employee> employees = employeeRepository.findAll();
         List<Employee> companyEmployees = employees.stream()

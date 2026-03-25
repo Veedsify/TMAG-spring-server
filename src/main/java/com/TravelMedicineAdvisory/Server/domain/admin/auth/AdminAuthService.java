@@ -33,10 +33,10 @@ public class AdminAuthService {
     private final ObjectMapper objectMapper;
 
     public AdminAuthService(UserRepository userRepository,
-                          RolePermissionRepository rolePermissionRepository,
-                          JwtService jwtService,
-                          AuthenticationManager authenticationManager,
-                          UserDetailsService userDetailsService, ObjectMapper objectMapper) {
+            RolePermissionRepository rolePermissionRepository,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            UserDetailsService userDetailsService, ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.jwtService = jwtService;
@@ -76,7 +76,8 @@ public class AdminAuthService {
 
     private boolean isSuperAdmin(User user) {
         Role role = user.getRole();
-        if (role == null) return false;
+        if (role == null)
+            return false;
 
         // Direct SuperAdmin role name check
         if ("SuperAdmin".equalsIgnoreCase(role.getName())) {
@@ -87,7 +88,8 @@ public class AdminAuthService {
         if (role.getPermissions() != null) {
             try {
                 List<String> permissions = objectMapper.readValue(role.getPermissions(),
-                        new TypeReference<List<String>>() {});
+                        new TypeReference<List<String>>() {
+                        });
                 if (permissions.contains("all")) {
                     return true;
                 }
@@ -125,7 +127,8 @@ public class AdminAuthService {
         if (user.getRole() != null && user.getRole().getPermissions() != null) {
             try {
                 permissions = objectMapper.readValue(user.getRole().getPermissions(),
-                        new TypeReference<List<String>>() {});
+                        new TypeReference<List<String>>() {
+                        });
             } catch (Exception e) {
                 permissions = List.of();
             }
@@ -145,7 +148,8 @@ public class AdminAuthService {
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", user.getId());
-        response.put("name", user.getName() != null ? user.getName() : user.getEmail());
+        response.put("name",
+                user.getFirstName() != null ? user.getFirstName() + " " + user.getLastName() : user.getEmail());
         response.put("email", user.getEmail());
         response.put("role", "super_admin");
         response.put("status", user.getDeletedAt() != null ? "inactive" : "active");

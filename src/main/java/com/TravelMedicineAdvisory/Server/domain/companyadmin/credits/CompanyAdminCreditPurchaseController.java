@@ -91,6 +91,44 @@ public class CompanyAdminCreditPurchaseController {
         }
     }
 
+    @PostMapping("/purchase/hr")
+    public ResponseEntity<SuccessResponse> initiateHrPurchase(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody Map<String, Object> body) {
+        try {
+            Long userId = getUserIdFromUserDetails(userDetails);
+
+            if (body.get("companyId") == null || body.get("credits") == null) {
+                return ResponseEntity.badRequest().body(new SuccessResponse("companyId and credits are required", null));
+            }
+
+            Long companyId = ((Number) body.get("companyId")).longValue();
+            Integer credits = ((Number) body.get("credits")).intValue();
+
+            var result = service.initiatePurchase(userId, companyId, credits, true);
+
+            return ResponseEntity.ok(new SuccessResponse("Payment initiated", Map.of(
+                    "txRef", result.txRef(),
+                    "paymentLink", result.paymentLink(),
+                    "credits", result.credits(),
+                    "amount", result.totalAmount(),
+                    "currency", result.currency(),
+                    "currencySymbol", result.currencySymbol(),
+                    "purchaseId", result.purchaseId()
+            )));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
+        } catch (RuntimeException e) {
+            logger.error("HR payment initiation failed: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
+        } catch (Exception e) {
+            logger.error("Unexpected error during HR payment initiation: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+        }
+    }
+
     @GetMapping("/verify/{txRef}")
     public ResponseEntity<SuccessResponse> verifyPurchase(
             @PathVariable String txRef,

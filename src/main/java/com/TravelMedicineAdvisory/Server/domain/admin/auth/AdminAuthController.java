@@ -18,8 +18,8 @@ public class AdminAuthController {
 
     @PostMapping("/login")
     public ResponseEntity<SuccessResponse> login(@RequestBody Map<String, String> credentials) {
-        return ResponseEntity.ok(new SuccessResponse("Login successful", 
-            service.login(credentials.get("email"), credentials.get("password"))));
+        return ResponseEntity.ok(new SuccessResponse("Login successful",
+                service.login(credentials.get("email"), credentials.get("password"))));
     }
 
     @PostMapping("/logout")

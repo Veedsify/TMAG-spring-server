@@ -87,16 +87,19 @@ public class EmployeeService {
 
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
-        entity.setCreditsAllocated(creditsAllocated);
+
+        int currentEmployeeCredits = entity.getCreditsAllocated() != null ? entity.getCreditsAllocated() : 0;
+        entity.setCreditsAllocated(currentEmployeeCredits + creditsAllocated);
 
         Company company = companyRepository.findById(companyId.longValue())
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
-        int totalCredits = company.getTotalCredits() != null ? company.getTotalCredits() : 0;
         int creditsToAllocate = creditsAllocated;
+        int availableCredits = company.getAvailableCredits();
 
-        if (totalCredits < creditsToAllocate) {
-            throw new IllegalArgumentException("Not enough credits available");
+        if (availableCredits < creditsToAllocate) {
+            throw new IllegalArgumentException(
+                    "Not enough credits available. You have " + availableCredits + " credits remaining.");
         }
 
         // Sync credits to CompanyUser as well
@@ -107,11 +110,16 @@ public class EmployeeService {
                         cu.setCreditsAllocated(currentCredits + creditsAllocated);
                         companyUserRepository.save(cu);
                     });
+
+            // Top up the User's credit balance
+            User user = entity.getUser();
+            int currentUserCredits = user.getCredits() != null ? user.getCredits() : 0;
+            user.setCredits(currentUserCredits + creditsAllocated);
+            userRepository.save(user);
         }
 
         int usedCredits = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
         company.setUsedCredits(usedCredits + creditsToAllocate);
-        company.setTotalCredits(totalCredits - creditsToAllocate);
         companyRepository.save(company);
 
         return toResponse(repository.save(entity));
