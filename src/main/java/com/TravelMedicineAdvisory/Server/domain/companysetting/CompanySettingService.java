@@ -14,7 +14,6 @@ import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
@@ -23,8 +22,6 @@ public class CompanySettingService {
 
     private final CompanySettingRepository repository;
     private final CompanyRepository companyRepository;
-    private final UserRepository userRepository;
-    private final QueueService queueService;
     private final AdminNotificationService adminNotificationService;
 
     public CompanySettingService(CompanySettingRepository repository, CompanyRepository companyRepository,
@@ -32,8 +29,6 @@ public class CompanySettingService {
             AdminNotificationService adminNotificationService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
-        this.userRepository = userRepository;
-        this.queueService = queueService;
         this.adminNotificationService = adminNotificationService;
     }
 
