@@ -42,6 +42,9 @@ public class User extends BaseEntity {
     @Column(name = "is_verified")
     private Boolean is_verified = false;
 
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
     @Column(name = "verification_token")
     private String verificationToken;
 
@@ -295,5 +298,13 @@ public class User extends BaseEntity {
 
     public void setProviderId(String providerId) {
         this.providerId = providerId;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

@@ -14,8 +14,11 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -126,10 +129,26 @@ public class EmployeeService {
     }
 
     public EmployeeResponse updateStatus(Long id, String status) {
+        getEmployee(id);
+
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
         entity.setStatus(status);
         return toResponse(repository.save(entity));
+    }
+
+    private void getEmployee(Long id) {
+        Optional<Employee> employee = repository.findById(id);
+        List<Role> roles = roleRepository.findByNameIn(
+                List.of("SuperAdmin", "Administrator", "HR")
+        );
+
+        if (employee.isPresent()) {
+            User user = employee.get().getUser();
+            if(roles.contains(user.getRole())){
+                throw new IllegalArgumentException("Sorry, You cannot remove this user");
+            }
+        }
     }
 
     public EmployeeResponse invite(EmployeeInviteRequest request) {
@@ -268,6 +287,8 @@ public class EmployeeService {
     }
 
     public void delete(Long id) {
+        getEmployee(id);
+
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Employee not found");
         }

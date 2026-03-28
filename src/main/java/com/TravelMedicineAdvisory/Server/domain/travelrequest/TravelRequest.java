@@ -17,6 +17,7 @@ public class TravelRequest extends BaseEntity {
     private String destination;
     private String dates;
     private String status;
+    private Integer creditRequested;
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
     
@@ -45,4 +46,7 @@ public class TravelRequest extends BaseEntity {
 
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
+
+    public Integer getCreditRequested() { return creditRequested; }
+    public void setCreditRequested(Integer creditRequested) { this.creditRequested = creditRequested; }
 }

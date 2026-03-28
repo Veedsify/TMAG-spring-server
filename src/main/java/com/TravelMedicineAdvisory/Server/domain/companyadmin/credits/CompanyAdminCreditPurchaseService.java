@@ -6,6 +6,8 @@ import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySetting;
+import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricing;
@@ -13,6 +15,8 @@ import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingServi
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseResponse;
+import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
+import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.slf4j.Logger;
@@ -33,11 +37,13 @@ public class CompanyAdminCreditPurchaseService {
     private static final Logger logger = LoggerFactory.getLogger(CompanyAdminCreditPurchaseService.class);
 
     private final CompanyRepository companyRepository;
+    private final CompanySettingRepository settingRepository;
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
     private final CreditPricingService pricingService;
     private final CreditPurchaseRepository purchaseRepository;
     private final FlutterwaveService flutterwaveService;
+    private final InvoiceRepository invoiceRepository;
 
     @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
     private String callbackUrl;
@@ -47,17 +53,21 @@ public class CompanyAdminCreditPurchaseService {
 
     public CompanyAdminCreditPurchaseService(
             CompanyRepository companyRepository,
+            CompanySettingRepository settingRepository,
             CreditRepository creditRepository,
             UserRepository userRepository,
             CreditPricingService pricingService,
             CreditPurchaseRepository purchaseRepository,
-            FlutterwaveService flutterwaveService) {
+            FlutterwaveService flutterwaveService,
+            InvoiceRepository invoiceRepository) {
         this.companyRepository = companyRepository;
+        this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
         this.pricingService = pricingService;
         this.purchaseRepository = purchaseRepository;
         this.flutterwaveService = flutterwaveService;
+        this.invoiceRepository = invoiceRepository;
     }
 
     public record CompanyPricingResult(
@@ -82,9 +92,7 @@ public class CompanyAdminCreditPurchaseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
-        BillingCurrency currency = company.getBillingCurrency() != null
-                ? company.getBillingCurrency()
-                : BillingCurrency.NGN;
+        BillingCurrency currency = resolveBillingCurrency(company);
 
         CreditPricing pricing = pricingService.getPricingEntity(currency);
 
@@ -124,9 +132,7 @@ public class CompanyAdminCreditPurchaseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
-        BillingCurrency currency = company.getBillingCurrency() != null
-                ? company.getBillingCurrency()
-                : BillingCurrency.NGN;
+        BillingCurrency currency = resolveBillingCurrency(company);
 
         var calculation = pricingService.calculatePriceWithDiscount(currency, credits);
 
@@ -165,9 +171,7 @@ public class CompanyAdminCreditPurchaseService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
-        BillingCurrency currency = company.getBillingCurrency() != null
-                ? company.getBillingCurrency()
-                : BillingCurrency.NGN;
+        BillingCurrency currency = resolveBillingCurrency(company);
 
         CreditPricing pricing = pricingService.getPricingEntity(currency);
 
@@ -288,8 +292,20 @@ public class CompanyAdminCreditPurchaseService {
             creditEntry.setBalanceAfter(balanceAfter);
             creditRepository.save(creditEntry);
 
-            logger.info("Company credit purchase completed: txRef={}, companyId={}, credits={}",
-                    purchase.getTxRef(), purchase.getCompanyId(), purchase.getCreditsPurchased());
+            Invoice invoice = new Invoice();
+            invoice.setAmount(purchase.getAmountPaid() != null ? purchase.getAmountPaid() : purchase.getAmount());
+            invoice.setCurrency(purchase.getCurrency().name());
+            invoice.setStatus("paid");
+            invoice.setDescription("Credit Purchase - " + purchase.getCreditsPurchased() + " credits for " + company.getName());
+            invoice.setIssuedAt(LocalDateTime.now());
+            invoice.setPaidAt(LocalDateTime.now());
+            invoice.setPaymentMethod("Flutterwave");
+            invoice.setCompany(company);
+            invoice.setUser(purchase.getUser());
+            invoiceRepository.save(invoice);
+
+            logger.info("Company credit purchase completed: txRef={}, companyId={}, credits={}, invoiceId={}",
+                    purchase.getTxRef(), purchase.getCompanyId(), purchase.getCreditsPurchased(), invoice.getId());
         } else {
             User user = purchase.getUser();
             user.setCredits(user.getCredits() + purchase.getCreditsPurchased());
@@ -302,6 +318,20 @@ public class CompanyAdminCreditPurchaseService {
             creditEntry.setReference(purchase.getTxRef());
             creditEntry.setBalanceAfter(user.getCredits());
             creditRepository.save(creditEntry);
+
+            Invoice invoice = new Invoice();
+            invoice.setAmount(purchase.getAmountPaid() != null ? purchase.getAmountPaid() : purchase.getAmount());
+            invoice.setCurrency(purchase.getCurrency().name());
+            invoice.setStatus("paid");
+            invoice.setDescription("Credit Purchase - " + purchase.getCreditsPurchased() + " credits");
+            invoice.setIssuedAt(LocalDateTime.now());
+            invoice.setPaidAt(LocalDateTime.now());
+            invoice.setPaymentMethod("Flutterwave");
+            invoice.setUser(user);
+            invoiceRepository.save(invoice);
+
+            logger.info("User credit purchase completed: txRef={}, credits={}, invoiceId={}",
+                    purchase.getTxRef(), purchase.getCreditsPurchased(), invoice.getId());
         }
 
         return CreditPurchaseResponse.from(purchase);
@@ -325,5 +355,21 @@ public class CompanyAdminCreditPurchaseService {
         CreditPurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found"));
         return CreditPurchaseResponse.from(purchase);
+    }
+
+    private BillingCurrency resolveBillingCurrency(Company company) {
+        return settingRepository.findByCompanyIdAndKeyAndDeletedAtIsNull(company.getId(), "pref_currency")
+                .map(setting -> {
+                    try {
+                        return BillingCurrency.valueOf(setting.getValue().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        return company.getBillingCurrency() != null
+                                ? company.getBillingCurrency()
+                                : BillingCurrency.NGN;
+                    }
+                })
+                .orElseGet(() -> company.getBillingCurrency() != null
+                        ? company.getBillingCurrency()
+                        : BillingCurrency.NGN);
     }
 }
