@@ -42,42 +42,59 @@ public class InvoicePdfGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\" />");
         sb.append("<style>");
-        sb.append("@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; }");
-        sb.append("@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-SemiBold.ttf') format('truetype'); font-weight: 600; font-style: normal; }");
-        sb.append("@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }");
-        sb.append("@font-face { font-family: 'Fraunces'; src: url('classpath:/fonts/Fraunces-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; }");
-        sb.append("@font-face { font-family: 'Fraunces'; src: url('classpath:/fonts/Fraunces-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }");
+        sb.append(
+                "@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; }");
+        sb.append(
+                "@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-SemiBold.ttf') format('truetype'); font-weight: 600; font-style: normal; }");
+        sb.append(
+                "@font-face { font-family: 'Hanken Grotesk'; src: url('classpath:/fonts/HankenGrotesk-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }");
+        sb.append(
+                "@font-face { font-family: 'Fraunces'; src: url('classpath:/fonts/Fraunces-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; }");
+        sb.append(
+                "@font-face { font-family: 'Fraunces'; src: url('classpath:/fonts/Fraunces-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }");
         sb.append("*{margin:0;padding:0;box-sizing:border-box}");
-        sb.append("body{font-family:'Hanken Grotesk',Arial,sans-serif;font-size:10pt;color:").append(BODY).append(";background-color:").append(BG_CREAM).append(";padding:40px}");
+        sb.append("body{font-family:'Hanken Grotesk',Arial,sans-serif;font-size:10pt;color:").append(BODY)
+                .append(";background-color:").append(BG_CREAM).append(";padding:40px}");
 
         sb.append(".header{display:table;width:100%;margin-bottom:8px}");
         sb.append(".header>div{display:table-cell;vertical-align:bottom}");
         sb.append(".brand-left{width:60%}");
         sb.append(".brand-right{width:40%;text-align:right}");
-        sb.append(".brand-label{font-size:8pt;color:").append(MUTED).append(";letter-spacing:2px;text-transform:uppercase}");
-        sb.append(".brand-name{font-family:'Fraunces',serif;font-size:24pt;font-weight:700;color:").append(ACCENT).append("}");
-        sb.append(".brand-tagline{font-size:8pt;color:").append(MUTED).append(";letter-spacing:2px;text-transform:uppercase}");
-        sb.append(".invoice-title{font-family:'Fraunces',serif;font-size:32pt;font-weight:700;color:").append(HEADING).append("}");
+        sb.append(".brand-label{font-size:8pt;color:").append(MUTED)
+                .append(";letter-spacing:2px;text-transform:uppercase}");
+        sb.append(".brand-name{font-family:'Fraunces',serif;font-size:24pt;font-weight:700;color:").append(ACCENT)
+                .append("}");
+        sb.append(".brand-tagline{font-size:8pt;color:").append(MUTED)
+                .append(";letter-spacing:2px;text-transform:uppercase}");
+        sb.append(".invoice-title{font-family:'Fraunces',serif;font-size:32pt;font-weight:700;color:").append(HEADING)
+                .append("}");
         sb.append(".invoice-id{font-size:10pt;font-weight:600;color:").append(HEADING).append("}");
-        sb.append(".invoice-id-label{font-size:8pt;color:").append(MUTED).append(";text-transform:uppercase;letter-spacing:1px}");
-        sb.append(".accent-bar{height:3px;background-color:").append(ACCENT).append(";border-radius:2px;margin:20px 0}");
+        sb.append(".invoice-id-label{font-size:8pt;color:").append(MUTED)
+                .append(";text-transform:uppercase;letter-spacing:1px}");
+        sb.append(".accent-bar{height:3px;background-color:").append(ACCENT)
+                .append(";border-radius:2px;margin:20px 0}");
 
         sb.append(".meta{display:table;width:100%;margin-bottom:20px}");
         sb.append(".meta>div{display:table-cell;vertical-align:bottom}");
         sb.append(".meta-left{width:55%}");
         sb.append(".meta-right{width:45%;text-align:right}");
-        sb.append(".meta-label{font-size:7pt;font-weight:700;color:").append(HEADING).append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}");
+        sb.append(".meta-label{font-size:7pt;font-weight:700;color:").append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}");
         sb.append(".meta-value{font-size:10pt;font-weight:600;color:").append(HEADING).append("}");
         sb.append(".meta-row{margin-bottom:4px}");
-        sb.append(".bill-to-label{font-size:7pt;font-weight:700;color:").append(HEADING).append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}");
+        sb.append(".bill-to-label{font-size:7pt;font-weight:700;color:").append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}");
         sb.append(".bill-to-name{font-size:12pt;font-weight:700;color:").append(HEADING).append("}");
         sb.append(".bill-to-company-id{font-size:7pt;color:").append(MUTED).append(";margin-top:2px}");
-        sb.append(".status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:7pt;font-weight:600;text-transform:uppercase}");
+        sb.append(
+                ".status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:7pt;font-weight:600;text-transform:uppercase}");
         sb.append(".status-paid{background-color:rgba(42,122,106,0.1);color:").append(ACCENT).append("}");
         sb.append(".status-pending{background-color:rgba(196,149,58,0.1);color:").append(GOLD).append("}");
 
         sb.append("table{width:100%;border-collapse:collapse;margin-bottom:20px}");
-        sb.append("th{background-color:").append(BG_CREAM).append(";padding:10px 12px;text-align:left;font-size:7pt;font-weight:700;color:").append(HEADING).append(";text-transform:uppercase;letter-spacing:1px}");
+        sb.append("th{background-color:").append(BG_CREAM)
+                .append(";padding:10px 12px;text-align:left;font-size:7pt;font-weight:700;color:").append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1px}");
         sb.append("th:first-child{border-radius:6px 0 0 6px}");
         sb.append("th:last-child{border-radius:0 6px 6px 0}");
         sb.append("th:not(:first-child){text-align:right}");
@@ -90,21 +107,25 @@ public class InvoicePdfGenerator {
         sb.append(".totals-row{display:table;width:100%;padding:6px 0}");
         sb.append(".totals-label{display:table-cell;font-size:9pt;color:").append(BODY).append("}");
         sb.append(".totals-value{display:table-cell;text-align:right;font-size:9pt;color:").append(HEADING).append("}");
-        sb.append(".totals-total{display:table;width:100%;padding:8px 0;border-top:2px solid ").append(HEADING).append("}");
+        sb.append(".totals-total{display:table;width:100%;padding:8px 0;border-top:2px solid ").append(HEADING)
+                .append("}");
         sb.append(".totals-total .totals-label{font-size:11pt;color:").append(HEADING).append("}");
         sb.append(".totals-total .totals-value{font-size:11pt;font-weight:700;color:").append(ACCENT).append("}");
 
         sb.append(".payment{display:table;width:100%;margin-top:30px}");
         sb.append(".payment>div{display:table-cell;width:50%}");
         sb.append(".payment-right{text-align:right}");
-        sb.append(".section-label{font-size:7pt;font-weight:700;color:").append(HEADING).append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}");
+        sb.append(".section-label{font-size:7pt;font-weight:700;color:").append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}");
         sb.append(".section-value{font-size:9pt;color:").append(BODY).append(";line-height:1.6}");
 
-        sb.append(".footer-bar{height:3px;background-color:").append(ACCENT).append(";border-radius:0 0 6px 6px;margin-top:40px}");
+        sb.append(".footer-bar{height:3px;background-color:").append(ACCENT)
+                .append(";border-radius:0 0 6px 6px;margin-top:40px}");
         sb.append(".footer{display:table;width:100%;padding:20px 0}");
         sb.append(".footer>div{display:table-cell;vertical-align:bottom}");
         sb.append(".footer-right{text-align:right}");
-        sb.append(".footer-thanks{font-family:'Fraunces',serif;font-size:14pt;font-weight:700;color:").append(ACCENT).append("}");
+        sb.append(".footer-thanks{font-family:'Fraunces',serif;font-size:14pt;font-weight:700;color:").append(ACCENT)
+                .append("}");
         sb.append(".footer-company{font-size:7pt;color:").append(MUTED).append(";margin-top:2px}");
         sb.append(".footer-tagline{font-size:7pt;color:").append(MUTED).append("}");
         sb.append(".footer-contact-label{font-size:7pt;color:").append(MUTED).append("}");
@@ -139,7 +160,8 @@ public class InvoicePdfGenerator {
         sb.append("<div class=\"meta\">");
         sb.append("<div class=\"meta-left\">");
         sb.append("<div class=\"bill-to-label\">Bill To</div>");
-        sb.append("<div class=\"bill-to-name\">").append(escapeHtml(companyName != null ? companyName : "Customer")).append("</div>");
+        sb.append("<div class=\"bill-to-name\">").append(escapeHtml(companyName != null ? companyName : "Customer"))
+                .append("</div>");
         if (invoice.companyId() != null) {
             sb.append("<div class=\"bill-to-company-id\">Company #").append(invoice.companyId()).append("</div>");
         }
@@ -158,14 +180,19 @@ public class InvoicePdfGenerator {
         }
         sb.append("<div class=\"meta-row\">");
         sb.append("<div class=\"meta-label\">Status</div>");
-        String statusClass = invoice.status() != null && invoice.status().equalsIgnoreCase("paid") ? "status-paid" : "status-pending";
-        sb.append("<div class=\"meta-value\"><span class=\"status-badge ").append(statusClass).append("\">").append(capitalize(invoice.status())).append("</span></div>");
+        String statusClass = invoice.status() != null && invoice.status().equalsIgnoreCase("paid") ? "status-paid"
+                : "status-pending";
+        sb.append("<div class=\"meta-value\"><span class=\"status-badge ").append(statusClass).append("\">")
+                .append(capitalize(invoice.status())).append("</span></div>");
         sb.append("</div>");
         sb.append("</div></div>");
 
         String price = formatCurrency(invoice.amount(), invoice.currency());
-        sb.append("<table><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>");
-        sb.append("<tr><td><div class=\"item-name\">").append(escapeHtml(invoice.description() != null ? invoice.description() : "Credit Purchase")).append("</div>");
+        sb.append(
+                "<table><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>");
+        sb.append("<tr><td><div class=\"item-name\">")
+                .append(escapeHtml(invoice.description() != null ? invoice.description() : "Credit Purchase"))
+                .append("</div>");
         sb.append("<div class=\"item-desc\">TMAG Platform Credits</div></td>");
         sb.append("<td>1</td>");
         sb.append("<td>").append(price).append("</td>");
@@ -173,21 +200,27 @@ public class InvoicePdfGenerator {
         sb.append("</tr></tbody></table>");
 
         sb.append("<div class=\"totals\">");
-        sb.append("<div class=\"totals-row\"><div class=\"totals-label\">Subtotal</div><div class=\"totals-value\">").append(price).append("</div></div>");
-        sb.append("<div class=\"totals-row\"><div class=\"totals-label\">Tax (0%)</div><div class=\"totals-value\">").append(formatCurrency(BigDecimal.ZERO, invoice.currency())).append("</div></div>");
-        sb.append("<div class=\"totals-total\"><div class=\"totals-label\">TOTAL</div><div class=\"totals-value\">").append(price).append("</div></div>");
+        sb.append("<div class=\"totals-row\"><div class=\"totals-label\">Subtotal</div><div class=\"totals-value\">")
+                .append(price).append("</div></div>");
+        sb.append("<div class=\"totals-row\"><div class=\"totals-label\">Tax (0%)</div><div class=\"totals-value\">")
+                .append(formatCurrency(BigDecimal.ZERO, invoice.currency())).append("</div></div>");
+        sb.append("<div class=\"totals-total\"><div class=\"totals-label\">TOTAL</div><div class=\"totals-value\">")
+                .append(price).append("</div></div>");
         sb.append("</div>");
 
         sb.append("<div class=\"payment\">");
         sb.append("<div class=\"payment-left\">");
         sb.append("<div class=\"section-label\">Payment</div>");
-        sb.append("<div class=\"section-value\">Method: ").append(invoice.paymentMethod() != null ? invoice.paymentMethod() : "Online Payment").append("</div>");
-        sb.append("<div class=\"section-value\">Currency: ").append(invoice.currency() != null ? invoice.currency() : "USD").append("</div>");
+        sb.append("<div class=\"section-value\">Method: ")
+                .append(invoice.paymentMethod() != null ? invoice.paymentMethod() : "Online Payment").append("</div>");
+        sb.append("<div class=\"section-value\">Currency: ")
+                .append(invoice.currency() != null ? invoice.currency() : "USD").append("</div>");
         sb.append("</div>");
         sb.append("<div class=\"payment-right\">");
         sb.append("<div class=\"section-label\">Transaction</div>");
         sb.append("<div class=\"section-value\">Invoice #").append(invoice.id()).append("</div>");
-        sb.append("<div class=\"section-value\">Created: ").append(formatDateTime(invoice.createdAt())).append("</div>");
+        sb.append("<div class=\"section-value\">Created: ").append(formatDateTime(invoice.createdAt()))
+                .append("</div>");
         if (invoice.paidAt() != null) {
             sb.append("<div class=\"section-value\">Paid: ").append(formatDateTime(invoice.paidAt())).append("</div>");
         }
@@ -211,17 +244,20 @@ public class InvoicePdfGenerator {
     }
 
     private String formatDate(LocalDateTime dateTime) {
-        if (dateTime == null) return "—";
+        if (dateTime == null)
+            return "—";
         return dateTime.format(DateTimeFormatter.ofPattern("MMM d, yyyy"));
     }
 
     private String formatDateTime(LocalDateTime dateTime) {
-        if (dateTime == null) return "—";
+        if (dateTime == null)
+            return "—";
         return dateTime.format(DateTimeFormatter.ofPattern("MMM d, yyyy • h:mm a"));
     }
 
     private String formatCurrency(BigDecimal amount, String currency) {
-        if (amount == null) amount = BigDecimal.ZERO;
+        if (amount == null)
+            amount = BigDecimal.ZERO;
         String symbol = switch (currency) {
             case "NGN" -> "₦";
             case "EUR" -> "€";
@@ -232,15 +268,17 @@ public class InvoicePdfGenerator {
     }
 
     private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return "—";
+        if (str == null || str.isEmpty())
+            return "—";
         return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     private String escapeHtml(String str) {
-        if (str == null) return "";
+        if (str == null)
+            return "";
         return str.replace("&", "&amp;")
-                  .replace("<", "&lt;")
-                  .replace(">", "&gt;")
-                  .replace("\"", "&quot;");
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }
