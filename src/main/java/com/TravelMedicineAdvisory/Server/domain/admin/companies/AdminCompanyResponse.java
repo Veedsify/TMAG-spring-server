@@ -19,16 +19,18 @@ public class AdminCompanyResponse {
     private String contactEmail;
     private String contactPhone;
     private String address;
+    private String billingCurrency;
     private LocalDateTime createdAt;
 
     public AdminCompanyResponse() {}
 
     public AdminCompanyResponse(Long id, String name, String industry, String website,
-                                Integer creditsPurchased, Integer creditsRemaining, 
-                                Integer plansGenerated, Integer activeEmployees, 
+                                Integer creditsPurchased, Integer creditsRemaining,
+                                Integer plansGenerated, Integer activeEmployees,
                                 String billingStatus, LocalDateTime contractRenewal,
                                 String tier, List<String> hrAdmins, String contactEmail,
-                                String contactPhone, String address, LocalDateTime createdAt) {
+                                String contactPhone, String address, String billingCurrency,
+                                LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.industry = industry;
@@ -44,6 +46,7 @@ public class AdminCompanyResponse {
         this.contactEmail = contactEmail;
         this.contactPhone = contactPhone;
         this.address = address;
+        this.billingCurrency = billingCurrency;
         this.createdAt = createdAt;
     }
 
@@ -77,6 +80,8 @@ public class AdminCompanyResponse {
     public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+    public String getBillingCurrency() { return billingCurrency; }
+    public void setBillingCurrency(String billingCurrency) { this.billingCurrency = billingCurrency; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

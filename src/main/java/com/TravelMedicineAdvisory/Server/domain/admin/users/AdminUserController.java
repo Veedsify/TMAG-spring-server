@@ -26,6 +26,11 @@ public class AdminUserController {
         this.service = service;
     }
 
+    @PostMapping
+    public ResponseEntity<SuccessResponse> create(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(new SuccessResponse("Created successfully", service.create(body)));
+    }
+
     @GetMapping
     public ResponseEntity<SuccessResponse> getAll() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAll()));

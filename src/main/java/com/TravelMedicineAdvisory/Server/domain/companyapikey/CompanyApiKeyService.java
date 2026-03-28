@@ -6,13 +6,18 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -22,10 +27,15 @@ public class CompanyApiKeyService {
 
     private final CompanyApiKeyRepository repository;
     private final CompanyRepository companyRepository;
+    private final UserRepository userRepository;
+    private final QueueService queueService;
 
-    public CompanyApiKeyService(CompanyApiKeyRepository repository, CompanyRepository companyRepository) {
+    public CompanyApiKeyService(CompanyApiKeyRepository repository, CompanyRepository companyRepository,
+            UserRepository userRepository, QueueService queueService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
+        this.userRepository = userRepository;
+        this.queueService = queueService;
     }
 
     public record CreateResult(String fullKey, CompanyApiKeyResponse response) {}
@@ -48,7 +58,38 @@ public class CompanyApiKeyService {
 
         CompanyApiKey saved = repository.save(entity);
 
+        sendApiKeyEmail(saved, true, saved.getCompany().getName());
+
         return new CreateResult(rawKey, toResponse(saved));
+    }
+
+    private void sendApiKeyEmail(CompanyApiKey apiKey, boolean created, String companyName) {
+        User adminUser = userRepository.findById(
+                companyRepository.findById(apiKey.getCompany().getId())
+                        .map(c -> c.getId())
+                        .orElse(0L))
+                .orElse(null);
+
+        if (adminUser != null) {
+            String firstName = adminUser.getFirstName() != null ? adminUser.getFirstName() : "there";
+            if (created) {
+                queueService.dispatch(JobType.EMAIL_API_KEY_CREATED, Map.of(
+                        "to", adminUser.getEmail(),
+                        "subject", "New API key created for " + companyName,
+                        "variables", Map.of(
+                                "firstName", firstName,
+                                "keyName", apiKey.getName(),
+                                "companyName", companyName)));
+            } else {
+                queueService.dispatch(JobType.EMAIL_API_KEY_REVOKED, Map.of(
+                        "to", adminUser.getEmail(),
+                        "subject", "API key revoked for " + companyName,
+                        "variables", Map.of(
+                                "firstName", firstName,
+                                "keyName", apiKey.getName(),
+                                "companyName", companyName)));
+            }
+        }
     }
 
     public List<CompanyApiKeyResponse> listByCompany(Long companyId) {
@@ -65,6 +106,9 @@ public class CompanyApiKeyService {
 
         entity.setStatus(CompanyApiKey.ApiKeyStatus.REVOKED);
         repository.save(entity);
+
+        String companyName = entity.getCompany() != null ? entity.getCompany().getName() : "your company";
+        sendApiKeyEmail(entity, false, companyName);
     }
 
     private String generateRawKey() {

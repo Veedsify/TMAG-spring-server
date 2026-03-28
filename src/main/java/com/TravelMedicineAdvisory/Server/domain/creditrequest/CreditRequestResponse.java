@@ -1,11 +1,11 @@
-package com.TravelMedicineAdvisory.Server.domain.travelrequest;
+package com.TravelMedicineAdvisory.Server.domain.creditrequest;
 
 import java.time.LocalDateTime;
 
-public record TravelRequestResponse(
+public record CreditRequestResponse(
     Long id,
-    String destination,
-    String dates,
+    Integer creditsRequested,
+    String reason,
     String status,
     LocalDateTime submittedAt,
     Long companyId,

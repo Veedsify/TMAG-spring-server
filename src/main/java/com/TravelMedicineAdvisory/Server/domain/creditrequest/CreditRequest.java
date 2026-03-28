@@ -1,4 +1,4 @@
-package com.TravelMedicineAdvisory.Server.domain.travelrequest;
+package com.TravelMedicineAdvisory.Server.domain.creditrequest;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
@@ -9,15 +9,15 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "travel_requests")
-@SQLDelete(sql = "UPDATE travel_requests SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@Table(name = "credit_requests")
+@SQLDelete(sql = "UPDATE credit_requests SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
-public class TravelRequest extends BaseEntity {
+public class CreditRequest extends BaseEntity {
 
-    private String destination;
-    private String dates;
+    private Integer creditsRequested;
+    private String reason;
     private String status;
-    private Integer creditRequested;
+    
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
     
@@ -29,11 +29,11 @@ public class TravelRequest extends BaseEntity {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    public String getDestination() { return destination; }
-    public void setDestination(String destination) { this.destination = destination; }
+    public Integer getCreditsRequested() { return creditsRequested; }
+    public void setCreditsRequested(Integer creditsRequested) { this.creditsRequested = creditsRequested; }
 
-    public String getDates() { return dates; }
-    public void setDates(String dates) { this.dates = dates; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -46,7 +46,4 @@ public class TravelRequest extends BaseEntity {
 
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
-
-    public Integer getCreditRequested() { return creditRequested; }
-    public void setCreditRequested(Integer creditRequested) { this.creditRequested = creditRequested; }
 }

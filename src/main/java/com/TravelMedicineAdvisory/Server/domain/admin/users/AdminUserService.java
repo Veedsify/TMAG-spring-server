@@ -7,17 +7,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlag;
+import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlagRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -28,21 +32,45 @@ public class AdminUserService {
     private final CreditRepository creditRepository;
     private final EmployeeRepository employeeRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final AbuseFlagRepository abuseFlagRepository;
+    private final TravelPlanRepository travelPlanRepository;
+    private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
 
     public AdminUserService(UserRepository userRepository, CreditRepository creditRepository,
             EmployeeRepository employeeRepository,
-            CompanyUserRepository companyUserRepository, QueueService queueService) {
+            CompanyUserRepository companyUserRepository, AbuseFlagRepository abuseFlagRepository,
+            TravelPlanRepository travelPlanRepository, PasswordEncoder passwordEncoder,
+            QueueService queueService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.employeeRepository = employeeRepository;
         this.companyUserRepository = companyUserRepository;
+        this.abuseFlagRepository = abuseFlagRepository;
+        this.travelPlanRepository = travelPlanRepository;
+        this.passwordEncoder = passwordEncoder;
         this.queueService = queueService;
     }
 
     public List<AdminUserResponse> findAll() {
         List<User> users = userRepository.findAllActive();
         return users.stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional
+    public AdminUserResponse create(Map<String, Object> body) {
+        User user = new User();
+        if (body.containsKey("name")) user.setName((String) body.get("name"));
+        if (body.containsKey("email")) user.setEmail((String) body.get("email"));
+        if (body.containsKey("phone")) user.setPhone((String) body.get("phone"));
+        if (body.containsKey("password")) {
+            user.setPassword(passwordEncoder.encode((String) body.get("password")));
+        }
+        user.setType(body.containsKey("type") ? (String) body.get("type") : "INDIVIDUAL");
+        user.setCredits(0);
+        user.setIsActive(true);
+        user = userRepository.save(user);
+        return mapToResponse(user);
     }
 
     public AdminUserResponse findById(Long id) {
@@ -58,6 +86,9 @@ public class AdminUserService {
 
         if (updates.containsKey("name")) {
             user.setName((String) updates.get("name"));
+        }
+        if (updates.containsKey("email")) {
+            user.setEmail((String) updates.get("email"));
         }
         if (updates.containsKey("phone")) {
             user.setPhone((String) updates.get("phone"));
@@ -124,7 +155,6 @@ public class AdminUserService {
         String planType = "individual";
         Long companyId = null;
         String companyName = null;
-        List<String> riskFlags = new ArrayList<>();
 
         if ("COMPANY".equals(user.getType())) {
             planType = "corporate";
@@ -150,6 +180,16 @@ public class AdminUserService {
                 creditsUsed += Math.abs(credit.getAmount());
             }
         }
+
+        // Get unresolved abuse flags for this user
+        List<String> riskFlags = abuseFlagRepository.findAll().stream()
+                .filter(f -> f.getUser() != null && f.getUser().getId().equals(user.getId()))
+                .filter(f -> f.getResolved() == null || !f.getResolved())
+                .map(AbuseFlag::getType)
+                .toList();
+
+        // Get actual plans generated count
+        int plansGenerated = (int) travelPlanRepository.countByUserId(user.getId());
 
         String role = "individual";
         if (user.getRole() != null) {
@@ -179,7 +219,7 @@ public class AdminUserService {
                 companyName,
                 creditsUsed,
                 creditsRemaining,
-                0,
+                plansGenerated,
                 user.getLastLogin(),
                 status,
                 riskFlags,

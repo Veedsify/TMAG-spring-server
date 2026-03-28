@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 
 @Service
 public class AdminAnalyticsService {
@@ -77,8 +78,17 @@ public class AdminAnalyticsService {
 
         stats.setSystemHealthStatus("healthy");
 
-        stats.setActiveUsersToday(1L);
-        stats.setNewUsersThisWeek(3L);
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        long activeUsersToday = userRepository.findAllActive().stream()
+                .filter(u -> u.getLastLogin() != null && u.getLastLogin().isAfter(todayStart))
+                .count();
+        stats.setActiveUsersToday(activeUsersToday);
+
+        LocalDateTime weekStart = todayStart.minusDays(7);
+        long newUsersThisWeek = userRepository.findAllActive().stream()
+                .filter(u -> u.getCreatedAt() != null && u.getCreatedAt().isAfter(weekStart))
+                .count();
+        stats.setNewUsersThisWeek(newUsersThisWeek);
 
         return stats;
     }
@@ -118,47 +128,115 @@ public class AdminAnalyticsService {
         corpVsInd.put("individual", userRepository.countByType("INDIVIDUAL"));
         analytics.setCorporateVsIndividual(corpVsInd);
 
+        // Peak usage times — aggregate AI request logs by hour of day
         List<Map<String, Object>> peakTimes = new ArrayList<>();
-        for (int hour = 8; hour <= 17; hour++) {
-            Map<String, Object> entry = new HashMap<>();
-            entry.put("hour", hour);
-            entry.put("requests", 50 + new Random().nextInt(50));
-            peakTimes.add(entry);
+        List<AiRequestLog> allAiLogs = aiRequestLogRepository.findAll();
+        Map<Integer, Long> hourCounts = new HashMap<>();
+        for (AiRequestLog log : allAiLogs) {
+            if (log.getCreatedAt() != null) {
+                int hour = log.getCreatedAt().getHour();
+                hourCounts.merge(hour, 1L, Long::sum);
+            }
+        }
+        for (int hour = 0; hour < 24; hour++) {
+            if (hourCounts.containsKey(hour)) {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("hour", hour);
+                entry.put("requests", hourCounts.get(hour));
+                peakTimes.add(entry);
+            }
+        }
+        if (peakTimes.isEmpty()) {
+            for (int hour = 8; hour <= 17; hour++) {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("hour", hour);
+                entry.put("requests", 0);
+                peakTimes.add(entry);
+            }
         }
         analytics.setPeakUsageTimes(peakTimes);
 
+        // Monthly requests & revenue — aggregate by month from AI logs and invoices
         List<Map<String, Object>> monthly = new ArrayList<>();
-        String[] months = { "Aug", "Sep", "Oct", "Nov", "Dec", "Jan" };
-        for (String month : months) {
+        Map<String, Long> monthlyRequestCounts = new HashMap<>();
+        Map<String, Long> monthlyRevenue = new HashMap<>();
+        java.time.format.DateTimeFormatter monthFmt = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
+        for (AiRequestLog log : allAiLogs) {
+            if (log.getCreatedAt() != null) {
+                String monthKey = log.getCreatedAt().format(monthFmt);
+                monthlyRequestCounts.merge(monthKey, 1L, Long::sum);
+            }
+        }
+        List<Invoice> allInvoices = invoiceRepository.findAllActive();
+        for (Invoice inv : allInvoices) {
+            if (inv.getPaidAt() != null && inv.getAmount() != null) {
+                String monthKey = inv.getPaidAt().format(monthFmt);
+                monthlyRevenue.merge(monthKey, inv.getAmount().longValue(), Long::sum);
+            }
+        }
+        Set<String> allMonths = new java.util.TreeSet<>();
+        allMonths.addAll(monthlyRequestCounts.keySet());
+        allMonths.addAll(monthlyRevenue.keySet());
+        for (String monthKey : allMonths) {
             Map<String, Object> entry = new HashMap<>();
-            entry.put("month", month);
-            entry.put("requests", 100 + new Random().nextInt(200));
-            entry.put("revenue", 40000 + new Random().nextInt(80000));
+            entry.put("month", monthKey);
+            entry.put("requests", monthlyRequestCounts.getOrDefault(monthKey, 0L));
+            entry.put("revenue", monthlyRevenue.getOrDefault(monthKey, 0L));
             monthly.add(entry);
         }
         analytics.setMonthlyRequests(monthly);
 
+        // Daily active users — users who logged in each day of the past week
         List<Map<String, Object>> dailyActive = new ArrayList<>();
-        String[] days = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-        for (String day : days) {
+        LocalDateTime now = LocalDateTime.now();
+        java.time.format.DateTimeFormatter dayFmt = java.time.format.DateTimeFormatter.ofPattern("EEE");
+        for (int i = 6; i >= 0; i--) {
+            LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime dayEnd = dayStart.plusDays(1);
+            long count = users.stream()
+                    .filter(u -> u.getLastLogin() != null
+                            && u.getLastLogin().isAfter(dayStart)
+                            && u.getLastLogin().isBefore(dayEnd))
+                    .count();
             Map<String, Object> entry = new HashMap<>();
-            entry.put("day", day);
-            entry.put("users", 15 + new Random().nextInt(50));
+            entry.put("day", dayStart.format(dayFmt));
+            entry.put("users", count);
             dailyActive.add(entry);
         }
         analytics.setDailyActiveUsers(dailyActive);
 
+        // Credit usage by type — real data from users and companies
         List<Map<String, Object>> creditUsage = new ArrayList<>();
-        Map<String, Object> ind = new HashMap<>();
-        ind.put("type", "Individual");
-        ind.put("used", 440);
-        ind.put("remaining", 280);
-        creditUsage.add(ind);
-        Map<String, Object> corp = new HashMap<>();
-        corp.put("type", "Corporate");
-        corp.put("used", 340);
-        corp.put("remaining", 560);
-        creditUsage.add(corp);
+        List<User> individualUsers = userRepository.findByType("INDIVIDUAL");
+        int indUsed = individualUsers.stream()
+                .mapToInt(u -> {
+                    return creditRepository.findLedgerByUserId(u.getId()).stream()
+                            .filter(c -> "consume".equals(c.getType()))
+                            .mapToInt(c -> Math.abs(c.getAmount()))
+                            .sum();
+                }).sum();
+        int indRemaining = individualUsers.stream()
+                .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
+                .sum();
+        Map<String, Object> indMap = new HashMap<>();
+        indMap.put("type", "Individual");
+        indMap.put("used", indUsed);
+        indMap.put("remaining", indRemaining);
+        creditUsage.add(indMap);
+
+        List<com.TravelMedicineAdvisory.Server.domain.company.Company> allCompanies = companyRepository.findAllActive();
+        int corpUsed = allCompanies.stream()
+                .mapToInt(c -> c.getUsedCredits() != null ? c.getUsedCredits() : 0)
+                .sum();
+        int corpRemaining = allCompanies.stream()
+                .mapToInt(c -> (c.getTotalCredits() != null ? c.getTotalCredits() : 0)
+                        - (c.getUsedCredits() != null ? c.getUsedCredits() : 0))
+                .sum();
+        Map<String, Object> corpMap = new HashMap<>();
+        corpMap.put("type", "Corporate");
+        corpMap.put("used", corpUsed);
+        corpMap.put("remaining", corpRemaining);
+        creditUsage.add(corpMap);
         analytics.setCreditUsageByType(creditUsage);
 
         return analytics;
@@ -249,6 +327,44 @@ public class AdminAnalyticsService {
     }
 
     @Transactional
+    public AdminInvoiceResponse createInvoice(Map<String, Object> body) {
+        Invoice invoice = new Invoice();
+        if (body.containsKey("description")) invoice.setDescription((String) body.get("description"));
+        if (body.containsKey("amount")) invoice.setAmount(new java.math.BigDecimal(body.get("amount").toString()));
+        if (body.containsKey("currency")) invoice.setCurrency((String) body.get("currency"));
+        if (body.containsKey("status")) invoice.setStatus((String) body.get("status"));
+        if (body.containsKey("paymentMethod")) invoice.setPaymentMethod((String) body.get("paymentMethod"));
+        if (body.containsKey("companyId")) {
+            Long companyId = ((Number) body.get("companyId")).longValue();
+            companyRepository.findById(companyId).ifPresent(invoice::setCompany);
+        }
+        if (body.containsKey("userId")) {
+            Long userId = ((Number) body.get("userId")).longValue();
+            userRepository.findById(userId).ifPresent(invoice::setUser);
+        }
+        invoice.setIssuedAt(LocalDateTime.now());
+        if (body.containsKey("dueDate")) {
+            invoice.setDueDate(LocalDateTime.parse((String) body.get("dueDate")));
+        }
+        invoice.setStatus(invoice.getStatus() != null ? invoice.getStatus() : "pending");
+        invoice = invoiceRepository.save(invoice);
+        return mapInvoiceToResponse(invoice);
+    }
+
+    @Transactional
+    public AdminInvoiceResponse updateInvoice(Long id, Map<String, Object> updates) {
+        Invoice invoice = invoiceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+        if (updates.containsKey("description")) invoice.setDescription((String) updates.get("description"));
+        if (updates.containsKey("amount")) invoice.setAmount(new java.math.BigDecimal(updates.get("amount").toString()));
+        if (updates.containsKey("currency")) invoice.setCurrency((String) updates.get("currency"));
+        if (updates.containsKey("status")) invoice.setStatus((String) updates.get("status"));
+        if (updates.containsKey("paymentMethod")) invoice.setPaymentMethod((String) updates.get("paymentMethod"));
+        invoice = invoiceRepository.save(invoice);
+        return mapInvoiceToResponse(invoice);
+    }
+
+    @Transactional
     public void markInvoicePaid(Long id) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
@@ -322,7 +438,7 @@ public class AdminAnalyticsService {
 
         response.setStatus(plan.getStatus() != null ? plan.getStatus() : "active");
         response.setCreatedAt(plan.getCreatedAt());
-        response.setCreditUsed(true);
+        response.setCreditUsed(plan.getUser() != null);
 
         return response;
     }

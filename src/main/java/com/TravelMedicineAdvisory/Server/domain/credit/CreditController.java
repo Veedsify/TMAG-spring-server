@@ -1,27 +1,42 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.TravelMedicineAdvisory.Server.core.types.PaginatedResponse;
 import com.TravelMedicineAdvisory.Server.core.types.Pagination;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @RestController
 @RequestMapping("/api/v1/credits")
 public class CreditController {
 
     private final CreditService service;
+    private final UserRepository userRepository;
 
-    public CreditController(CreditService service) {
+    public CreditController(CreditService service, UserRepository userRepository) {
         this.service = service;
+        this.userRepository = userRepository;
+    }
+
+    private User getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @GetMapping
-    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable) {
-        Page<CreditResponse> page = service.findAll(companyId, pageable);
+    public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
+        User currentUser = getCurrentUser();
+        Page<CreditResponse> page = service.findAllByUser(currentUser.getId(), pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
@@ -34,23 +49,7 @@ public class CreditController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
-    }
-
-    @PostMapping
-    public ResponseEntity<SuccessResponse> create(@RequestBody CreditRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new SuccessResponse("Created successfully", service.create(request)));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody CreditRequest request) {
-        return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));
+        CreditResponse credit = service.findById(id);
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", credit));
     }
 }

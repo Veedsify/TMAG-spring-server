@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.data.domain.Page;
@@ -7,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
@@ -24,13 +27,15 @@ public class TravelPlanService {
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
+    private final QueueService queueService;
 
     public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
-            EmployeeRepository employeeRepository, UserRepository userRepository) {
+            EmployeeRepository employeeRepository, UserRepository userRepository, QueueService queueService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
+        this.queueService = queueService;
     }
 
     public Page<TravelPlanResponse> findAll(Long companyId, Pageable pageable) {
@@ -81,7 +86,19 @@ public class TravelPlanService {
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
         entity.setStatus(String.valueOf(Travel_Plan.PENDING));
-        return toResponse(repository.save(entity));
+        TravelPlan saved = repository.save(entity);
+
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        String companyName = entity.getCompany() != null ? entity.getCompany().getName() : "TMAG";
+        queueService.dispatch(JobType.EMAIL_TRAVEL_PLAN_CREATED, Map.of(
+                "to", user.getEmail(),
+                "subject", "Your travel health plan for " + entity.getDestination() + " is ready",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "destination", entity.getDestination(),
+                        "companyName", companyName)));
+
+        return toResponse(saved);
     }
 
     public TravelPlanResponse update(Long id, TravelPlanRequest request) {

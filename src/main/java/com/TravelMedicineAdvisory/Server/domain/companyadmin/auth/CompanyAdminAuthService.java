@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.auth;
 
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
@@ -18,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,7 @@ public class CompanyAdminAuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
+    private final QueueService queueService;
 
     public CompanyAdminAuthService(UserRepository userRepository,
                                    CompanyUserRepository companyUserRepository,
@@ -40,7 +44,8 @@ public class CompanyAdminAuthService {
                                    JwtService jwtService,
                                    AuthenticationManager authenticationManager,
                                    UserDetailsService userDetailsService,
-                                   ObjectMapper objectMapper) {
+                                   ObjectMapper objectMapper,
+                                   QueueService queueService) {
         this.userRepository = userRepository;
         this.companyUserRepository = companyUserRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -48,6 +53,7 @@ public class CompanyAdminAuthService {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.objectMapper = objectMapper;
+        this.queueService = queueService;
     }
 
     public Map<String, Object> login(String email, String password) {
@@ -67,6 +73,17 @@ public class CompanyAdminAuthService {
 
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
+
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss"));
+        queueService.dispatch(JobType.EMAIL_LOGIN_ALERT, Map.of(
+                "to", user.getEmail(),
+                "subject", "New login to your TMAG account",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "location", "Unknown",
+                        "device", "Web Browser",
+                        "timestamp", timestamp)));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         String jwtToken = jwtService.generateToken(userDetails);

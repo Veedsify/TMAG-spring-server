@@ -28,6 +28,11 @@ public class AdminCompanyController {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
     }
 
+    @PostMapping
+    public ResponseEntity<SuccessResponse> create(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(new SuccessResponse("Created successfully", service.create(body)));
+    }
+
     @GetMapping("/{id}/employees")
     public ResponseEntity<SuccessResponse> getEmployees(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getEmployees(id)));

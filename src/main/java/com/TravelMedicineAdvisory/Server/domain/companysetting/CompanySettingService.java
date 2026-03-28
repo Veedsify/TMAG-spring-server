@@ -8,9 +8,14 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -18,10 +23,18 @@ public class CompanySettingService {
 
     private final CompanySettingRepository repository;
     private final CompanyRepository companyRepository;
+    private final UserRepository userRepository;
+    private final QueueService queueService;
+    private final AdminNotificationService adminNotificationService;
 
-    public CompanySettingService(CompanySettingRepository repository, CompanyRepository companyRepository) {
+    public CompanySettingService(CompanySettingRepository repository, CompanyRepository companyRepository,
+            UserRepository userRepository, QueueService queueService,
+            AdminNotificationService adminNotificationService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
+        this.userRepository = userRepository;
+        this.queueService = queueService;
+        this.adminNotificationService = adminNotificationService;
     }
 
     public CompanySettingResponse getByCompany(Long companyId) {
@@ -44,9 +57,11 @@ public class CompanySettingService {
             String key = entry.getKey();
             CompanySettingRequest.SettingValue val = entry.getValue();
 
-            CompanySetting setting = repository.findByCompanyIdAndKeyAndDeletedAtIsNull(companyId, key)
-                    .orElse(new CompanySetting());
+            CompanySetting existingSetting = repository.findByCompanyIdAndKeyAndDeletedAtIsNull(companyId, key)
+                    .orElse(null);
+            String oldValue = existingSetting != null ? existingSetting.getValue() : null;
 
+            CompanySetting setting = new CompanySetting();
             setting.setCompany(company);
             setting.setKey(key);
             setting.setValue(val.value());
@@ -55,14 +70,31 @@ public class CompanySettingService {
                     : CompanySetting.SettingType.STRING);
 
             repository.save(setting);
+
+            if ("two_factor_enabled".equals(key) && oldValue != null && !oldValue.equals(val.value())) {
+                sendTwoFactorEmail(company, "true".equalsIgnoreCase(val.value()));
+            }
         }
 
         return getByCompany(companyId);
     }
 
+    private void sendTwoFactorEmail(Company company, boolean enabled) {
+        JobType jobType = enabled ? JobType.EMAIL_TWO_FACTOR_ENABLED : JobType.EMAIL_TWO_FACTOR_DISABLED;
+        String subject = enabled ? "Two-factor authentication enabled" : "Two-factor authentication disabled";
+        
+        adminNotificationService.notifyCompanyAdmins(
+                company.getId(),
+                subject,
+                jobType,
+                Map.of());
+    }
+
     public void updateBillingCurrency(Long companyId, BillingCurrency currency) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
+
+        String oldCurrency = company.getBillingCurrency() != null ? company.getBillingCurrency().name() : "USD";
 
         company.setBillingCurrency(currency);
         companyRepository.save(company);
@@ -74,6 +106,18 @@ public class CompanySettingService {
         setting.setValue(currency.name());
         setting.setType(CompanySetting.SettingType.STRING);
         repository.save(setting);
+
+        sendBillingCurrencyEmail(company, oldCurrency, currency.name());
+    }
+
+    private void sendBillingCurrencyEmail(Company company, String oldCurrency, String newCurrency) {
+        adminNotificationService.notifyCompanyAdmins(
+                company.getId(),
+                "Billing currency updated for " + company.getName(),
+                JobType.EMAIL_BILLING_CURRENCY_CHANGED,
+                Map.of(
+                        "oldCurrency", oldCurrency,
+                        "newCurrency", newCurrency));
     }
 
     private Object parseValue(CompanySetting setting) {

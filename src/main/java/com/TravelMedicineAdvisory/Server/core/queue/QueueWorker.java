@@ -90,6 +90,42 @@ public class QueueWorker {
                     handleEmailJob(msg, "employee_invitation");
                 case EMAIL_GENERIC ->
                     handleEmailJob(msg, "generic");
+                case EMAIL_CREDIT_PURCHASE ->
+                    handleEmailJob(msg, "credit_purchase");
+                case EMAIL_CREDIT_ALLOCATION ->
+                    handleEmailJob(msg, "credit_allocation");
+                case EMAIL_CREDIT_REQUEST_APPROVED ->
+                    handleEmailJob(msg, "credit_request_approved");
+                case EMAIL_CREDIT_REQUEST_REJECTED ->
+                    handleEmailJob(msg, "credit_request_rejected");
+                case EMAIL_EMPLOYEE_STATUS_CHANGED ->
+                    handleEmailJob(msg, "employee_status_changed");
+                case EMAIL_EMPLOYEE_REMOVED ->
+                    handleEmailJob(msg, "employee_removed");
+                case EMAIL_API_KEY_CREATED ->
+                    handleEmailJob(msg, "api_key_created");
+                case EMAIL_API_KEY_REVOKED ->
+                    handleEmailJob(msg, "api_key_revoked");
+                case EMAIL_TRAVEL_PLAN_CREATED ->
+                    handleEmailJob(msg, "travel_plan_created");
+                case EMAIL_LOGIN_ALERT ->
+                    handleEmailJob(msg, "login_alert");
+                case EMAIL_INVOICE_AVAILABLE ->
+                    handleEmailJob(msg, "invoice_available");
+                case EMAIL_ONBOARDING_REMINDER ->
+                    handleEmailJob(msg, "onboarding_reminder");
+                case EMAIL_TWO_FACTOR_ENABLED ->
+                    handleEmailJob(msg, "two_factor_enabled");
+                case EMAIL_TWO_FACTOR_DISABLED ->
+                    handleEmailJob(msg, "two_factor_disabled");
+                case EMAIL_BILLING_CURRENCY_CHANGED ->
+                    handleEmailJob(msg, "billing_currency_changed");
+                case EMAIL_DATA_EXPORT ->
+                    handleEmailJob(msg, "data_export");
+                case EMAIL_INVITATION_ACCEPTED ->
+                    handleEmailJob(msg, "invitation_accepted");
+                case EMAIL_CREDIT_REQUEST_SUBMITTED ->
+                    handleEmailJob(msg, "credit_request_submitted");
             }
             logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
 
@@ -136,6 +172,21 @@ public class QueueWorker {
         String code = vars.getOrDefault("code", "");
 
         String companyName = vars.getOrDefault("companyName", "");
+        String credits = vars.getOrDefault("credits", "0");
+        String currencySymbol = vars.getOrDefault("currencySymbol", "$");
+        String amount = vars.getOrDefault("amount", "0");
+        String status = vars.getOrDefault("status", "active");
+        String reason = vars.getOrDefault("reason", "");
+        String keyName = vars.getOrDefault("keyName", "");
+        String destination = vars.getOrDefault("destination", "");
+        String location = vars.getOrDefault("location", "Unknown");
+        String device = vars.getOrDefault("device", "Unknown");
+        String timestamp = vars.getOrDefault("timestamp", "");
+        String invoiceNumber = vars.getOrDefault("invoiceNumber", "");
+        String oldCurrency = vars.getOrDefault("oldCurrency", "");
+        String newCurrency = vars.getOrDefault("newCurrency", "");
+        String exportType = vars.getOrDefault("exportType", "");
+        String employeeName = vars.getOrDefault("employeeName", "");
 
         String html = switch (templateType) {
             case "verification" ->
@@ -146,6 +197,42 @@ public class QueueWorker {
                 emailTemplates.passwordChangedEmail(firstName);
             case "employee_invitation" ->
                 emailTemplates.employeeInvitationEmail(firstName, companyName, vars.getOrDefault("role", "Individual"), link);
+            case "credit_purchase" ->
+                emailTemplates.creditPurchaseConfirmationEmail(firstName, Integer.parseInt(credits), currencySymbol, amount);
+            case "credit_allocation" ->
+                emailTemplates.creditAllocationNotificationEmail(firstName, Integer.parseInt(credits), companyName);
+            case "credit_request_approved" ->
+                emailTemplates.creditRequestApprovedEmail(firstName, Integer.parseInt(credits), companyName);
+            case "credit_request_rejected" ->
+                emailTemplates.creditRequestRejectedEmail(firstName, Integer.parseInt(credits), reason, companyName);
+            case "employee_status_changed" ->
+                emailTemplates.employeeStatusChangedEmail(firstName, status, companyName);
+            case "employee_removed" ->
+                emailTemplates.employeeRemovedEmail(firstName, companyName);
+            case "api_key_created" ->
+                emailTemplates.apiKeyCreatedEmail(firstName, keyName, companyName);
+            case "api_key_revoked" ->
+                emailTemplates.apiKeyRevokedEmail(firstName, keyName, companyName);
+            case "travel_plan_created" ->
+                emailTemplates.travelPlanCreatedEmail(firstName, destination, companyName);
+            case "login_alert" ->
+                emailTemplates.loginAlertEmail(firstName, location, device, timestamp);
+            case "invoice_available" ->
+                emailTemplates.invoiceAvailableEmail(firstName, invoiceNumber, amount, currencySymbol, companyName);
+            case "onboarding_reminder" ->
+                emailTemplates.onboardingReminderEmail(firstName, companyName);
+            case "two_factor_enabled" ->
+                emailTemplates.twoFactorEnabledEmail(firstName);
+            case "two_factor_disabled" ->
+                emailTemplates.twoFactorDisabledEmail(firstName);
+            case "billing_currency_changed" ->
+                emailTemplates.billingCurrencyChangedEmail(firstName, oldCurrency, newCurrency, companyName);
+            case "data_export" ->
+                emailTemplates.dataExportEmail(firstName, exportType, companyName);
+            case "invitation_accepted" ->
+                emailTemplates.invitationAcceptedEmail(firstName, vars.getOrDefault("employeeName", "User"), companyName);
+            case "credit_request_submitted" ->
+                emailTemplates.creditRequestSubmittedEmail(firstName, employeeName, Integer.parseInt(credits), companyName);
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.core.seeder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +28,8 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItem;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItemRepository;
+import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
+import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
 import com.TravelMedicineAdvisory.Server.domain.permission.Permission;
 import com.TravelMedicineAdvisory.Server.domain.permission.PermissionRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
@@ -57,6 +60,7 @@ public class DataSeeder implements CommandLineRunner {
     private final CountryHealthAlertRepository countryHealthAlertRepository;
     private final SystemSettingRepository systemSettingRepository;
     private final FaqItemRepository faqItemRepository;
+    private final InvoiceRepository invoiceRepository;
     private final PasswordEncoder passwordEncoder;
     private final RandomNumberGenerator randomNumberGenerator;
 
@@ -71,6 +75,7 @@ public class DataSeeder implements CommandLineRunner {
             CountryHealthAlertRepository countryHealthAlertRepository,
             SystemSettingRepository systemSettingRepository,
             FaqItemRepository faqItemRepository,
+            InvoiceRepository invoiceRepository,
             PasswordEncoder passwordEncoder,
             RandomNumberGenerator randomNumberGenerator) {
         this.userRepository = userRepository;
@@ -84,6 +89,7 @@ public class DataSeeder implements CommandLineRunner {
         this.countryHealthAlertRepository = countryHealthAlertRepository;
         this.systemSettingRepository = systemSettingRepository;
         this.faqItemRepository = faqItemRepository;
+        this.invoiceRepository = invoiceRepository;
         this.passwordEncoder = passwordEncoder;
         this.randomNumberGenerator = randomNumberGenerator;
     }
@@ -106,6 +112,7 @@ public class DataSeeder implements CommandLineRunner {
         seedCountryHealthAlerts();
         seedSystemSettings();
         seedFaqItems();
+        seedInvoices();
 
         logger.info("Database Seeding Completed.");
     }
@@ -1149,5 +1156,48 @@ public class DataSeeder implements CommandLineRunner {
         faq.setPosition(position);
         faq.setActive(true);
         return faq;
+    }
+
+    // ======================== INVOICES ========================
+
+    @Transactional
+    protected void seedInvoices() {
+        if (invoiceRepository.count() > 0)
+            return;
+
+        Company company = companyRepository.findAll().stream().findFirst().orElse(null);
+        if (company == null)
+            return;
+
+        List<Invoice> invoices = new ArrayList<>();
+
+        invoices.add(createInvoice(new BigDecimal("49.99"), "USD", "paid", "TMAG Starter Plan - 10 Credits",
+                LocalDateTime.now().minusDays(30), LocalDateTime.now().minusDays(23),
+                LocalDateTime.now().minusDays(23), "Credit Card", company, null));
+        invoices.add(createInvoice(new BigDecimal("199.99"), "USD", "paid", "TMAG Business Plan - 50 Credits",
+                LocalDateTime.now().minusDays(14), LocalDateTime.now().minusDays(7),
+                LocalDateTime.now().minusDays(7), "Credit Card", company, null));
+        invoices.add(createInvoice(new BigDecimal("499.99"), "USD", "pending", "TMAG Enterprise Plan - 150 Credits",
+                LocalDateTime.now().minusDays(3), LocalDateTime.now().plusDays(27),
+                null, "Bank Transfer", company, null));
+
+        invoiceRepository.saveAll(invoices);
+    }
+
+    private Invoice createInvoice(BigDecimal amount, String currency, String status, String description,
+            LocalDateTime issuedAt, LocalDateTime dueDate, LocalDateTime paidAt,
+            String paymentMethod, Company company, User user) {
+        Invoice invoice = new Invoice();
+        invoice.setAmount(amount);
+        invoice.setCurrency(currency);
+        invoice.setStatus(status);
+        invoice.setDescription(description);
+        invoice.setIssuedAt(issuedAt);
+        invoice.setDueDate(dueDate);
+        invoice.setPaidAt(paidAt);
+        invoice.setPaymentMethod(paymentMethod);
+        invoice.setCompany(company);
+        invoice.setUser(user);
+        return invoice;
     }
 }

@@ -21,4 +21,7 @@ public interface PlanUsageLedgerRepository extends JpaRepository<PlanUsageLedger
 
     @Query("SELECT l FROM PlanUsageLedger l WHERE l.travelPlan.employee.id = :employeeId ORDER BY l.createdAt DESC")
     Page<PlanUsageLedger> findByEmployeeIdOrderByCreatedAtDesc(@Param("employeeId") Long employeeId, Pageable pageable);
+
+    @Query("SELECT l FROM PlanUsageLedger l WHERE l.travelPlan.company.id = :companyId ORDER BY l.createdAt DESC")
+    List<PlanUsageLedger> findByCompanyIdOrderByCreatedAtDesc(@Param("companyId") Long companyId);
 }

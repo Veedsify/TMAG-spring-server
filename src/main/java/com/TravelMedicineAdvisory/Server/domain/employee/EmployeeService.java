@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class EmployeeService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmployeeService.class);
 
     private final EmployeeRepository repository;
     private final CompanyRepository companyRepository;
@@ -125,6 +129,18 @@ public class EmployeeService {
         company.setUsedCredits(usedCredits + creditsToAllocate);
         companyRepository.save(company);
 
+        if (entity.getUser() != null) {
+            User user = entity.getUser();
+            String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+            queueService.dispatch(JobType.EMAIL_CREDIT_ALLOCATION, Map.of(
+                    "to", user.getEmail(),
+                    "subject", "Credits allocated to your TMAG account",
+                    "variables", Map.of(
+                            "firstName", firstName,
+                            "credits", String.valueOf(creditsAllocated),
+                            "companyName", company.getName())));
+        }
+
         return toResponse(repository.save(entity));
     }
 
@@ -134,7 +150,21 @@ public class EmployeeService {
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
         entity.setStatus(status);
-        return toResponse(repository.save(entity));
+        Employee saved = repository.save(entity);
+
+        if (entity.getUser() != null && entity.getCompany() != null) {
+            User user = entity.getUser();
+            String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+            queueService.dispatch(JobType.EMAIL_EMPLOYEE_STATUS_CHANGED, Map.of(
+                    "to", user.getEmail(),
+                    "subject", "Your TMAG account status has been updated",
+                    "variables", Map.of(
+                            "firstName", firstName,
+                            "status", status,
+                            "companyName", entity.getCompany().getName())));
+        }
+
+        return toResponse(saved);
     }
 
     private void getEmployee(Long id) {
@@ -289,10 +319,52 @@ public class EmployeeService {
     public void delete(Long id) {
         getEmployee(id);
 
+        Employee employee = repository.findById(id).orElse(null);
+        String userEmail = null;
+        String firstName = null;
+        String companyName = null;
+
+        if (employee != null && employee.getUser() != null && employee.getCompany() != null) {
+            userEmail = employee.getUser().getEmail();
+            firstName = employee.getUser().getFirstName() != null ? employee.getUser().getFirstName() : "there";
+            companyName = employee.getCompany().getName();
+        }
+
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Employee not found");
         }
         repository.deleteById(id);
+
+        if (userEmail != null && companyName != null) {
+            queueService.dispatch(JobType.EMAIL_EMPLOYEE_REMOVED, Map.of(
+                    "to", userEmail,
+                    "subject", "Removed from " + companyName + " on TMAG",
+                    "variables", Map.of(
+                            "firstName", firstName,
+                            "companyName", companyName)));
+        }
+    }
+
+    public void sendOnboardingReminder(Long id) {
+        Employee employee = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Employee not found"));
+
+        if (employee.getUser() == null || employee.getUser().getEmail() == null) {
+            throw new IllegalArgumentException("Employee does not have a linked user account");
+        }
+
+        User user = employee.getUser();
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        String companyName = employee.getCompany() != null ? employee.getCompany().getName() : "TMAG";
+
+        queueService.dispatch(JobType.EMAIL_ONBOARDING_REMINDER, Map.of(
+                "to", user.getEmail(),
+                "subject", "Reminder: Complete your TMAG onboarding",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "companyName", companyName)));
+
+        logger.info("Onboarding reminder sent to employee id={}, email={}", id, user.getEmail());
     }
 
     private EmployeeResponse toResponse(Employee entity) {

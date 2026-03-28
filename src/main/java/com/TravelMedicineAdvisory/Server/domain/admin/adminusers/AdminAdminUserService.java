@@ -6,6 +6,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +19,14 @@ public class AdminAdminUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
 
     public AdminAdminUserService(UserRepository userRepository, RoleRepository roleRepository,
-                                ObjectMapper objectMapper) {
+                                PasswordEncoder passwordEncoder, ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
     }
 
@@ -59,7 +62,7 @@ public class AdminAdminUserService {
             user.setName((String) body.get("name"));
         }
         if (body.containsKey("password")) {
-            user.setPassword((String) body.get("password"));
+            user.setPassword(passwordEncoder.encode((String) body.get("password")));
         }
         if (body.containsKey("roleId")) {
             Long roleId = ((Number) body.get("roleId")).longValue();

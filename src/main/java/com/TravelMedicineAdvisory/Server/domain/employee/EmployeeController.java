@@ -72,4 +72,10 @@ public class EmployeeController {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));
     }
+
+    @PostMapping("/{id}/remind-onboarding")
+    public ResponseEntity<SuccessResponse> remindOnboarding(@PathVariable Long id) {
+        service.sendOnboardingReminder(id);
+        return ResponseEntity.ok(new SuccessResponse("Reminder sent successfully", null));
+    }
 }

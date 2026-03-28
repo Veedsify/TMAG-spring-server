@@ -285,7 +285,6 @@ public class CompanyAdminCreditPurchaseService {
 
             Credit creditEntry = new Credit();
             creditEntry.setCompany(company);
-            creditEntry.setUser(purchase.getUser());
             creditEntry.setAmount(purchase.getCreditsPurchased());
             creditEntry.setType("purchase");
             creditEntry.setReference(purchase.getTxRef());
@@ -301,7 +300,6 @@ public class CompanyAdminCreditPurchaseService {
             invoice.setPaidAt(LocalDateTime.now());
             invoice.setPaymentMethod("Flutterwave");
             invoice.setCompany(company);
-            invoice.setUser(purchase.getUser());
             invoiceRepository.save(invoice);
 
             logger.info("Company credit purchase completed: txRef={}, companyId={}, credits={}, invoiceId={}",

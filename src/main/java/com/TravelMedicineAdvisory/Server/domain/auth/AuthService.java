@@ -1,8 +1,11 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
+import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
@@ -33,6 +36,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -49,6 +53,8 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
     private final QueueService queueService;
     private final CreditRepository creditRepository;
+    private final CompanyUserRepository companyUserRepository;
+    private final AdminNotificationService adminNotificationService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -67,7 +73,9 @@ public class AuthService {
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder, JwtService jwtService,
             AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
-            QueueService queueService, CreditRepository creditRepository ) {
+            QueueService queueService, CreditRepository creditRepository, 
+            CompanyUserRepository companyUserRepository,
+            AdminNotificationService adminNotificationService) {
         this.userRepository = userRepository;
         this.creditRepository=  creditRepository;
         this.roleRepository = roleRepository;
@@ -76,6 +84,8 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.queueService = queueService;
+        this.companyUserRepository = companyUserRepository;
+        this.adminNotificationService = adminNotificationService;
     }
 
     @Transactional
@@ -149,10 +159,26 @@ public class AuthService {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
+        sendLoginAlertEmail(user);
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
         return buildAuthResponse(user, jwtToken);
+    }
+
+    private void sendLoginAlertEmail(User user) {
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss"));
+        
+        queueService.dispatch(JobType.EMAIL_LOGIN_ALERT, Map.of(
+                "to", user.getEmail(),
+                "subject", "New login to your TMAG account",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "location", "Unknown",
+                        "device", "Web Browser",
+                        "timestamp", timestamp)));
     }
 
     public String googleAuthUrl() {
@@ -382,10 +408,27 @@ public class AuthService {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
+        sendInvitationAcceptedEmail(user);
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
         return buildAuthResponse(user, jwtToken);
+    }
+
+    private void sendInvitationAcceptedEmail(User user) {
+        var companyUserLinks = companyUserRepository.findAllByUser(user);
+        
+        for (CompanyUser link : companyUserLinks) {
+            if (link.getCompany() != null) {
+                String userName = user.getName() != null ? user.getName() : user.getEmail();
+                adminNotificationService.notifyCompanyAdmins(
+                        link.getCompany().getId(),
+                        userName + " has joined " + link.getCompany().getName() + " on TMAG",
+                        JobType.EMAIL_INVITATION_ACCEPTED,
+                        Map.of("employeeName", userName));
+            }
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -36,6 +36,11 @@ public class CreditService {
                 .map(this::toResponse);
     }
 
+    public Page<CreditResponse> findAllByUser(Long userId, Pageable pageable) {
+        return repository.findAllByUserId(userId, pageable)
+                .map(this::toResponse);
+    }
+
     public CreditResponse findById(Long id) {
         Credit entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Credit not found"));

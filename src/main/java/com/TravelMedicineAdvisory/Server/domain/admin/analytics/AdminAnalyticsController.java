@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasAuthority('all')")
@@ -84,6 +86,16 @@ public class AdminAnalyticsController {
     @GetMapping("/billing/invoices/{id}")
     public ResponseEntity<SuccessResponse> getInvoice(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getInvoice(id)));
+    }
+
+    @PostMapping("/billing/invoices")
+    public ResponseEntity<SuccessResponse> createInvoice(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(new SuccessResponse("Created successfully", service.createInvoice(body)));
+    }
+
+    @PutMapping("/billing/invoices/{id}")
+    public ResponseEntity<SuccessResponse> updateInvoice(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.updateInvoice(id, updates)));
     }
 
     @PostMapping("/billing/invoices/{id}/paid")

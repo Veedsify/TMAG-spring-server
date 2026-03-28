@@ -13,6 +13,8 @@ import java.util.List;
 public interface CreditRepository extends JpaRepository<Credit, Long> {
     Page<Credit> findAllByCompanyId(Long companyId, Pageable pageable);
 
+    Page<Credit> findAllByUserId(Long userId, Pageable pageable);
+
     List<Credit> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<Credit> findByCompanyIdOrderByCreatedAtDesc(Long companyId);

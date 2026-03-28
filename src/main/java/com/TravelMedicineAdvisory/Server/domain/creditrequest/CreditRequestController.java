@@ -1,4 +1,4 @@
-package com.TravelMedicineAdvisory.Server.domain.travelrequest;
+package com.TravelMedicineAdvisory.Server.domain.creditrequest;
 
 import com.TravelMedicineAdvisory.Server.core.types.PaginatedResponse;
 import com.TravelMedicineAdvisory.Server.core.types.Pagination;
@@ -10,25 +10,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/travel-requests")
-public class TravelRequestController {
+@RequestMapping("/api/v1/credit-requests")
+public class CreditRequestController {
 
-    private final TravelRequestService service;
+    private final CreditRequestService service;
 
-    public TravelRequestController(TravelRequestService service) {
+    public CreditRequestController(CreditRequestService service) {
         this.service = service;
     }
 
     @GetMapping
     public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable) {
-        Page<TravelRequestResponse> page = service.findAll(companyId, pageable);
+        Page<CreditRequestResponse> page = service.findAll(companyId, pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<TravelRequestResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<CreditRequestResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
@@ -38,13 +38,13 @@ public class TravelRequestController {
     }
 
     @PostMapping
-    public ResponseEntity<SuccessResponse> create(@RequestBody TravelRequestRequest request) {
+    public ResponseEntity<SuccessResponse> create(@RequestBody CreditRequestRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody TravelRequestRequest request) {
+    public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody CreditRequestRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
@@ -54,8 +54,9 @@ public class TravelRequestController {
     }
 
     @PostMapping("/{id}/reject")
-    public ResponseEntity<SuccessResponse> reject(@PathVariable Long id) {
-        return ResponseEntity.ok(new SuccessResponse("Rejected", service.reject(id)));
+    public ResponseEntity<SuccessResponse> reject(@PathVariable Long id, @RequestBody(required = false) CreditRequestRequest request) {
+        String reason = request != null ? request.reason() : null;
+        return ResponseEntity.ok(new SuccessResponse("Rejected", service.reject(id, reason)));
     }
 
     @DeleteMapping("/{id}")

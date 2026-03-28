@@ -3,6 +3,8 @@ package com.TravelMedicineAdvisory.Server.domain.creditpurchase;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -35,6 +38,7 @@ public class CreditPurchaseService {
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
+    private final QueueService queueService;
 
     @Value("${app.payment.flutterwave.callback-url:http://localhost:3000/payment/callback}")
     private String callbackUrl;
@@ -45,13 +49,15 @@ public class CreditPurchaseService {
             CreditPricingService pricingService,
             CreditRepository creditRepository,
             UserRepository userRepository,
-            FlutterwaveService flutterwaveService) {
+            FlutterwaveService flutterwaveService,
+            QueueService queueService) {
         this.purchaseRepository = purchaseRepository;
         this.pricingRepository = pricingRepository;
         this.pricingService = pricingService;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
+        this.queueService = queueService;
     }
 
     public record PurchaseInitiationResult(
@@ -263,6 +269,16 @@ public class CreditPurchaseService {
 
         logger.info("Credit purchase completed: txRef={}, credits={}, userId={}", 
             purchase.getTxRef(), purchase.getCreditsPurchased(), user.getId());
+
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        queueService.dispatch(JobType.EMAIL_CREDIT_PURCHASE, Map.of(
+                "to", user.getEmail(),
+                "subject", "Your TMAG credit purchase is complete",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "credits", String.valueOf(purchase.getCreditsPurchased()),
+                        "currencySymbol", purchase.getCurrencySymbol(),
+                        "amount", purchase.getAmount().toString())));
 
         return CreditPurchaseResponse.from(purchase);
     }

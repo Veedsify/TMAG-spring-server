@@ -195,6 +195,263 @@ public class EmailTemplates {
         return wrap(subject, content);
     }
 
+    /** Credit purchase confirmation */
+    public String creditPurchaseConfirmationEmail(String firstName, Integer credits, String currencySymbol, String amount) {
+        String content =
+                badge("Payment Confirmed") +
+                heading("Credit purchase successful") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your credit purchase has been completed successfully. Your account has been credited.</p>" +
+                infoBox("Credits purchased: <strong>" + credits + "</strong><br/>Amount paid: " + currencySymbol + " " + amount) +
+                divider() +
+                fine("Thank you for your purchase. You can now use these credits to generate travel health plans.");
+
+        return wrap("Your TMAG credit purchase is complete", content);
+    }
+
+    /** Credit allocation notification */
+    public String creditAllocationNotificationEmail(String firstName, Integer credits, String companyName) {
+        String content =
+                badge("Credits Allocated") +
+                heading("You've received credits") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">" + esc(companyName) + " has allocated credits to your account.</p>" +
+                infoBox("Credits added: <strong>" + credits + "</strong>") +
+                divider() +
+                fine("Log in to your account to use these credits for travel health plans.");
+
+        return wrap("Credits allocated to your TMAG account", content);
+    }
+
+    /** Credit request approved */
+    public String creditRequestApprovedEmail(String firstName, Integer credits, String companyName) {
+        String content =
+                badge("Request Approved") +
+                heading("Credit request approved") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Great news! " + esc(companyName) + " has approved your credit request.</p>" +
+                infoBox("Credits approved: <strong>" + credits + "</strong>") +
+                divider() +
+                fine("Your credits are now available. Start generating your travel health plans!");
+
+        return wrap("Your credit request has been approved", content);
+    }
+
+    /** Credit request rejected */
+    public String creditRequestRejectedEmail(String firstName, Integer credits, String reason, String companyName) {
+        String content =
+                badge("Request Update") +
+                heading("Credit request update") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your credit request for <strong>" + credits + "</strong> credits with " + esc(companyName) + " has been reviewed.</p>" +
+                infoBox("Status: <strong>Declined</strong><br/>Reason: " + esc(reason)) +
+                divider() +
+                fine("Please contact your HR or administrator for more information.");
+
+        return wrap("Update on your credit request", content);
+    }
+
+    /** Employee status changed */
+    public String employeeStatusChangedEmail(String firstName, String status, String companyName) {
+        String content =
+                badge("Account Status") +
+                heading("Your account status has changed") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your account status with <strong>" + esc(companyName) + "</strong> has been updated.</p>" +
+                infoBox("New status: <strong>" + esc(status) + "</strong>") +
+                divider() +
+                fine("If you have questions, please contact your administrator.");
+
+        return wrap("Your TMAG account status has been updated", content);
+    }
+
+    /** Employee removed */
+    public String employeeRemovedEmail(String firstName, String companyName) {
+        String content =
+                badge("Account Update") +
+                heading("You have been removed from " + esc(companyName)) +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your access to <strong>" + esc(companyName) + "</strong> on TMAG has been removed.</p>" +
+                infoBox("Your account has been deactivated for this organization.") +
+                divider() +
+                fine("If you believe this is an error, please contact your HR or administrator.");
+
+        return wrap("Removed from " + companyName + " on TMAG", content);
+    }
+
+    /** API key created */
+    public String apiKeyCreatedEmail(String firstName, String keyName, String companyName) {
+        String content =
+                badge("API Access") +
+                heading("New API key created") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">A new API key has been created for <strong>" + esc(companyName) + "</strong>.</p>" +
+                infoBox("Key name: <strong>" + esc(keyName) + "</strong>") +
+                divider() +
+                fine("Store this key securely. You won't be able to view it again. If you didn't create this key, revoke it immediately.");
+
+        return wrap("New API key created for " + companyName, content);
+    }
+
+    /** API key revoked */
+    public String apiKeyRevokedEmail(String firstName, String keyName, String companyName) {
+        String content =
+                badge("API Access") +
+                heading("API key revoked") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">An API key for <strong>" + esc(companyName) + "</strong> has been revoked.</p>" +
+                infoBox("Revoked key: <strong>" + esc(keyName) + "</strong>") +
+                divider() +
+                fine("If you didn't revoke this key, please contact your administrator immediately.");
+
+        return wrap("API key revoked for " + companyName, content);
+    }
+
+    /** Travel plan created */
+    public String travelPlanCreatedEmail(String firstName, String destination, String companyName) {
+        String content =
+                badge("Travel Plan Ready") +
+                heading("Your travel health plan is ready") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your personalized travel health plan for <strong>" + esc(destination) + "</strong> has been generated.</p>" +
+                infoBox("Destination: <strong>" + esc(destination) + "</strong><br/>Generated by: " + esc(companyName)) +
+                tealButton("View Your Plan", "{frontendUrl}/plans") +
+                divider() +
+                fine("Log in to view complete health advisories, vaccinations, and safety recommendations.");
+
+        return wrap("Your travel health plan for " + destination + " is ready", content);
+    }
+
+    /** Login alert */
+    public String loginAlertEmail(String firstName, String location, String device, String timestamp) {
+        String content =
+                badge("Security Alert") +
+                heading("New login detected") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">We detected a new sign-in to your TMAG account.</p>" +
+                infoBox("Device: <strong>" + esc(device) + "</strong><br/>Location: <strong>" + esc(location) + "</strong><br/>Time: <strong>" + esc(timestamp) + "</strong>") +
+                divider() +
+                fine("If this wasn't you, please reset your password immediately and contact support.");
+
+        return wrap("New login to your TMAG account", content);
+    }
+
+    /** Invoice available */
+    public String invoiceAvailableEmail(String firstName, String invoiceNumber, String amount, String currencySymbol, String companyName) {
+        String content =
+                badge("Invoice") +
+                heading("New invoice available") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">A new invoice from <strong>" + esc(companyName) + "</strong> is now available.</p>" +
+                infoBox("Invoice #: <strong>" + esc(invoiceNumber) + "</strong><br/>Amount: " + currencySymbol + " " + esc(amount)) +
+                tealButton("View Invoice", "{frontendUrl}/credits/invoices") +
+                divider() +
+                fine("You can view and download your invoices from the billing section.");
+
+        return wrap("New invoice #" + invoiceNumber + " from TMAG", content);
+    }
+
+    /** Onboarding reminder */
+    public String onboardingReminderEmail(String firstName, String companyName) {
+        String content =
+                badge("Action Required") +
+                heading("Complete your TMAG onboarding") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">" + esc(companyName) + " has invited you to TMAG, but you haven't completed your onboarding yet.</p>" +
+                "<p style=\"" + P_STYLE + "\">Complete your profile to start receiving personalized travel health recommendations.</p>" +
+                tealButton("Complete Onboarding", "{frontendUrl}/onboarding") +
+                divider() +
+                fine("If you already completed onboarding, you can safely ignore this email.");
+
+        return wrap("Reminder: Complete your TMAG onboarding", content);
+    }
+
+    /** Two-Factor Authentication enabled */
+    public String twoFactorEnabledEmail(String firstName) {
+        String content =
+                badge("Security") +
+                heading("Two-factor authentication enabled") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Two-factor authentication has been enabled on your TMAG account.</p>" +
+                infoBox("Your account is now more secure. You will be prompted for a verification code when logging in.") +
+                divider() +
+                fine("If you didn't enable 2FA, please contact support immediately.");
+
+        return wrap("Two-factor authentication enabled on your TMAG account", content);
+    }
+
+    /** Two-Factor Authentication disabled */
+    public String twoFactorDisabledEmail(String firstName) {
+        String content =
+                badge("Security") +
+                heading("Two-factor authentication disabled") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Two-factor authentication has been disabled on your TMAG account.</p>" +
+                infoBox("Your account is now less secure. We recommend keeping 2FA enabled.") +
+                divider() +
+                fine("If you didn't disable 2FA, please re-enable it immediately and contact support.");
+
+        return wrap("Two-factor authentication disabled on your TMAG account", content);
+    }
+
+    /** Billing currency changed */
+    public String billingCurrencyChangedEmail(String firstName, String oldCurrency, String newCurrency, String companyName) {
+        String content =
+                badge("Billing Update") +
+                heading("Billing currency updated") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">The billing currency for <strong>" + esc(companyName) + "</strong> has been updated.</p>" +
+                infoBox("Previous currency: <strong>" + esc(oldCurrency) + "</strong><br/>New currency: <strong>" + esc(newCurrency) + "</strong>") +
+                divider() +
+                fine("All future invoices will be generated in " + esc(newCurrency) + ".");
+
+        return wrap("Billing currency updated for " + companyName, content);
+    }
+
+    /** Data export confirmation */
+    public String dataExportEmail(String firstName, String exportType, String companyName) {
+        String content =
+                badge("Data Export") +
+                heading("Your data export is ready") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">A data export request for <strong>" + esc(companyName) + "</strong> has been processed.</p>" +
+                infoBox("Data type exported: <strong>" + esc(exportType) + "</strong>") +
+                divider() +
+                fine("You can download your exported data from the admin dashboard. This export complies with GDPR requirements.");
+
+        return wrap("Your data export is ready for " + companyName, content);
+    }
+
+    /** Invitation accepted notification to admin */
+    public String invitationAcceptedEmail(String adminName, String employeeName, String companyName) {
+        String content =
+                badge("Team Update") +
+                heading(employeeName + " has accepted the invitation") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(adminName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\"><strong>" + esc(employeeName) + "</strong> has accepted the invitation to join <strong>" + esc(companyName) + "</strong> on TMAG.</p>" +
+                infoBox("The employee has completed their registration and can now access the platform.") +
+                tealButton("View Team", "{frontendUrl}/team/members") +
+                divider() +
+                fine("Log in to the admin dashboard to manage your team.");
+
+        return wrap(employeeName + " has joined " + companyName + " on TMAG", content);
+    }
+
+    /** New credit request submitted - notify HR admin */
+    public String creditRequestSubmittedEmail(String adminName, String employeeName, Integer credits, String companyName) {
+        String content =
+                badge("New Credit Request") +
+                heading("New credit request pending approval") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(adminName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\"><strong>" + esc(employeeName) + "</strong> has submitted a credit request that requires your approval.</p>" +
+                infoBox("Credits requested: <strong>" + credits + "</strong>") +
+                tealButton("Review Request", "{frontendUrl}/hr/credit-requests") +
+                divider() +
+                fine("Log in to the HR dashboard to approve or reject this request.");
+
+        return wrap("New credit request from " + employeeName, content);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
