@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.invoice;
 
+import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
@@ -10,6 +11,8 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,19 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class InvoiceService {
 
+    private static final Logger logger = LoggerFactory.getLogger(InvoiceService.class);
+
     private final InvoiceRepository repository;
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final CompanyUserRepository companyUserRepository;
     private final QueueService queueService;
+    private final AdminNotificationService adminNotificationService;
 
     public InvoiceService(InvoiceRepository repository, CompanyRepository companyRepository, 
-            UserRepository userRepository, CompanyUserRepository companyUserRepository, QueueService queueService) {
+            UserRepository userRepository, CompanyUserRepository companyUserRepository, QueueService queueService,
+            AdminNotificationService adminNotificationService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
         this.companyUserRepository = companyUserRepository;
         this.queueService = queueService;
+        this.adminNotificationService = adminNotificationService;
     }
 
     public Page<InvoiceResponse> findAll(Pageable pageable) {
@@ -56,43 +64,32 @@ public class InvoiceService {
     }
 
     private void sendInvoiceEmail(Invoice invoice) {
-        String email;
-        String firstName;
-        String companyName;
-
-        if (invoice.getUser() != null) {
-            email = invoice.getUser().getEmail();
-            firstName = invoice.getUser().getFirstName() != null ? invoice.getUser().getFirstName() : "there";
-            companyName = invoice.getCompany() != null ? invoice.getCompany().getName() : "TMAG";
-        } else if (invoice.getCompany() != null) {
-            companyName = invoice.getCompany().getName();
-            var companyUserList = companyUserRepository.findAll();
-            var companyUser = companyUserList.stream()
-                    .filter(cu -> cu.getCompany() != null && cu.getCompany().getId().equals(invoice.getCompany().getId()))
-                    .findFirst().orElse(null);
-            if (companyUser != null && companyUser.getUser() != null) {
-                email = companyUser.getUser().getEmail();
-                firstName = companyUser.getUser().getFirstName() != null ? companyUser.getUser().getFirstName() : "there";
-            } else {
-                email = companyName + "@company.com";
-                firstName = "there";
-            }
-        } else {
-            return;
-        }
-
+        Long companyId = null;
         String invoiceNumber = "INV-" + String.format("%06d", invoice.getId());
         String currencySymbol = getCurrencySymbol(invoice.getCurrency());
 
-        queueService.dispatch(JobType.EMAIL_INVOICE_AVAILABLE, Map.of(
-                "to", email,
-                "subject", "New invoice #" + invoiceNumber + " from TMAG",
-                "variables", Map.of(
-                        "firstName", firstName,
+        if (invoice.getCompany() != null) {
+            companyId = invoice.getCompany().getId();
+        } else if (invoice.getUser() != null) {
+            var userCompanies = companyUserRepository.findAllByUser(invoice.getUser());
+            if (!userCompanies.isEmpty() && userCompanies.get(0).getCompany() != null) {
+                companyId = userCompanies.get(0).getCompany().getId();
+            }
+        }
+
+        if (companyId == null) {
+            logger.warn("Cannot send invoice email: no company found for invoice {}", invoice.getId());
+            return;
+        }
+
+        adminNotificationService.notifyCompanyAdmins(
+                companyId,
+                "New invoice #" + invoiceNumber + " from TMAG",
+                JobType.EMAIL_INVOICE_AVAILABLE,
+                Map.of(
                         "invoiceNumber", invoiceNumber,
                         "amount", invoice.getAmount() != null ? invoice.getAmount().toString() : "0.00",
-                        "currencySymbol", currencySymbol,
-                        "companyName", companyName)));
+                        "currencySymbol", currencySymbol));
     }
 
     private String getCurrencySymbol(String currency) {
