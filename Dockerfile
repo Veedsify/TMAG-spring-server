@@ -1,15 +1,13 @@
 # ---- Build stage ----
-FROM eclipse-temurin:25-jdk AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 
 WORKDIR /app
 
-# Copy Maven wrapper and POM first for dependency caching
-COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+COPY pom.xml ./
+RUN mvn dependency:go-offline -B || true
 
-# Copy source and build
 COPY src/ src/
-RUN ./mvnw clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:25-jre
@@ -17,8 +15,8 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Application Settings
-ARG APP_ENV
-ARG SERVER_PORT
+ARG APP_ENV=prod
+ARG SERVER_PORT=8080
 ARG APP_FRONTEND_URL
 ARG APP_HOST
 
@@ -55,29 +53,28 @@ ARG FLUTTERWAVE_WEBHOOK_URL
 
 ENV APP_ENV=${APP_ENV} \
     SERVER_PORT=${SERVER_PORT} \
-    APP_FRONTEND_URL=${APP_FRONTEND_URL} \
-    APP_HOST=${APP_HOST} \
-    SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL} \
-    SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME} \
-    SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD} \
-    SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO} \
-    JWT_SECRET=${JWT_SECRET} \
-    APP_API_KEY=${APP_API_KEY} \
-    SPRING_MAIL_HOST=${SPRING_MAIL_HOST} \
-    SPRING_MAIL_PORT=${SPRING_MAIL_PORT} \
-    SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME} \
-    SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD} \
-    REDIS_HOST=${REDIS_HOST} \
-    REDIS_PORT=${REDIS_PORT} \
-    APP_STORAGE_PATH=${APP_STORAGE_PATH} \
-    APP_STORAGE_BASE_URL=${APP_STORAGE_BASE_URL} \
-    FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY} \
-    FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY} \
-    FLUTTERWAVE_ENCRYPTION_KEY=${FLUTTERWAVE_ENCRYPTION_KEY} \
-    FLUTTERWAVE_CALLBACK_URL=${FLUTTERWAVE_CALLBACK_URL} \
-    FLUTTERWAVE_WEBHOOK_URL=${FLUTTERWAVE_WEBHOOK_URL}
+    APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://travelmedicineadvisory.com} \
+    APP_HOST=${APP_HOST:-0.0.0.0} \
+    SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/tmag} \
+    SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-tmag} \
+    SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-changeme} \
+    SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update} \
+    JWT_SECRET=${JWT_SECRET:-default-secret-change-in-prod} \
+    APP_API_KEY=${APP_API_KEY:-default-api-key} \
+    SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-smtp.gmail.com} \
+    SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587} \
+    SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-} \
+    SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-} \
+    REDIS_HOST=${REDIS_HOST:-redis} \
+    REDIS_PORT=${REDIS_PORT:-6379} \
+    APP_STORAGE_PATH=/app/storage \
+    APP_STORAGE_BASE_URL=${APP_STORAGE_BASE_URL:-https://storage.travelmedicineadvisory.com} \
+    FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY:-} \
+    FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY:-} \
+    FLUTTERWAVE_ENCRYPTION_KEY=${FLUTTERWAVE_ENCRYPTION_KEY:-} \
+    FLUTTERWAVE_CALLBACK_URL=${FLUTTERWAVE_CALLBACK_URL:-https://travelmedicineadvisory.com/payment/callback} \
+    FLUTTERWAVE_WEBHOOK_URL=${FLUTTERWAVE_WEBHOOK_URL:-https://travelmedicineadvisory.com/api/v1/payments/webhook}
 
-# Create storage directory
 RUN mkdir -p /app/storage/upload
 
 COPY --from=build /app/target/Server-0.0.1-SNAPSHOT.jar app.jar
