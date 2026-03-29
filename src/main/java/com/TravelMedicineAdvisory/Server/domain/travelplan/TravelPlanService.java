@@ -85,7 +85,7 @@ public class TravelPlanService {
 
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(request, entity);
-        entity.setStatus(String.valueOf(Travel_Plan.PENDING));
+        entity.setStatus("PENDING");
         TravelPlan saved = repository.save(entity);
 
         String firstName = user.getFirstName() != null ? user.getFirstName() : "there";

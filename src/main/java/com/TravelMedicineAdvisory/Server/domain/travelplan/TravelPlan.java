@@ -16,43 +16,41 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "travel_plans")
-@SQLDelete(sql = "UPDATE travel_plans SET deleted_at =   CURRENT_TIMESTAMP WHERE id = ?")
+@SQLDelete(sql = "UPDATE travel_plans SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class TravelPlan extends BaseEntity {
 
     private String destination;
     private String country;
     private Integer duration;
     private String purpose;
-    @Column(name = "risk_score")
     private Integer riskScore;
     private String status;
-    @Column(name = "medical_considerations", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String medicalConsiderations;
     @Column(columnDefinition = "TEXT")
     private String vaccinations;
-    @Column(name = "health_alerts", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String healthAlerts;
-    @Column(name = "safety_advisories", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String safetyAdvisories;
     @Column(columnDefinition = "TEXT")
     private String medications;
-    @Column(name = "water_food", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String waterFood;
-    @Column(name = "emergency_contacts", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String emergencyContacts;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     private Employee employee;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-
 
     public String getDestination() {
         return destination;
