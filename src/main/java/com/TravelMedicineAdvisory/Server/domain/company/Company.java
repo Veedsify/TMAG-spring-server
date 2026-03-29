@@ -1,12 +1,23 @@
 package com.TravelMedicineAdvisory.Server.domain.company;
 
-import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
-import jakarta.persistence.*;
-import org.hibernate.annotations.SQLDelete;
-import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.hibernate.annotations.SQLDelete;
+
+import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
+import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "companies")

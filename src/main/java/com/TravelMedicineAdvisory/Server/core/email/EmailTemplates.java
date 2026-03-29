@@ -488,6 +488,54 @@ public class EmailTemplates {
         return wrap("Welcome to TMAG - Your admin account is ready", content);
     }
 
+    public String contactAcknowledgmentEmail(String firstName, String subject) {
+        String content = badge("Message Received")
+                + heading("We've got your message")
+                + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Hi " + esc(firstName) + ",</p>"
+                + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Thank you for reaching out to TMAG. We've received your message regarding <strong style=\"color:#3d2c1e;\">&ldquo;" + esc(subject) + "&rdquo;</strong> and our team will get back to you within 24&ndash;48 hours.</p>"
+                + infoBox("We take every inquiry seriously. A member of our team will review your message and respond as soon as possible.")
+                + tealButton("Visit TMAG", "{frontendUrl}/contact")
+                + divider()
+                + fine("If you didn't send this message, you can safely ignore this email.");
+
+        return wrap("We received your message — TMAG", content);
+    }
+
+    public String contactSubmissionEmail(String name, String email, String inquiryType, String subject, String message) {
+        String typeLabel = switch (inquiryType) {
+            case "SUPPORT" -> "Support Request";
+            case "DEMO"    -> "Demo Request";
+            case "SALES"   -> "Sales Inquiry";
+            default        -> "General Inquiry";
+        };
+
+        String content = badge("New Inquiry")
+                + heading("New contact submission")
+                + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">A new contact form submission has been received. Details below:</p>"
+                + infoBox("<strong style=\"color:#3d2c1e;\">From:</strong> " + esc(name) + " &lt;" + esc(email) + "&gt;<br/>"
+                        + "<strong style=\"color:#3d2c1e;\">Type:</strong> " + esc(typeLabel) + "<br/>"
+                        + "<strong style=\"color:#3d2c1e;\">Subject:</strong> " + esc(subject) + "<br/><br/>"
+                        + "<strong style=\"color:#3d2c1e;\">Message:</strong><br/>" + esc(message).replace("\n", "<br/>"))
+                + darkButton("Open Admin Dashboard", "{frontendUrl}/admin")
+                + divider()
+                + fine("This is an internal notification sent to the TMAG admin team.");
+
+        return wrap("New contact submission: " + subject, content);
+    }
+
+    public String newsletterWelcomeEmail(String firstName) {
+        String content = badge("Newsletter")
+                + heading("You're on the list!")
+                + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Hi " + esc(firstName) + ",</p>"
+                + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Welcome to TMAG updates! You'll be the first to hear about new features, travel health insights, and tips to keep your journeys safe and healthy.</p>"
+                + infoBox("Expect updates on destination health alerts, vaccination guidance, and platform improvements — straight to your inbox.")
+                + tealButton("Explore TMAG", "{frontendUrl}/how-it-works")
+                + divider()
+                + fine("You're receiving this because you subscribed to TMAG updates. To unsubscribe, reply to this email.");
+
+        return wrap("Welcome to TMAG updates", content);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

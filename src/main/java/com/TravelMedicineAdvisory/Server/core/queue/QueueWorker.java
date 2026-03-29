@@ -128,6 +128,12 @@ public class QueueWorker {
                     handleEmailJob(msg, "credit_request_submitted");
                 case EMAIL_COMPANY_ADMIN_ONBOARDING ->
                     handleEmailJob(msg, "company_admin_onboarding");
+                case EMAIL_CONTACT_ACKNOWLEDGMENT ->
+                    handleEmailJob(msg, "contact_acknowledgment");
+                case EMAIL_CONTACT_SUBMISSION ->
+                    handleEmailJob(msg, "contact_submission");
+                case EMAIL_NEWSLETTER_WELCOME ->
+                    handleEmailJob(msg, "newsletter_welcome");
             }
             logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
 
@@ -189,6 +195,10 @@ public class QueueWorker {
         String newCurrency = vars.getOrDefault("newCurrency", "");
         String exportType = vars.getOrDefault("exportType", "");
         String employeeName = vars.getOrDefault("employeeName", "");
+        String name = vars.getOrDefault("name", "");
+        String message = vars.getOrDefault("message", "");
+        String inquiryType = vars.getOrDefault("inquiryType", "");
+        String senderEmail = vars.getOrDefault("email", to);
 
         String html = switch (templateType) {
             case "verification" ->
@@ -237,6 +247,12 @@ public class QueueWorker {
                 emailTemplates.creditRequestSubmittedEmail(firstName, employeeName, Integer.parseInt(credits), companyName);
             case "company_admin_onboarding" ->
                 emailTemplates.companyAdminOnboardingEmail(firstName, companyName, vars.getOrDefault("temporaryPassword", ""));
+            case "contact_acknowledgment" ->
+                emailTemplates.contactAcknowledgmentEmail(firstName, subject);
+            case "contact_submission" ->
+                emailTemplates.contactSubmissionEmail(name, senderEmail, inquiryType, subject, message);
+            case "newsletter_welcome" ->
+                emailTemplates.newsletterWelcomeEmail(firstName);
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

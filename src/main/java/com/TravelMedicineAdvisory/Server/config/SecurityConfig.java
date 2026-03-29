@@ -105,6 +105,10 @@ public class SecurityConfig {
                                 "/api/v1/system-settings",
                                 "/api/v1/system-settings/**")
                         .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/contact",
+                                "/api/v1/newsletter/subscribe")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
