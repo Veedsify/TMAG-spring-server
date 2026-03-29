@@ -1,33 +1,35 @@
 package com.TravelMedicineAdvisory.Server.domain.creditrequest;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 @Service
 @Transactional
 public class CreditRequestService {
-
     private final CreditRequestRepository repository;
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
     private final QueueService queueService;
     private final AdminNotificationService adminNotificationService;
-
     public CreditRequestService(CreditRequestRepository repository, CompanyRepository companyRepository, 
             EmployeeRepository employeeRepository, UserRepository userRepository, QueueService queueService,
             AdminNotificationService adminNotificationService) {
@@ -38,7 +40,6 @@ public class CreditRequestService {
         this.queueService = queueService;
         this.adminNotificationService = adminNotificationService;
     }
-
     public Page<CreditRequestResponse> findAll(Long companyId, Pageable pageable) {
         if (companyId != null) {
             return repository.findAllByCompanyId(companyId, pageable)
@@ -47,30 +48,32 @@ public class CreditRequestService {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
-
     public CreditRequestResponse findById(Long id) {
         CreditRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CreditRequest not found"));
         return toResponse(entity);
     }
-
-    public CreditRequestResponse create(CreditRequestRequest request) {
+    public CreditRequestResponse create(CreditRequestRequest request, Long userId) {
         CreditRequest entity = new CreditRequest();
+        // map request fields to entity
         mapRequestToEntity(request, entity);
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            throw new NoSuchElementException("User not found");
+        }
+        entity.setSubmittedAt(LocalDateTime.now(ZoneId.systemDefault()));
+        entity.setEmployee(employeeRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("Employee not found for user")));
         CreditRequest saved = repository.save(entity);
-
         sendNewRequestNotificationToHr(entity);
-
         return toResponse(saved);
     }
-
     private void sendNewRequestNotificationToHr(CreditRequest request) {
-        if (request.getCompany() == null || request.getEmployee() == null) return;
-
+        if (request.getCompany() == null || request.getEmployee() == null)
+            return;
         String employeeName = request.getEmployee().getName() != null 
                 ? request.getEmployee().getName() 
                 : "Employee";
-        
         adminNotificationService.notifyCompanyAdmins(
                 request.getCompany().getId(),
                 "New credit request from " + employeeName,
@@ -80,7 +83,6 @@ public class CreditRequestService {
                         "credits", String.valueOf(request.getCreditsRequested()))
         );
     }
-
     public CreditRequestResponse update(Long id, CreditRequestRequest request) {
         CreditRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CreditRequest not found"));
@@ -88,35 +90,40 @@ public class CreditRequestService {
         CreditRequest saved = repository.save(entity);
         return toResponse(saved);
     }
-
     public CreditRequestResponse approve(Long id) {
         CreditRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CreditRequest not found"));
         entity.setStatus("approved");
         CreditRequest saved = repository.save(entity);
 
-        sendStatusEmail(entity, true, null);
+        Employee employee = entity.getEmployee();
 
+        if (employee != null) {
+            User user = employee.getUser();
+            if (user != null) {
+                Integer credits = user.getCredits();
+                Integer currentBalance = credits != null ? credits : 0;
+                user.setCredits(currentBalance + entity.getCreditsRequested());
+                userRepository.save(user);
+            }
+        }
+
+        sendStatusEmail(entity, true, null);
         return toResponse(saved);
     }
-
     public CreditRequestResponse reject(Long id, String reason) {
         CreditRequest entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CreditRequest not found"));
         entity.setStatus("rejected");
         CreditRequest saved = repository.save(entity);
-
         sendStatusEmail(entity, false, reason);
-
         return toResponse(saved);
     }
-
     private void sendStatusEmail(CreditRequest entity, boolean approved, String reason) {
         if (entity.getEmployee() != null && entity.getEmployee().getUser() != null) {
             User user = entity.getEmployee().getUser();
             String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
             String companyName = entity.getCompany() != null ? entity.getCompany().getName() : "your company";
-
             if (approved) {
                 queueService.dispatch(JobType.EMAIL_CREDIT_REQUEST_APPROVED, Map.of(
                         "to", user.getEmail(),
@@ -137,14 +144,12 @@ public class CreditRequestService {
             }
         }
     }
-
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("CreditRequest not found");
         }
         repository.deleteById(id);
     }
-
     private CreditRequestResponse toResponse(CreditRequest entity) {
         return new CreditRequestResponse(
             entity.getId(),
@@ -159,7 +164,6 @@ public class CreditRequestService {
             entity.getUpdatedAt()
         );
     }
-
     private void mapRequestToEntity(CreditRequestRequest request, CreditRequest entity) {
         entity.setCreditsRequested(request.creditsRequested());
         entity.setReason(request.reason());

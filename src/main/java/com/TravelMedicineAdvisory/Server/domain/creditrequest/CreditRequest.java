@@ -1,17 +1,23 @@
 package com.TravelMedicineAdvisory.Server.domain.creditrequest;
 
-import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
+import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
-import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "credit_requests")
 @SQLDelete(sql = "UPDATE credit_requests SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
 public class CreditRequest extends BaseEntity {
 
     private Integer creditsRequested;

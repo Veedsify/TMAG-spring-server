@@ -155,6 +155,11 @@ public class CreditPurchaseService {
             return CreditPurchaseResponse.from(purchase);
         }
 
+        if (purchase.getCompanyId() != null) {
+            logger.info("Skipping company purchase in user verify handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            return CreditPurchaseResponse.from(purchase);
+        }
+
         // Use the Flutterwave transaction ID for verification when available (preferred),
         // as GET /transactions/{id}/verify returns a single object.
         // The tx_ref search endpoint returns an array which may be empty due to indexing delay.
@@ -192,6 +197,22 @@ public class CreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found with txRef: " + txRef));
 
         if ("completed".equalsIgnoreCase(purchase.getStatus())) {
+            return CreditPurchaseResponse.from(purchase);
+        }
+
+        if (purchase.getCompanyId() != null) {
+            logger.info("Skipping company purchase in user complete handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            return CreditPurchaseResponse.from(purchase);
+        }
+
+        if (creditRepository.existsByTypeAndReference("purchase", txRef)) {
+            logger.info("Credit entry already exists for txRef={}, skipping duplicate", txRef);
+            purchase.setStatus("completed");
+            purchase.setFlwRef(flwRef);
+            purchase.setAmountPaid(amountPaid);
+            purchase.setPaidAt(LocalDateTime.now());
+            purchase.setFlutterwaveStatus("successful");
+            purchaseRepository.save(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -233,6 +254,11 @@ public class CreditPurchaseService {
             return CreditPurchaseResponse.from(purchase);
         }
 
+        if (purchase.getCompanyId() != null) {
+            logger.info("Skipping company purchase in user webhook handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            return CreditPurchaseResponse.from(purchase);
+        }
+
         if ("successful".equalsIgnoreCase(status)) {
             return completePurchase(purchase, new FlutterwavePaymentResponse(
                 true, "Payment successful", txRef, flwRef, status, null, amount,
@@ -254,6 +280,11 @@ public class CreditPurchaseService {
         purchase.setPaidAt(LocalDateTime.now());
         purchase.setFlutterwaveStatus(verification.status());
         purchaseRepository.save(purchase);
+
+        if (creditRepository.existsByTypeAndReference("purchase", purchase.getTxRef())) {
+            logger.info("Credit entry already exists for txRef={}, skipping duplicate", purchase.getTxRef());
+            return CreditPurchaseResponse.from(purchase);
+        }
 
         User user = purchase.getUser();
         user.setCredits(user.getCredits() + purchase.getCreditsPurchased());

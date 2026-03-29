@@ -126,6 +126,8 @@ public class QueueWorker {
                     handleEmailJob(msg, "invitation_accepted");
                 case EMAIL_CREDIT_REQUEST_SUBMITTED ->
                     handleEmailJob(msg, "credit_request_submitted");
+                case EMAIL_COMPANY_ADMIN_ONBOARDING ->
+                    handleEmailJob(msg, "company_admin_onboarding");
             }
             logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
 
@@ -233,6 +235,8 @@ public class QueueWorker {
                 emailTemplates.invitationAcceptedEmail(firstName, vars.getOrDefault("employeeName", "User"), companyName);
             case "credit_request_submitted" ->
                 emailTemplates.creditRequestSubmittedEmail(firstName, employeeName, Integer.parseInt(credits), companyName);
+            case "company_admin_onboarding" ->
+                emailTemplates.companyAdminOnboardingEmail(firstName, companyName, vars.getOrDefault("temporaryPassword", ""));
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

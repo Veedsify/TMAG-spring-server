@@ -34,9 +34,9 @@ public class CreditController {
     }
 
     @GetMapping
-    public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
+    public ResponseEntity<SuccessResponse> getAll(Integer companyId, Pageable pageable) {
         User currentUser = getCurrentUser();
-        Page<CreditResponse> page = service.findAllByUser(currentUser.getId(), pageable);
+        Page<CreditResponse> page = service.findAllByUser(currentUser.getId(), companyId != null ? companyId.longValue() : null, pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,

@@ -274,6 +274,11 @@ public class CompanyAdminCreditPurchaseService {
         purchase.setAmountPaid(verification.amount() != null ? verification.amount() : purchase.getAmount());
         purchaseRepository.save(purchase);
 
+        if (creditRepository.existsByTypeAndReference("purchase", purchase.getTxRef())) {
+            logger.info("Credit entry already exists for txRef={}, skipping duplicate: txRef={}", purchase.getTxRef(), purchase.getTxRef());
+            return CreditPurchaseResponse.from(purchase);
+        }
+
         if (purchase.getCompanyId() != null) {
             Company company = companyRepository.findById(purchase.getCompanyId())
                     .orElseThrow(() -> new NoSuchElementException("Company not found"));

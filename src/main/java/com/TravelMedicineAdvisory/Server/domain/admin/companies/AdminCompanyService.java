@@ -9,6 +9,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingStatus;
@@ -40,6 +43,7 @@ public class AdminCompanyService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final QueueService queueService;
 
     public AdminCompanyService(CompanyRepository companyRepository,
             EmployeeRepository employeeRepository,
@@ -49,7 +53,8 @@ public class AdminCompanyService {
             TravelPlanRepository travelPlanRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            QueueService queueService) {
         this.companyRepository = companyRepository;
         this.employeeRepository = employeeRepository;
         this.companyUserRepository = companyUserRepository;
@@ -59,6 +64,7 @@ public class AdminCompanyService {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.queueService = queueService;
     }
 
     public List<AdminCompanyResponse> findAll() {
@@ -150,9 +156,23 @@ public class AdminCompanyService {
             companyUser.setCompany(company);
             companyUser.setUser(adminUser);
             companyUserRepository.save(companyUser);
+
+            sendOnboardingEmail(adminUser, company, adminPassword);
         }
 
         return mapToResponse(company);
+    }
+
+    private void sendOnboardingEmail(User user, Company company, String temporaryPassword) {
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
+        
+        queueService.dispatch(JobType.EMAIL_COMPANY_ADMIN_ONBOARDING, Map.of(
+                "to", user.getEmail(),
+                "subject", "Welcome to TMAG - Your admin account is ready",
+                "variables", Map.of(
+                        "firstName", firstName,
+                        "companyName", company.getName(),
+                        "temporaryPassword", temporaryPassword != null ? temporaryPassword : "")));
     }
 
     public AdminCompanyResponse findById(Long id) {

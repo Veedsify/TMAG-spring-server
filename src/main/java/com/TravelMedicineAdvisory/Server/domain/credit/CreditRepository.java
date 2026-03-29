@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,13 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface CreditRepository extends JpaRepository<Credit, Long> {
     Page<Credit> findAllByCompanyId(Long companyId, Pageable pageable);
 
     Page<Credit> findAllByUserId(Long userId, Pageable pageable);
+
+    List<Credit> findByCompanyId(Long companyId, Pageable pageable);
 
     List<Credit> findByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -45,4 +47,6 @@ public interface CreditRepository extends JpaRepository<Credit, Long> {
 
     @Query("SELECT COALESCE(SUM(c.amount), 0) FROM Credit c WHERE c.type = 'consume' AND c.company.id = :companyId")
     Integer sumConsumedByCompanyId(@Param("companyId") Long companyId);
+
+    boolean existsByTypeAndReference(String type, String reference);
 }

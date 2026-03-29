@@ -1,9 +1,9 @@
 package com.TravelMedicineAdvisory.Server.core.email;
 
+import java.time.Year;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.time.Year;
 
 /**
  * TMAG branded email templates.
@@ -450,6 +450,42 @@ public class EmailTemplates {
                 fine("Log in to the HR dashboard to approve or reject this request.");
 
         return wrap("New credit request from " + employeeName, content);
+    }
+
+    /**
+     * Company admin onboarding welcome email
+     */
+    public String companyAdminOnboardingEmail(String firstName, String companyName, String temporaryPassword) {
+        String content
+                = badge("Welcome to TMAG")
+                + heading("Your TMAG admin account is ready")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Welcome to <strong>Travel Medicine Advisory Global</strong>! Your administrator account for <strong>" + esc(companyName) + "</strong> has been created.</p>"
+                + "<p style=\"" + P_STYLE + "\">Below is your temporary login credential:</p>"
+                + infoBox("Temporary Password: <strong>" + esc(temporaryPassword) + "</strong><br/><em>You will be required to change this password on first login.</em>")
+                + heading("Getting Started")
+                + "<p style=\"" + P_STYLE + "\">Here's a quick guide to help you navigate the admin dashboard:</p>"
+                + "<div style=\"font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:14px;color:#8a7968;line-height:1.8;padding-left:20px;\">"
+                + "<p><strong style=\"color:#1c3a2d;\">1. Team Management</strong><br/>"
+                + "Navigate to <strong>Team & Members</strong> to invite employees, allocate credits, and manage your organization's users. Use CSV bulk upload for quick onboarding.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">2. Credit Management</strong><br/>"
+                + "Purchase credits under <strong>Credits</strong> and allocate them to employees. Monitor usage and track credit distribution.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">3. Credit Requests</strong><br/>"
+                + "Review and approve/reject credit requests from employees in the <strong>Requests</strong> section.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">4. Travel Plans</strong><br/>"
+                + "Generate travel health plans for your employees. Each plan includes vaccinations, health alerts, and safety advisories.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">5. Reports & Analytics</strong><br/>"
+                + "Export usage reports, team reports, and compliance data from the <strong>Reports</strong> section.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">6. API Keys</strong><br/>"
+                + "Generate API keys under <strong>Settings</strong> to integrate TMAG with your existing systems.</p>"
+                + "<p><strong style=\"color:#1c3a2d;\">7. Settings</strong><br/>"
+                + "Configure billing currency, notification preferences, and security settings including 2FA.</p>"
+                + "</div>"
+                + tealButton("Go to Admin Dashboard", "{frontendUrl}/admin")
+                + divider()
+                + fine("If you have questions, contact our support team. We're here to help you keep your travelers safe!");
+
+        return wrap("Welcome to TMAG - Your admin account is ready", content);
     }
 
     // -------------------------------------------------------------------------

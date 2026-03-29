@@ -36,7 +36,11 @@ public class CreditService {
                 .map(this::toResponse);
     }
 
-    public Page<CreditResponse> findAllByUser(Long userId, Pageable pageable) {
+    public Page<CreditResponse> findAllByUser(Long userId, Long companyId, Pageable pageable) {
+        if (companyId != null) {
+            return repository.findAllByCompanyId(companyId, pageable)
+                    .map(this::toResponse);
+        }
         return repository.findAllByUserId(userId, pageable)
                 .map(this::toResponse);
     }
