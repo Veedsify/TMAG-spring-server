@@ -103,16 +103,16 @@ public class DataSeeder implements CommandLineRunner {
 
         // logger.info("Running Database Seeder...");
 
-        this.seedRoles();
-        seedPermissions();
-        seedRolePermissions();
-        seedCompany();
-        seedAdminUser();
-        seedCountries();
-        seedCountryHealthAlerts();
-        seedSystemSettings();
-        seedFaqItems();
-        seedInvoices();
+        // this.seedRoles();
+        // seedPermissions();
+        // seedRolePermissions();
+        // seedCompany();
+        // seedAdminUser();
+        // seedCountries();
+        // seedCountryHealthAlerts();
+        // seedSystemSettings();
+        // seedFaqItems();
+        // seedInvoices();
 
         logger.info("Database Seeding Completed.");
     }
