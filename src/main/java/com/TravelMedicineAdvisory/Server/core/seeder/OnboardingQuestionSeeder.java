@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @Order(2)
@@ -33,11 +34,6 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (!seederEnabled)
             return;
-        // Always re-seed to pick up question structure changes
-        if (repository.count() > 0) {
-            repository.deleteAll();
-            logger.info("Clearing existing onboarding questions for re-seed...");
-        }
 
         logger.info("Seeding onboarding questions...");
 
@@ -102,8 +98,14 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         safety.setQuestions(SAFETY_QUESTIONS);
         categories.add(safety);
 
-        repository.saveAll(categories);
-        logger.info("Seeded {} onboarding question categories.", categories.size());
+        int savedCount = 0;
+        for (OnboardingQuestionCategory category : categories) {
+            if (repository.findByCategoryKey(category.getCategoryKey()).isEmpty()) {
+                repository.save(category);
+                savedCount++;
+            }
+        }
+        logger.info("Seeded {} new onboarding question categories.", savedCount);
     }
 
     // ═══════════════════════════════════════════════════════════════

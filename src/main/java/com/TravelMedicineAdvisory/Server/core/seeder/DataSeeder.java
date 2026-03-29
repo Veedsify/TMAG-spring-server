@@ -103,16 +103,16 @@ public class DataSeeder implements CommandLineRunner {
 
         // logger.info("Running Database Seeder...");
 
-        // this.seedRoles();
-        // seedPermissions();
-        // seedRolePermissions();
-        // seedCompany();
-        // seedAdminUser();
-        // seedCountries();
-        // seedCountryHealthAlerts();
-        // seedSystemSettings();
-        // seedFaqItems();
-        // seedInvoices();
+        this.seedRoles();
+        seedPermissions();
+        seedRolePermissions();
+        seedCompany();
+        seedAdminUser();
+        seedCountries();
+        seedCountryHealthAlerts();
+        seedSystemSettings();
+        seedFaqItems();
+        seedInvoices();
 
         logger.info("Database Seeding Completed.");
     }
@@ -121,8 +121,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedRoles() {
-        if (roleRepository.count() > 0)
+        if (roleRepository.count() > 0) {
             return;
+        }
         // logger.info("Seeding roles...");
 
         List<String> roleNames = List.of("SuperAdmin", "Administrator", "HR", "CustomerSupport", "Individual");
