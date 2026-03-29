@@ -3,48 +3,35 @@ FROM maven:3.9-eclipse-temurin-25 AS build
 
 WORKDIR /app
 
-COPY pom.xml ./
-RUN mvn dependency:go-offline -B || true
+COPY mvnw pom.xml ./
+RUN ./mvnw dependency:resolve -B
 
-COPY src/ src/
-RUN mvn clean package -DskipTests -B
+COPY src ./src
+RUN ./mvnw clean package -DskipTests -B
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 
-# Application Settings
 ARG APP_ENV=prod
 ARG SERVER_PORT=8080
 ARG APP_FRONTEND_URL
 ARG APP_HOST
-
-# Database Configuration
 ARG SPRING_DATASOURCE_URL
 ARG SPRING_DATASOURCE_USERNAME
 ARG SPRING_DATASOURCE_PASSWORD
 ARG SPRING_JPA_HIBERNATE_DDL_AUTO
-
-# Security
-ARG JWT_SECRET
-ARG APP_API_KEY
-
-# Mail
+ARG JWT_SECRET=changeme
+ARG APP_API_KEY=changeme
 ARG SPRING_MAIL_HOST
 ARG SPRING_MAIL_PORT
 ARG SPRING_MAIL_USERNAME
 ARG SPRING_MAIL_PASSWORD
-
-# Redis
 ARG REDIS_HOST
 ARG REDIS_PORT
-
-# Storage
 ARG APP_STORAGE_PATH
 ARG APP_STORAGE_BASE_URL
-
-# Flutterwave Payment
 ARG FLUTTERWAVE_PUBLIC_KEY
 ARG FLUTTERWAVE_SECRET_KEY
 ARG FLUTTERWAVE_ENCRYPTION_KEY
@@ -59,8 +46,8 @@ ENV APP_ENV=${APP_ENV} \
     SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-tmag} \
     SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-changeme} \
     SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update} \
-    JWT_SECRET=${JWT_SECRET:-default-secret-change-in-prod} \
-    APP_API_KEY=${APP_API_KEY:-default-api-key} \
+    JWT_SECRET=${JWT_SECRET} \
+    APP_API_KEY=${APP_API_KEY} \
     SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-smtp.gmail.com} \
     SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587} \
     SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-} \
