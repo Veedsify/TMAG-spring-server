@@ -4,8 +4,8 @@ FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
 # Copy Maven wrapper and POM first for dependency caching
-COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
+COPY .mvn .mvn
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 # Copy source and build
