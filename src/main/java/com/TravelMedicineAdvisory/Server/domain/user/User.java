@@ -1,14 +1,25 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.hibernate.annotations.SQLDelete;
+
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import jakarta.persistence.*;
-import org.hibernate.annotations.SQLDelete;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
