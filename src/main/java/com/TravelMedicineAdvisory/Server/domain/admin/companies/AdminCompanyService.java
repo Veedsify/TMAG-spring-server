@@ -165,7 +165,6 @@ public class AdminCompanyService {
 
     private void sendOnboardingEmail(User user, Company company, String temporaryPassword) {
         String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
-        
         queueService.dispatch(JobType.EMAIL_COMPANY_ADMIN_ONBOARDING, Map.of(
                 "to", user.getEmail(),
                 "subject", "Welcome to TMAG - Your admin account is ready",
