@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.creditrequest;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import com.TravelMedicineAdvisory.Server.core.types.Pagination;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
+@Tag(name = "Credit requests")
 @RestController
 @RequestMapping("/api/v1/credit-requests")
 public class CreditRequestController {

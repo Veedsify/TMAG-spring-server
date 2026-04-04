@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.invoice;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.PaginatedResponse;
 import com.TravelMedicineAdvisory.Server.core.types.Pagination;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
@@ -12,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Invoices")
 @RestController
 @RequestMapping("/api/v1/invoices")
 public class InvoiceController {

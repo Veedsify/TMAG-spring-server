@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.dataexport;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Company admin · Data export")
 @RestController
 @RequestMapping("/api/v1/company-admin/data-export")
 public class DataExportController {

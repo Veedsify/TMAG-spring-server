@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.core.payment;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+@Tag(name = "Payments")
 @RestController
 @RequestMapping("/api/v1/payments")
 public class PaymentController {

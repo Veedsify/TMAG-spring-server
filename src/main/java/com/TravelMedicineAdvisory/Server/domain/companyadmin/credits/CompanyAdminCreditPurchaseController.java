@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.credits;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -20,6 +22,7 @@ import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
+@Tag(name = "Company admin · Credits")
 @RestController
 @RequestMapping("/api/v1/company-admin/credits")
 public class CompanyAdminCreditPurchaseController {

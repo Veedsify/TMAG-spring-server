@@ -150,6 +150,12 @@ public class AdminSystemService {
 
         if ("boolean".equalsIgnoreCase(type)) {
             return "true".equalsIgnoreCase(value);
+        } else if ("decimal".equalsIgnoreCase(type) || "float".equalsIgnoreCase(type) || "double".equalsIgnoreCase(type)) {
+            try {
+                return Double.parseDouble(value);
+            } catch (NumberFormatException e) {
+                return value;
+            }
         } else if ("number".equalsIgnoreCase(type) || "integer".equalsIgnoreCase(type)) {
             try {
                 return Integer.parseInt(value);

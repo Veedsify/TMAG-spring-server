@@ -7,7 +7,8 @@ public class AdminDashboardStatsResponse {
     private Long totalCreditsIssued;
     private Long totalCreditsConsumed;
     private Long aiRequestsToday;
-    private Long revenueOverview;
+    private Double revenueOverview;
+    private String revenueBaseCurrency;
     private Long failedAICalls;
     private String systemHealthStatus;
     private Long activeUsersToday;
@@ -25,8 +26,10 @@ public class AdminDashboardStatsResponse {
     public void setTotalCreditsConsumed(Long totalCreditsConsumed) { this.totalCreditsConsumed = totalCreditsConsumed; }
     public Long getAiRequestsToday() { return aiRequestsToday; }
     public void setAiRequestsToday(Long aiRequestsToday) { this.aiRequestsToday = aiRequestsToday; }
-    public Long getRevenueOverview() { return revenueOverview; }
-    public void setRevenueOverview(Long revenueOverview) { this.revenueOverview = revenueOverview; }
+    public Double getRevenueOverview() { return revenueOverview; }
+    public void setRevenueOverview(Double revenueOverview) { this.revenueOverview = revenueOverview; }
+    public String getRevenueBaseCurrency() { return revenueBaseCurrency; }
+    public void setRevenueBaseCurrency(String revenueBaseCurrency) { this.revenueBaseCurrency = revenueBaseCurrency; }
     public Long getFailedAICalls() { return failedAICalls; }
     public void setFailedAICalls(Long failedAICalls) { this.failedAICalls = failedAICalls; }
     public String getSystemHealthStatus() { return systemHealthStatus; }

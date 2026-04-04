@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.users;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
+@Tag(name = "Admin · Users")
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @PreAuthorize("hasAuthority('all')")

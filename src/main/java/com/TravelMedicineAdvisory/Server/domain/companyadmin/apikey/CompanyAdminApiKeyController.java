@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.apikey;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKeyRespo
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKeyService;
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKeyService.CreateResult;
 
+@Tag(name = "Company admin · API keys")
 @RestController
 @RequestMapping("/api/v1/company-admin/api-keys")
 public class CompanyAdminApiKeyController {

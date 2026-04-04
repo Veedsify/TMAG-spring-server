@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +30,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@Tag(name = "Onboarding")
 @RestController
 @RequestMapping("/api/v1/onboarding")
 public class OnboardingController {

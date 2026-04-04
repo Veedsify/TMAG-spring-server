@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.setting;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +11,7 @@ import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingReq
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingResponse;
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingService;
 
+@Tag(name = "Company admin · Settings")
 @RestController
 @RequestMapping("/api/v1/company-admin/settings")
 public class CompanyAdminSettingController {

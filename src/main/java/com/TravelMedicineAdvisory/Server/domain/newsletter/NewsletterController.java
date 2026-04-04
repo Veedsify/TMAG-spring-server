@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.newsletter;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.newsletter.NewsletterDto.NewsletterRequest;
 import com.TravelMedicineAdvisory.Server.domain.newsletter.NewsletterDto.NewsletterResponse;
@@ -7,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Newsletter")
 @RestController
 @RequestMapping("/api/v1/newsletter")
 public class NewsletterController {

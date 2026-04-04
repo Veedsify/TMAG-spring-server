@@ -6,6 +6,7 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
 import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
+import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -26,16 +27,53 @@ public class AdminAnalyticsService {
     private final TravelPlanRepository travelPlanRepository;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final InvoiceRepository invoiceRepository;
+    private final SystemSettingRepository systemSettingRepository;
 
     public AdminAnalyticsService(UserRepository userRepository, CompanyRepository companyRepository,
             CreditRepository creditRepository, TravelPlanRepository travelPlanRepository,
-            AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository) {
+            AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository,
+            SystemSettingRepository systemSettingRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.creditRepository = creditRepository;
         this.travelPlanRepository = travelPlanRepository;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.invoiceRepository = invoiceRepository;
+        this.systemSettingRepository = systemSettingRepository;
+    }
+
+    private String getBaseCurrency() {
+        return systemSettingRepository.findByKey("revenueBaseCurrency")
+                .map(s -> s.getValue() != null ? s.getValue().toUpperCase() : "USD")
+                .orElse("USD");
+    }
+
+    private Map<String, Double> getExchangeRates() {
+        Map<String, Double> rates = new HashMap<>();
+        systemSettingRepository.findByKey("exchangeRateNGN")
+                .ifPresent(s -> {
+                    try { rates.put("NGN", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                });
+        systemSettingRepository.findByKey("exchangeRateEUR")
+                .ifPresent(s -> {
+                    try { rates.put("EUR", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                });
+        systemSettingRepository.findByKey("exchangeRateGBP")
+                .ifPresent(s -> {
+                    try { rates.put("GBP", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                });
+        return rates;
+    }
+
+    private double convertToBase(java.math.BigDecimal amount, String currency, String baseCurrency, Map<String, Double> rates) {
+        if (amount == null) return 0;
+        if (currency == null || currency.isBlank()) return amount.doubleValue();
+        String upper = currency.toUpperCase();
+        // Base currency invoices need no conversion
+        if (upper.equals(baseCurrency)) return amount.doubleValue();
+        // If rate is not configured for this currency, assume 1:1
+        double rate = rates.getOrDefault(upper, 1.0);
+        return amount.doubleValue() * rate;
     }
 
     public AdminDashboardStatsResponse getDashboardStats() {
@@ -68,8 +106,13 @@ public class AdminAnalyticsService {
         long aiRequestsToday = aiRequestLogRepository.count();
         stats.setAiRequestsToday(aiRequestsToday);
 
-        Long revenue = invoiceRepository.sumPaidInvoices();
-        stats.setRevenueOverview(revenue != null ? revenue : 0L);
+        String baseCurrency = getBaseCurrency();
+        Map<String, Double> rates = getExchangeRates();
+        double revenue = invoiceRepository.findAllActiveByStatus("paid").stream()
+                .mapToDouble(inv -> convertToBase(inv.getAmount(), inv.getCurrency(), baseCurrency, rates))
+                .sum();
+        stats.setRevenueOverview(revenue);
+        stats.setRevenueBaseCurrency(baseCurrency);
 
         long failedCalls = aiRequestLogRepository.findAll().stream()
                 .filter(log -> "error".equals(log.getStatus()))
@@ -159,7 +202,7 @@ public class AdminAnalyticsService {
         // Monthly requests & revenue — aggregate by month from AI logs and invoices
         List<Map<String, Object>> monthly = new ArrayList<>();
         Map<String, Long> monthlyRequestCounts = new HashMap<>();
-        Map<String, Long> monthlyRevenue = new HashMap<>();
+        Map<String, Double> monthlyRevenue = new HashMap<>();
         java.time.format.DateTimeFormatter monthFmt = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
         for (AiRequestLog log : allAiLogs) {
             if (log.getCreatedAt() != null) {
@@ -167,11 +210,14 @@ public class AdminAnalyticsService {
                 monthlyRequestCounts.merge(monthKey, 1L, Long::sum);
             }
         }
+        String analyticsBaseCurrency = getBaseCurrency();
+        Map<String, Double> currencyRates = getExchangeRates();
         List<Invoice> allInvoices = invoiceRepository.findAllActive();
         for (Invoice inv : allInvoices) {
             if (inv.getPaidAt() != null && inv.getAmount() != null) {
                 String monthKey = inv.getPaidAt().format(monthFmt);
-                monthlyRevenue.merge(monthKey, inv.getAmount().longValue(), Long::sum);
+                double converted = convertToBase(inv.getAmount(), inv.getCurrency(), analyticsBaseCurrency, currencyRates);
+                monthlyRevenue.merge(monthKey, converted, Double::sum);
             }
         }
         Set<String> allMonths = new java.util.TreeSet<>();
@@ -181,7 +227,7 @@ public class AdminAnalyticsService {
             Map<String, Object> entry = new HashMap<>();
             entry.put("month", monthKey);
             entry.put("requests", monthlyRequestCounts.getOrDefault(monthKey, 0L));
-            entry.put("revenue", monthlyRevenue.getOrDefault(monthKey, 0L));
+            entry.put("revenue", monthlyRevenue.getOrDefault(monthKey, 0.0));
             monthly.add(entry);
         }
         analytics.setMonthlyRequests(monthly);

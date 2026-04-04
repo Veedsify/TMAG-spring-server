@@ -11,22 +11,12 @@ public class AdminSystemSettingsResponse {
     private Boolean maintenanceMode;
     private Boolean emailNotifications;
     private Integer maxEmployeesPerCompany;
+    private String revenueBaseCurrency;
+    private Double exchangeRateNGN;
+    private Double exchangeRateEUR;
+    private Double exchangeRateGBP;
 
     public AdminSystemSettingsResponse() {}
-
-    public AdminSystemSettingsResponse(Integer defaultIndividualCredits, Integer defaultCorporateCredits,
-                                        String aiModelVersion, Integer planGenerationLimit,
-                                        String globalDisclaimer, Boolean maintenanceMode,
-                                        Boolean emailNotifications, Integer maxEmployeesPerCompany) {
-        this.defaultIndividualCredits = defaultIndividualCredits;
-        this.defaultCorporateCredits = defaultCorporateCredits;
-        this.aiModelVersion = aiModelVersion;
-        this.planGenerationLimit = planGenerationLimit;
-        this.globalDisclaimer = globalDisclaimer;
-        this.maintenanceMode = maintenanceMode;
-        this.emailNotifications = emailNotifications;
-        this.maxEmployeesPerCompany = maxEmployeesPerCompany;
-    }
 
     public static AdminSystemSettingsResponse fromMap(Map<String, Object> settings) {
         AdminSystemSettingsResponse response = new AdminSystemSettingsResponse();
@@ -54,6 +44,18 @@ public class AdminSystemSettingsResponse {
         if (settings.containsKey("maxEmployeesPerCompany")) {
             response.setMaxEmployeesPerCompany((Integer) settings.get("maxEmployeesPerCompany"));
         }
+        if (settings.containsKey("revenueBaseCurrency")) {
+            response.setRevenueBaseCurrency((String) settings.get("revenueBaseCurrency"));
+        }
+        if (settings.containsKey("exchangeRateNGN") && settings.get("exchangeRateNGN") instanceof Number) {
+            response.setExchangeRateNGN(((Number) settings.get("exchangeRateNGN")).doubleValue());
+        }
+        if (settings.containsKey("exchangeRateEUR") && settings.get("exchangeRateEUR") instanceof Number) {
+            response.setExchangeRateEUR(((Number) settings.get("exchangeRateEUR")).doubleValue());
+        }
+        if (settings.containsKey("exchangeRateGBP") && settings.get("exchangeRateGBP") instanceof Number) {
+            response.setExchangeRateGBP(((Number) settings.get("exchangeRateGBP")).doubleValue());
+        }
         return response;
     }
 
@@ -73,4 +75,12 @@ public class AdminSystemSettingsResponse {
     public void setEmailNotifications(Boolean emailNotifications) { this.emailNotifications = emailNotifications; }
     public Integer getMaxEmployeesPerCompany() { return maxEmployeesPerCompany; }
     public void setMaxEmployeesPerCompany(Integer maxEmployeesPerCompany) { this.maxEmployeesPerCompany = maxEmployeesPerCompany; }
+    public String getRevenueBaseCurrency() { return revenueBaseCurrency; }
+    public void setRevenueBaseCurrency(String revenueBaseCurrency) { this.revenueBaseCurrency = revenueBaseCurrency; }
+    public Double getExchangeRateNGN() { return exchangeRateNGN; }
+    public void setExchangeRateNGN(Double exchangeRateNGN) { this.exchangeRateNGN = exchangeRateNGN; }
+    public Double getExchangeRateEUR() { return exchangeRateEUR; }
+    public void setExchangeRateEUR(Double exchangeRateEUR) { this.exchangeRateEUR = exchangeRateEUR; }
+    public Double getExchangeRateGBP() { return exchangeRateGBP; }
+    public void setExchangeRateGBP(Double exchangeRateGBP) { this.exchangeRateGBP = exchangeRateGBP; }
 }

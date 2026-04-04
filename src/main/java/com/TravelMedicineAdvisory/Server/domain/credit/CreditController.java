@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
+@Tag(name = "Credits")
 @RestController
 @RequestMapping("/api/v1/credits")
 public class CreditController {

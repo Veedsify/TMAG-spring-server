@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.contact;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.contact.ContactDto.ContactRequest;
 import com.TravelMedicineAdvisory.Server.domain.contact.ContactDto.ContactResponse;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Contact")
 @RestController
 @RequestMapping("/api/v1/contact")
 public class ContactController {

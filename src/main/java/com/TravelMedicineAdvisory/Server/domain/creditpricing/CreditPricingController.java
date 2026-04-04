@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.creditpricing;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import jakarta.validation.Valid;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Credit pricing")
 @RestController
 @RequestMapping("/api/v1/credit-pricing")
 public class CreditPricingController {

@@ -1,10 +1,13 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.abuse;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Admin · Abuse")
 @RestController
 @RequestMapping("/api/v1/admin/abuse")
 @PreAuthorize("hasAuthority('all')")

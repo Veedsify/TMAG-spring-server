@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +18,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+@Tag(name = "Profile")
 @RestController
 @RequestMapping("/api/v1/profile")
 public class ProfileController {
