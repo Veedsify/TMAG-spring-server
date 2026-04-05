@@ -3,9 +3,11 @@ package com.TravelMedicineAdvisory.Server.domain.report;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,9 +18,22 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final UserRepository userRepository;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(ReportService reportService, UserRepository userRepository) {
         this.reportService = reportService;
+        this.userRepository = userRepository;
+    }
+
+    @GetMapping("/dashboard/analytics")
+    public ResponseEntity<SuccessResponse> getDashboardAnalytics(@RequestParam(required = false) Long companyId) {
+        Long userId = null;
+        if (companyId == null) {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            userId = userRepository.findByEmail(email).map(u -> u.getId()).orElse(null);
+        }
+        DashboardAnalyticsDto dto = reportService.getDashboardAnalytics(companyId, userId);
+        return ResponseEntity.ok(new SuccessResponse("Dashboard analytics fetched successfully", dto));
     }
 
     @GetMapping("/usage")

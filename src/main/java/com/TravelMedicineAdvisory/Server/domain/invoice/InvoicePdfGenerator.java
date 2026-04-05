@@ -12,21 +12,23 @@ import java.time.format.DateTimeFormatter;
 @Component
 public class InvoicePdfGenerator {
 
+    /** Aligns with client `index.css` @theme tokens */
+    private static final String BG_PAGE = "#f6f0e9";
+    private static final String BG_CARD = "#fffdf9";
+    private static final String BG_SUBTLE = "#fcf6ef";
+    private static final String BG_MUTED_ROW = "#efe7dd";
+    private static final String DARK = "#2a1e14";
+    private static final String HEADING = "#3d2c1e";
+    private static final String MUTED = "#7a6a5a";
+    private static final String BODY = "#8a7968";
+    private static final String BORDER_LIGHT = "#e8ddd3";
+    private static final String ACCENT = "#2a7a6a";
+    private static final String ACCENT_SOFT = "#e8f4f1";
+    private static final String GOLD = "#c4953a";
+    private static final String GOLD_SOFT = "#fdf3e3";
+
     @Value("${app.frontend.url}")
     private String frontendUrl;
-
-        // private static final String ACCENT = "#2a7a6a";
-        // private static final String ACCENT_LIGHT = "#e8f4f1";
-        // private static final String GOLD = "#c4953a";
-        // private static final String GOLD_LIGHT = "#fdf3e3";
-        // private static final String HEADING = "#3d2c1e";
-        // private static final String MUTED = "#7a6a5a";
-        // private static final String BODY = "#8a7968";
-        // private static final String BORDER = "#d4c4b4";
-        // private static final String BORDER_LIGHT = "#e8ddd3";
-        // private static final String BG_CREAM = "#f6f0e9";
-        // private static final String BG_WHITE = "#fffdf9";
-        // private static final String CARD_SHADOW = "rgba(61,44,30,0.08)";
 
     public byte[] generateInvoicePdf(InvoiceResponse invoice, String companyName) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -58,196 +60,266 @@ public class InvoicePdfGenerator {
         sb.append(
                 "@font-face{font-family:'Fraunces';src:url('classpath:/fonts/Fraunces-Bold.ttf') format('truetype');font-weight:700;font-style:normal}");
         sb.append("*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}");
-        sb.append(
-                "body{font-family:'Hanken Grotesk',Arial,sans-serif;font-size:10pt;color:#8a7968;background-color:#f6f0e9;padding:0}");
-        sb.append(".page{padding:40px 48px}");
-        sb.append(
-                ".top-band{background-color:#2a7a6a;padding:28px 48px;border-radius:12px 12px 0 0;margin-bottom:2px}");
-        sb.append(".top-band-inner{display:table;width:100%}");
-        sb.append(".top-band-inner>div{display:table-cell;vertical-align:middle}");
-        sb.append(".top-band-right{text-align:right;vertical-align:bottom}");
-        sb.append(
-                ".top-band-label{font-size:7pt;color:rgba(255,255,255,0.65);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}");
-        sb.append(
-                ".top-band-brand{font-family:'Fraunces',serif;font-size:26pt;font-weight:700;color:#fff;line-height:1}");
-        sb.append(
-                ".top-band-sub{font-size:7pt;color:rgba(255,255,255,0.65);letter-spacing:2px;text-transform:uppercase;margin-top:4px}");
-        sb.append(
-                ".top-band-title{font-family:'Fraunces',serif;font-size:28pt;font-weight:700;color:rgb(255,255,255);}");
-        sb.append(".top-band-num{font-size:9pt;color:rgba(255,255,255,0.7);margin-top:6px;letter-spacing:1px}");
-        sb.append(
-                ".invoice-info-strip{background-color:#fff;border-left:3px solid #2a7a6a;border-right:3px solid #2a7a6a;padding:16px 24px;display:table;width:100%}");
-        sb.append(".invoice-info-strip>div{display:table-cell;vertical-align:middle}");
-        sb.append(".invoice-info-left{width:50%}");
-        sb.append(".invoice-info-right{width:50%;text-align:right}");
-        sb.append(
-                ".info-label{font-size:7pt;font-weight:700;color:#3d2c1e;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}");
-        sb.append(".info-value{font-size:10pt;font-weight:600;color:#3d2c1e}");
-        sb.append(".info-row{margin-bottom:8px}");
-        sb.append(".info-row:last-child{margin-bottom:0}");
-        sb.append(
-                ".badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}");
-        sb.append(".badge-paid{background-color:#e8f4f1;color:#2a7a6a}");
-        sb.append(".badge-pending{background-color:#fdf3e3;color:#c4953a}");
-        sb.append(
-                ".body-card{background-color:#fff;border-left:3px solid #2a7a6a;border-right:3px solid #2a7a6a;padding:28px 24px}");
-        sb.append(".bill-to-section{margin-bottom:28px}");
-        sb.append(
-                ".section-eyebrow{font-size:7pt;font-weight:700;color:#7a6a5a;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e8ddd3}");
-        sb.append(".bill-to-name{font-size:14pt;font-weight:700;color:#3d2c1e;line-height:1.2}");
-        sb.append(".bill-to-meta{font-size:8pt;color:#7a6a5a;margin-top:3px}");
-        sb.append("table{width:100%;border-collapse:collapse;margin-bottom:24px}");
-        sb.append("thead{background-color:#f6f0e9}");
-        sb.append(
-                "th{padding:10px 14px;text-align:left;font-size:7pt;font-weight:700;color:#3d2c1e;text-transform:uppercase;letter-spacing:1px}");
-        sb.append("th:first-child{border-radius:8px 0 0 8px}");
-        sb.append("th:last-child{border-radius:0 8px 8px 0}");
-        sb.append("th:not(:first-child){text-align:right}");
-        sb.append("td{padding:14px;font-size:10pt;border-bottom:1px solid #e8ddd3;color:#3d2c1e}");
-        sb.append("td:not(:first-child){text-align:right}");
-        sb.append("tr:last-child td{border-bottom:none}");
-        sb.append(".item-name{font-weight:700;font-size:11pt;color:#3d2c1e}");
-        sb.append(".item-desc{font-size:8pt;color:#7a6a5a;margin-top:3px}");
-        sb.append(".summary-section{display:table;width:100%;gap:16px}");
-        sb.append(".summary-left{width:100%}");
-        sb.append(
-                ".summary-card{background-color:#f6f0e9;border-radius:10px;padding:18px 22px;width:42%;margin-left:auto}");
-        sb.append(".summary-row{display:table;width:100%;padding:5px 0}");
-        sb.append(".summary-row:not(:last-child){border-bottom:1px solid #e8ddd3}");
-        sb.append(".s-label{font-size:9pt;color:#7a6a5a;display:table-cell}");
-        sb.append(".s-value{font-size:9pt;font-weight:600;color:#3d2c1e;display:table-cell;text-align:right}");
-        sb.append(".summary-total{padding-top:10px;margin-top:4px}");
-        sb.append(".summary-total .s-label{font-size:11pt;font-weight:700;color:#3d2c1e}");
-        sb.append(".summary-total .s-value{font-size:13pt;font-weight:700;color:#2a7a6a}");
-        sb.append(".details-grid{display:table;width:100%;margin-top:24px;gap:16px}");
-        sb.append(".details-grid>div{display:table-cell;width:50%;vertical-align:top}");
-        sb.append(".details-grid>div:first-child{padding-right:12px}");
-        sb.append(".details-grid>div:last-child{padding-left:12px;text-align:right}");
-        sb.append(
-                ".detail-card{background-color:#fcf6ef;border-radius:8px;padding:14px 16px;border:1px solid #e8ddd3}");
-        sb.append(
-                ".detail-label{font-size:7pt;font-weight:700;color:#3d2c1e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #e8ddd3}");
-        sb.append(".detail-row{font-size:9pt;color:#7a6a5a;line-height:1.9}");
-        sb.append(".detail-row span{color:#3d2c1e;font-weight:600}");
-        sb.append(".bottom-band{background-color:#2a7a6a;height:4px;border-radius:0 0 12px 12px}");
-        sb.append(".footer{padding:28px 0 8px;display:table;width:100%}");
-        sb.append(".footer>div{display:table-cell;vertical-align:bottom}");
-        sb.append(".footer-right{text-align:right}");
-        sb.append(".footer-thanks{font-family:'Fraunces',serif;font-size:16pt;font-weight:700;color:#2a7a6a}");
-        sb.append(".footer-sub{font-size:8pt;color:#7a6a5a;margin-top:3px}");
-        sb.append(".footer-contact-label{font-size:7pt;color:#7a6a5a;text-transform:uppercase;letter-spacing:1px}");
-        sb.append(".footer-contact-value{font-size:9pt;font-weight:600;color:#3d2c1e;margin-top:2px}");
-        sb.append(".footer-divider{height:1px;background-color:#e8ddd3;margin:16px 0 12px}");
+        sb.append("@page{size:A4;margin:28pt}");
+        sb.append("body{font-family:'Hanken Grotesk',Arial,sans-serif;font-size:10pt;color:")
+                .append(BODY)
+                .append(";background-color:")
+                .append(BG_PAGE)
+                .append(";line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
+        sb.append(".wrap{padding:8px 0 24px}");
+        sb.append(".shell{background-color:")
+                .append(BG_CARD)
+                .append(";border:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";border-radius:14px;overflow:hidden}");
+        sb.append(".head{background-color:")
+                .append(DARK)
+                .append(";padding:26px 36px 0}");
+        sb.append(".head-row{display:table;width:100%}");
+        sb.append(".head-row>div{display:table-cell;vertical-align:bottom}");
+        sb.append(".head-left{width:58%}");
+        sb.append(".head-right{width:42%;text-align:right;padding-bottom:4px}");
+        sb.append(".head-eyebrow{font-size:7pt;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px}");
+        sb.append(".head-logo{font-family:'Fraunces',serif;font-size:24pt;font-weight:400;color:#fff;line-height:1.05}");
+        sb.append(".head-tag{font-size:7pt;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-top:6px}");
+        sb.append(".head-doc{font-family:'Fraunces',serif;font-size:22pt;font-weight:400;color:#fff;letter-spacing:0.02em}");
+        sb.append(".head-inv{font-size:9pt;color:rgba(255,255,255,0.65);margin-top:8px;font-weight:600;letter-spacing:0.08em}");
+        sb.append(".accent-bar{height:3px;background-color:")
+                .append(ACCENT)
+                .append(";margin-top:22px;border-radius:2px}");
+        sb.append(".meta{padding:20px 36px;background-color:")
+                .append(BG_SUBTLE)
+                .append(";border-bottom:1px solid ")
+                .append(BORDER_LIGHT)
+                .append("}");
+        sb.append(".meta-table{width:100%;border-collapse:collapse}");
+        sb.append(".meta-table td{width:25%;vertical-align:top;padding:4px 12px 4px 0}");
+        sb.append(".meta-table td:last-child{padding-right:0}");
+        sb.append(".mk{font-size:7pt;font-weight:700;color:")
+                .append(MUTED)
+                .append(";text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px}");
+        sb.append(".mv{font-size:10pt;font-weight:600;color:")
+                .append(HEADING)
+                .append("}");
+        sb.append(".badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.6px}");
+        sb.append(".badge-paid{background-color:")
+                .append(ACCENT_SOFT)
+                .append(";color:")
+                .append(ACCENT)
+                .append("}");
+        sb.append(".badge-pending{background-color:")
+                .append(GOLD_SOFT)
+                .append(";color:")
+                .append(GOLD)
+                .append("}");
+        sb.append(".body{padding:28px 36px 32px}");
+        sb.append(".bill{margin-bottom:26px}");
+        sb.append(".section-label{font-size:7pt;font-weight:700;color:")
+                .append(MUTED)
+                .append(";text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}");
+        sb.append(".section-label-line{height:2px;width:36px;background-color:")
+                .append(ACCENT)
+                .append(";border-radius:1px;margin-bottom:12px}");
+        sb.append(".bill-name{font-size:13pt;font-weight:700;color:")
+                .append(HEADING)
+                .append(";line-height:1.25}");
+        sb.append(".bill-meta{font-size:8pt;color:")
+                .append(MUTED)
+                .append(";margin-top:4px}");
+        sb.append("table.line-items{width:100%;border-collapse:separate;border-spacing:0;margin-bottom:22px;border:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";border-radius:10px;overflow:hidden}");
+        sb.append("thead th{padding:11px 16px;text-align:left;font-size:7pt;font-weight:700;color:")
+                .append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1px;background-color:")
+                .append(BG_MUTED_ROW)
+                .append(";border-bottom:1px solid ")
+                .append(BORDER_LIGHT)
+                .append("}");
+        sb.append("thead th:not(:first-child){text-align:right}");
+        sb.append("tbody td{padding:15px 16px;font-size:10pt;border-bottom:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";color:")
+                .append(HEADING)
+                .append("}");
+        sb.append("tbody td:not(:first-child){text-align:right;font-weight:600}");
+        sb.append("tbody tr:last-child td{border-bottom:none}");
+        sb.append(".item-title{font-weight:700;font-size:10.5pt;color:")
+                .append(HEADING)
+                .append("}");
+        sb.append(".item-sub{font-size:8pt;color:")
+                .append(MUTED)
+                .append(";margin-top:3px;font-weight:400}");
+        sb.append(".totals-wrap{display:table;width:100%}");
+        sb.append(".totals-spacer{display:table-cell;width:52%}");
+        sb.append(".totals-card{display:table-cell;width:48%;vertical-align:top}");
+        sb.append(".totals-inner{border:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";border-radius:10px;overflow:hidden;background-color:")
+                .append(BG_CARD)
+                .append("}");
+        sb.append(".tot-row{display:table;width:100%;padding:10px 18px}");
+        sb.append(".tot-row:not(:last-of-type){border-bottom:1px solid ")
+                .append(BORDER_LIGHT)
+                .append("}");
+        sb.append(".tot-label{display:table-cell;font-size:9pt;color:")
+                .append(MUTED)
+                .append("}");
+        sb.append(".tot-value{display:table-cell;text-align:right;font-size:9pt;font-weight:600;color:")
+                .append(HEADING)
+                .append("}");
+        sb.append(".tot-row-total{background-color:")
+                .append(ACCENT_SOFT)
+                .append(";padding:14px 18px;display:table;width:100%}");
+        sb.append(".tot-row-total .tot-label{font-size:10pt;font-weight:700;color:")
+                .append(HEADING)
+                .append(";display:table-cell}");
+        sb.append(".tot-row-total .tot-value{font-family:'Fraunces',serif;font-size:14pt;font-weight:400;color:")
+                .append(ACCENT)
+                .append(";display:table-cell;text-align:right}");
+        sb.append(".details{margin-top:26px;display:table;width:100%}");
+        sb.append(".details>div{display:table-cell;width:50%;vertical-align:top}");
+        sb.append(".details>div:first-child{padding-right:10px}");
+        sb.append(".details>div:last-child{padding-left:10px}");
+        sb.append(".detail-box{border:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";border-radius:10px;padding:14px 16px;background-color:")
+                .append(BG_CARD)
+                .append(";min-height:88px}");
+        sb.append(".detail-h{font-size:7pt;font-weight:700;color:")
+                .append(HEADING)
+                .append(";text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid ")
+                .append(BORDER_LIGHT)
+                .append("}");
+        sb.append(".detail-line{font-size:9pt;color:")
+                .append(MUTED)
+                .append(";line-height:1.85}");
+        sb.append(".detail-line strong{color:")
+                .append(HEADING)
+                .append(";font-weight:600}");
+        sb.append(".foot{margin-top:28px;padding-top:22px;border-top:1px solid ")
+                .append(BORDER_LIGHT)
+                .append(";display:table;width:100%}");
+        sb.append(".foot>div{display:table-cell;vertical-align:bottom}");
+        sb.append(".foot-right{text-align:right}");
+        sb.append(".thanks{font-family:'Fraunces',serif;font-size:15pt;font-weight:400;color:")
+                .append(ACCENT)
+                .append(";line-height:1.2}");
+        sb.append(".thanks-sub{font-size:8pt;color:")
+                .append(MUTED)
+                .append(";margin-top:6px;max-width:280px}");
+        sb.append(".contact-label{font-size:7pt;color:")
+                .append(MUTED)
+                .append(";text-transform:uppercase;letter-spacing:1px}");
+        sb.append(".contact-val{font-size:9pt;font-weight:600;color:")
+                .append(HEADING)
+                .append(";margin-top:3px}");
         sb.append("</style></head><body>");
-        sb.append("<div class=\"page\">");
-        sb.append("<div class=\"top-band\">");
-        sb.append("<div class=\"top-band-inner\">");
-        sb.append("<div class=\"top-band-left\">");
-        sb.append("<div class=\"top-band-label\">Travel Medicine Advisory</div>");
-        sb.append("<div class=\"top-band-brand\">TMAG</div>");
-        sb.append("<div class=\"top-band-sub\">Global Advisory Platform</div>");
+        sb.append("<div class=\"wrap\"><div class=\"shell\">");
+
+        sb.append("<div class=\"head\"><div class=\"head-row\">");
+        sb.append("<div class=\"head-left\">");
+        sb.append("<div class=\"head-eyebrow\">Travel Medicine Advisory</div>");
+        sb.append("<div class=\"head-logo\">TMAG</div>");
+        sb.append("<div class=\"head-tag\">Global Advisory Platform</div>");
         sb.append("</div>");
-        sb.append("<div class=\"top-band-right\">");
-        sb.append("<div class=\"top-band-title\">INVOICE</div>");
-        sb.append("<div class=\"top-band-num\">INV-").append(String.format("%06d", invoice.id())).append("</div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("</div>");
+        sb.append("<div class=\"head-right\">");
+        sb.append("<div class=\"head-doc\">Invoice</div>");
+        sb.append("<div class=\"head-inv\">INV-").append(String.format("%06d", invoice.id())).append("</div>");
+        sb.append("</div></div>");
+        sb.append("<div class=\"accent-bar\"></div></div>");
+
         boolean isPaid = invoice.status() != null && invoice.status().equalsIgnoreCase("paid");
         String badgeClass = isPaid ? "badge-paid" : "badge-pending";
         String statusLabel = capitalize(invoice.status());
-        sb.append("<div class=\"invoice-info-strip\">");
-        sb.append("<div class=\"invoice-info-left\">");
-        sb.append("<div class=\"info-row\"><div class=\"info-label\">Invoice Date</div><div class=\"info-value\">")
-                .append(formatDate(invoice.issuedAt())).append("</div></div>");
+        String currency = invoice.currency() != null ? invoice.currency() : "USD";
+
+        sb.append("<div class=\"meta\"><table class=\"meta-table\"><tr>");
+        sb.append("<td><div class=\"mk\">Invoice date</div><div class=\"mv\">")
+                .append(formatDate(invoice.issuedAt()))
+                .append("</div></td>");
         if (invoice.dueDate() != null) {
-            sb.append("<div class=\"info-row\"><div class=\"info-label\">Due Date</div><div class=\"info-value\">")
-                    .append(formatDate(invoice.dueDate())).append("</div></div>");
+            sb.append("<td><div class=\"mk\">Due date</div><div class=\"mv\">")
+                    .append(formatDate(invoice.dueDate()))
+                    .append("</div></td>");
+        } else {
+            sb.append("<td><div class=\"mk\">Due date</div><div class=\"mv\">—</div></td>");
         }
-        sb.append("</div>");
-        sb.append("<div class=\"invoice-info-right\">");
-        sb.append(
-                "<div class=\"info-row\"><div class=\"info-label\">Status</div><div class=\"info-value\"><span class=\"badge ")
-                .append(badgeClass).append("\">").append(statusLabel).append("</span></div></div>");
-        sb.append("<div class=\"info-row\"><div class=\"info-label\">Currency</div><div class=\"info-value\">")
-                .append(invoice.currency() != null ? invoice.currency() : "USD").append("</div></div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("<div class=\"body-card\">");
-        sb.append("<div class=\"bill-to-section\">");
-        sb.append("<div class=\"section-eyebrow\">Bill To</div>");
-        sb.append("<div class=\"bill-to-name\">").append(escapeHtml(companyName != null ? companyName : "Customer"))
-                .append("</div>");
+        sb.append("<td><div class=\"mk\">Status</div><div class=\"mv\"><span class=\"badge ")
+                .append(badgeClass)
+                .append("\">")
+                .append(statusLabel)
+                .append("</span></div></td>");
+        sb.append("<td><div class=\"mk\">Currency</div><div class=\"mv\">").append(currency).append("</div></td>");
+        sb.append("</tr></table></div>");
+
+        sb.append("<div class=\"body\">");
+        sb.append("<div class=\"bill\">");
+        sb.append("<div class=\"section-label\">Bill to</div>");
+        sb.append("<div class=\"section-label-line\"></div>");
+        sb.append("<div class=\"bill-name\">").append(escapeHtml(companyName != null ? companyName : "Customer")).append("</div>");
         if (invoice.companyId() != null) {
-            sb.append("<div class=\"bill-to-meta\">Company #").append(invoice.companyId()).append("</div>");
+            sb.append("<div class=\"bill-meta\">Company #").append(invoice.companyId()).append("</div>");
         }
         sb.append("</div>");
+
         String price = formatCurrency(invoice.amount(), invoice.currency());
         String zero = formatCurrency(BigDecimal.ZERO, invoice.currency());
+
         sb.append(
-                "<table><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>");
+                "<table class=\"line-items\"><thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Amount</th></tr></thead><tbody>");
         sb.append("<tr>");
-        sb.append("<td><div class=\"item-name\">")
-                .append(escapeHtml(invoice.description() != null ? invoice.description() : "Credit Purchase"))
+        sb.append("<td><div class=\"item-title\">")
+                .append(escapeHtml(invoice.description() != null ? invoice.description() : "Credit purchase"))
                 .append("</div>");
-        sb.append("<div class=\"item-desc\">TMAG Platform Credits</div></td>");
+        sb.append("<div class=\"item-sub\">TMAG platform credits</div></td>");
         sb.append("<td>1</td>");
         sb.append("<td>").append(price).append("</td>");
         sb.append("<td>").append(price).append("</td>");
         sb.append("</tr></tbody></table>");
-        sb.append("<div class=\"summary-section\">");
-        sb.append("<div class=\"summary-left\">");
-        sb.append("<div class=\"summary-card\">");
-        sb.append("<div class=\"summary-row\"><div class=\"s-label\">Subtotal</div><div class=\"s-value\">")
-                .append(price).append("</div></div>");
-        sb.append("<div class=\"summary-row\"><div class=\"s-label\">Tax (0%)</div><div class=\"s-value\">")
-                .append(zero).append("</div></div>");
-        sb.append(
-                "<div class=\"summary-row summary-total\"><div class=\"s-label\">Total Due</div><div class=\"s-value\">")
-                .append(price).append("</div></div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("<div class=\"details-grid\">");
-        sb.append("<div>");
-        sb.append("<div class=\"detail-card\">");
-        sb.append("<div class=\"detail-label\">Payment Details</div>");
-        sb.append("<div class=\"detail-row\">Method: <span>")
-                .append(invoice.paymentMethod() != null ? invoice.paymentMethod() : "Online Payment")
+
+        sb.append("<div class=\"totals-wrap\"><div class=\"totals-spacer\"></div><div class=\"totals-card\">");
+        sb.append("<div class=\"totals-inner\">");
+        sb.append("<div class=\"tot-row\"><span class=\"tot-label\">Subtotal</span><span class=\"tot-value\">")
+                .append(price)
                 .append("</span></div>");
-        sb.append("<div class=\"detail-row\">Currency: <span>")
-                .append(invoice.currency() != null ? invoice.currency() : "USD").append("</span></div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("<div>");
-        sb.append("<div class=\"detail-card\">");
-        sb.append("<div class=\"detail-label\">Transaction</div>");
-        sb.append("<div class=\"detail-row\">Invoice: <span>#").append(invoice.id()).append("</span></div>");
-        sb.append("<div class=\"detail-row\">Created: <span>").append(formatDateTime(invoice.createdAt()))
+        sb.append("<div class=\"tot-row\"><span class=\"tot-label\">Tax (0%)</span><span class=\"tot-value\">")
+                .append(zero)
                 .append("</span></div>");
+        sb.append("<div class=\"tot-row-total\"><span class=\"tot-label\">Total due</span><span class=\"tot-value\">")
+                .append(price)
+                .append("</span></div>");
+        sb.append("</div></div></div>");
+
+        sb.append("<div class=\"details\">");
+        sb.append("<div><div class=\"detail-box\">");
+        sb.append("<div class=\"detail-h\">Payment</div>");
+        sb.append("<div class=\"detail-line\">Method: <strong>")
+                .append(escapeHtml(invoice.paymentMethod() != null ? invoice.paymentMethod() : "Online payment"))
+                .append("</strong></div>");
+        sb.append("<div class=\"detail-line\">Currency: <strong>").append(currency).append("</strong></div>");
+        sb.append("</div></div>");
+        sb.append("<div><div class=\"detail-box\">");
+        sb.append("<div class=\"detail-h\">Transaction</div>");
+        sb.append("<div class=\"detail-line\">Reference: <strong>#").append(invoice.id()).append("</strong></div>");
+        sb.append("<div class=\"detail-line\">Created: <strong>").append(formatDateTime(invoice.createdAt())).append("</strong></div>");
         if (invoice.paidAt() != null) {
-            sb.append("<div class=\"detail-row\">Paid: <span>").append(formatDateTime(invoice.paidAt()))
-                    .append("</span></div>");
+            sb.append("<div class=\"detail-line\">Paid: <strong>").append(formatDateTime(invoice.paidAt())).append("</strong></div>");
         }
+        sb.append("</div></div></div>");
+
+        sb.append("<div class=\"foot\">");
+        sb.append("<div class=\"foot-left\">");
+        sb.append("<div class=\"thanks\">Thank you for choosing TMAG</div>");
+        sb.append("<div class=\"thanks-sub\">Travel Medicine Advisory Global — professional travel health planning for your team.</div>");
         sb.append("</div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("<div class=\"bottom-band\"></div>");
-        sb.append("<div class=\"footer\">");
-        sb.append("<div class=\"footer-left\">");
-        sb.append("<div class=\"footer-thanks\">Thank you for choosing TMAG</div>");
-        sb.append(
-                "<div class=\"footer-sub\">Travel Medicine Advisory Global &#8212; Professional travel health solutions</div>");
-        sb.append("</div>");
-        sb.append("<div class=\"footer-right\">");
-        sb.append("<div class=\"footer-contact-label\">Questions?</div>");
-        sb.append("<div class=\"footer-contact-value\">support@tmag.com</div>");
-        sb.append("<div class=\"footer-contact-value\">www.tmag.com</div>");
-        sb.append("</div>");
-        sb.append("</div>");
-        sb.append("<div class=\"footer-divider\"></div>");
-        sb.append("</div></body></html>");
+        sb.append("<div class=\"foot-right\">");
+        sb.append("<div class=\"contact-label\">Questions?</div>");
+        sb.append("<div class=\"contact-val\">support@tmag.com</div>");
+        sb.append("<div class=\"contact-val\">www.tmag.com</div>");
+        sb.append("</div></div>");
+
+        sb.append("</div></div></div></body></html>");
         return sb.toString();
     }
 

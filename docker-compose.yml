@@ -8,8 +8,14 @@ services:
       REDIS_HOST: redis
       APP_STORAGE_PATH: /app/storage/upload
       APP_STORAGE_BASE_URL: http://localhost:8080/storage/upload
+      # Vertex (optional): on GCP you normally omit GOOGLE_APPLICATION_CREDENTIALS and use an attached SA.
+      # For Compose on your laptop, create ./secrets/gcp-sa.json (gitignored), then uncomment below + secrets block.
+      # GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp_sa
+      # VERTEX_PROJECT_ID: your-gcp-project-id
     volumes:
       - app-storage:/app/storage/upload
+    # secrets:
+    #   - gcp_sa
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,3 +57,8 @@ volumes:
   pgdata:
   redisdata:
   app-storage:
+
+# Uncomment with the app service secrets + env above:
+# secrets:
+#   gcp_sa:
+#     file: ./secrets/gcp-sa.json

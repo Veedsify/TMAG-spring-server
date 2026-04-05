@@ -8,6 +8,8 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # ---- Runtime stage ----
+# No GCP/Vertex credentials in the image. On Cloud Run/GKE use an attached service account;
+# elsewhere mount a key at runtime (e.g. GOOGLE_APPLICATION_CREDENTIALS + read-only volume).
 FROM eclipse-temurin:25-jre
 
 WORKDIR /app

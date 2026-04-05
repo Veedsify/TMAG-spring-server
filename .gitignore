@@ -40,6 +40,9 @@ dist/
 logs/
 *.log
 
+# GCP service account keys (for local Compose / non-GCP Docker only; never commit)
+secrets/
+
 # Environment
 .env
 .env.local

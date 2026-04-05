@@ -13,6 +13,24 @@ public class AdminDashboardStatsResponse {
     private String systemHealthStatus;
     private Long activeUsersToday;
     private Long newUsersThisWeek;
+    /** Active travel health plans (non-deleted). */
+    private Long totalTravelPlans;
+    /** Users with suspended accounts (soft-deleted / suspended). */
+    private Long suspendedUsers;
+    /** Invoices awaiting payment. */
+    private Long pendingInvoicesCount;
+    /** Company-linked employee records (active). */
+    private Long totalEmployees;
+    /** Abuse flags not marked resolved. */
+    private Long unresolvedAbuseFlags;
+    /** AI API calls in the rolling last 7 days. */
+    private Long aiRequestsLast7Days;
+    /** Share of AI logs with status success in the last 30 days (0–100). */
+    private Double aiSuccessRateLast30Days;
+    /** LLM tokens recorded on AI logs since midnight today. */
+    private Long tokensUsedToday;
+    /** AI logs with status error in the last 7 days. */
+    private Long failedAiCallsLast7Days;
 
     public AdminDashboardStatsResponse() {}
 
@@ -38,4 +56,23 @@ public class AdminDashboardStatsResponse {
     public void setActiveUsersToday(Long activeUsersToday) { this.activeUsersToday = activeUsersToday; }
     public Long getNewUsersThisWeek() { return newUsersThisWeek; }
     public void setNewUsersThisWeek(Long newUsersThisWeek) { this.newUsersThisWeek = newUsersThisWeek; }
+
+    public Long getTotalTravelPlans() { return totalTravelPlans; }
+    public void setTotalTravelPlans(Long totalTravelPlans) { this.totalTravelPlans = totalTravelPlans; }
+    public Long getSuspendedUsers() { return suspendedUsers; }
+    public void setSuspendedUsers(Long suspendedUsers) { this.suspendedUsers = suspendedUsers; }
+    public Long getPendingInvoicesCount() { return pendingInvoicesCount; }
+    public void setPendingInvoicesCount(Long pendingInvoicesCount) { this.pendingInvoicesCount = pendingInvoicesCount; }
+    public Long getTotalEmployees() { return totalEmployees; }
+    public void setTotalEmployees(Long totalEmployees) { this.totalEmployees = totalEmployees; }
+    public Long getUnresolvedAbuseFlags() { return unresolvedAbuseFlags; }
+    public void setUnresolvedAbuseFlags(Long unresolvedAbuseFlags) { this.unresolvedAbuseFlags = unresolvedAbuseFlags; }
+    public Long getAiRequestsLast7Days() { return aiRequestsLast7Days; }
+    public void setAiRequestsLast7Days(Long aiRequestsLast7Days) { this.aiRequestsLast7Days = aiRequestsLast7Days; }
+    public Double getAiSuccessRateLast30Days() { return aiSuccessRateLast30Days; }
+    public void setAiSuccessRateLast30Days(Double aiSuccessRateLast30Days) { this.aiSuccessRateLast30Days = aiSuccessRateLast30Days; }
+    public Long getTokensUsedToday() { return tokensUsedToday; }
+    public void setTokensUsedToday(Long tokensUsedToday) { this.tokensUsedToday = tokensUsedToday; }
+    public Long getFailedAiCallsLast7Days() { return failedAiCallsLast7Days; }
+    public void setFailedAiCallsLast7Days(Long failedAiCallsLast7Days) { this.failedAiCallsLast7Days = failedAiCallsLast7Days; }
 }

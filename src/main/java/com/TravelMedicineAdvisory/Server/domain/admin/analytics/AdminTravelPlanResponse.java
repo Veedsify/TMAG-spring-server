@@ -16,6 +16,7 @@ public class AdminTravelPlanResponse {
     private List<String> vaccinations;
     private List<String> healthAlerts;
     private List<String> safetyAdvisories;
+    private String planJson;
     private String status;
     private LocalDateTime createdAt;
     private Boolean creditUsed;
@@ -46,6 +47,8 @@ public class AdminTravelPlanResponse {
     public void setHealthAlerts(List<String> healthAlerts) { this.healthAlerts = healthAlerts; }
     public List<String> getSafetyAdvisories() { return safetyAdvisories; }
     public void setSafetyAdvisories(List<String> safetyAdvisories) { this.safetyAdvisories = safetyAdvisories; }
+    public String getPlanJson() { return planJson; }
+    public void setPlanJson(String planJson) { this.planJson = planJson; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }

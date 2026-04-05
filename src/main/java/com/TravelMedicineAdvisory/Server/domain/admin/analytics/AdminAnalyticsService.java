@@ -1,9 +1,13 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.analytics;
 
+import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlagRepository;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
+import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
 import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
@@ -27,19 +31,27 @@ public class AdminAnalyticsService {
     private final TravelPlanRepository travelPlanRepository;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final InvoiceRepository invoiceRepository;
+    private final GeneratedPlanRepository generatedPlanRepository;
     private final SystemSettingRepository systemSettingRepository;
+    private final EmployeeRepository employeeRepository;
+    private final AbuseFlagRepository abuseFlagRepository;
 
     public AdminAnalyticsService(UserRepository userRepository, CompanyRepository companyRepository,
             CreditRepository creditRepository, TravelPlanRepository travelPlanRepository,
             AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository,
-            SystemSettingRepository systemSettingRepository) {
+            GeneratedPlanRepository generatedPlanRepository,
+            SystemSettingRepository systemSettingRepository, EmployeeRepository employeeRepository,
+            AbuseFlagRepository abuseFlagRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.creditRepository = creditRepository;
         this.travelPlanRepository = travelPlanRepository;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.invoiceRepository = invoiceRepository;
+        this.generatedPlanRepository = generatedPlanRepository;
         this.systemSettingRepository = systemSettingRepository;
+        this.employeeRepository = employeeRepository;
+        this.abuseFlagRepository = abuseFlagRepository;
     }
 
     private String getBaseCurrency() {
@@ -65,19 +77,28 @@ public class AdminAnalyticsService {
         return rates;
     }
 
+    /**
+     * Converts an invoice amount into the configured reporting (base) currency.
+     * Rates are "1 unit of foreign currency = X baseCurrency" (e.g. NGN→USD).
+     * Missing rates return 0 so NGN amounts are never summed as if they were USD (or vice versa).
+     */
     private double convertToBase(java.math.BigDecimal amount, String currency, String baseCurrency, Map<String, Double> rates) {
         if (amount == null) return 0;
         if (currency == null || currency.isBlank()) return amount.doubleValue();
         String upper = currency.toUpperCase();
-        // Base currency invoices need no conversion
-        if (upper.equals(baseCurrency)) return amount.doubleValue();
-        // If rate is not configured for this currency, assume 1:1
-        double rate = rates.getOrDefault(upper, 1.0);
+        String base = baseCurrency != null ? baseCurrency.toUpperCase() : "USD";
+        if (upper.equals(base)) return amount.doubleValue();
+        Double rate = rates.get(upper);
+        if (rate == null) return 0.0;
         return amount.doubleValue() * rate;
     }
 
     public AdminDashboardStatsResponse getDashboardStats() {
         AdminDashboardStatsResponse stats = new AdminDashboardStatsResponse();
+
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime weekStart = todayStart.minusDays(7);
+        LocalDateTime monthStart = todayStart.minusDays(30);
 
         stats.setTotalUsers(userRepository.countAllActive());
         stats.setTotalCompanies(companyRepository.countAllActive());
@@ -102,9 +123,23 @@ public class AdminAnalyticsService {
                 .sum();
         stats.setTotalCreditsConsumed(individualUsed);
 
-        // LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-        long aiRequestsToday = aiRequestLogRepository.count();
-        stats.setAiRequestsToday(aiRequestsToday);
+        stats.setTotalTravelPlans(travelPlanRepository.countAllActive());
+        stats.setSuspendedUsers(userRepository.countSuspended());
+        stats.setPendingInvoicesCount(invoiceRepository.countByStatus("pending"));
+        stats.setTotalEmployees(employeeRepository.countActiveEmployees());
+        stats.setUnresolvedAbuseFlags(abuseFlagRepository.countUnresolved());
+
+        stats.setAiRequestsToday(aiRequestLogRepository.countCreatedSince(todayStart));
+        stats.setAiRequestsLast7Days(aiRequestLogRepository.countCreatedSince(weekStart));
+        stats.setTokensUsedToday(aiRequestLogRepository.sumTokensUsedSince(todayStart));
+
+        long failedLast7d = aiRequestLogRepository.countCreatedSinceWithStatus(weekStart, "error");
+        stats.setFailedAiCallsLast7Days(failedLast7d);
+
+        long aiTotal30d = aiRequestLogRepository.countCreatedSince(monthStart);
+        long aiSuccess30d = aiRequestLogRepository.countCreatedSinceWithStatus(monthStart, "success");
+        double successRate = aiTotal30d == 0 ? 100.0 : Math.round(aiSuccess30d * 1000.0 / aiTotal30d) / 10.0;
+        stats.setAiSuccessRateLast30Days(successRate);
 
         String baseCurrency = getBaseCurrency();
         Map<String, Double> rates = getExchangeRates();
@@ -114,24 +149,28 @@ public class AdminAnalyticsService {
         stats.setRevenueOverview(revenue);
         stats.setRevenueBaseCurrency(baseCurrency);
 
-        long failedCalls = aiRequestLogRepository.findAll().stream()
-                .filter(log -> "error".equals(log.getStatus()))
+        long failedCallsAllTime = aiRequestLogRepository.findAll().stream()
+                .filter(log -> log.getDeletedAt() == null && "error".equalsIgnoreCase(log.getStatus()))
                 .count();
-        stats.setFailedAICalls(failedCalls);
+        stats.setFailedAICalls(failedCallsAllTime);
 
-        stats.setSystemHealthStatus("healthy");
-
-        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         long activeUsersToday = userRepository.findAllActive().stream()
                 .filter(u -> u.getLastLogin() != null && u.getLastLogin().isAfter(todayStart))
                 .count();
         stats.setActiveUsersToday(activeUsersToday);
 
-        LocalDateTime weekStart = todayStart.minusDays(7);
         long newUsersThisWeek = userRepository.findAllActive().stream()
                 .filter(u -> u.getCreatedAt() != null && u.getCreatedAt().isAfter(weekStart))
                 .count();
         stats.setNewUsersThisWeek(newUsersThisWeek);
+
+        String health = "healthy";
+        if (stats.getUnresolvedAbuseFlags() != null && stats.getUnresolvedAbuseFlags() > 0) {
+            health = "degraded";
+        } else if (failedLast7d >= 10) {
+            health = "degraded";
+        }
+        stats.setSystemHealthStatus(health);
 
         return stats;
     }
@@ -321,44 +360,47 @@ public class AdminAnalyticsService {
     }
 
     public List<AdminTravelPlanResponse> getPlans(Long userId, Long companyId) {
-        List<TravelPlan> plans;
+        List<GeneratedPlan> plans;
 
         if (userId != null) {
-            plans = travelPlanRepository.findAllActiveByUserId(userId);
+            plans = generatedPlanRepository.findAllActiveByUserId(userId);
         } else if (companyId != null) {
-            plans = travelPlanRepository.findAllActiveByCompanyId(companyId);
+            plans = generatedPlanRepository.findAllActiveByCompanyId(companyId);
         } else {
-            plans = travelPlanRepository.findAllActive();
+            plans = generatedPlanRepository.findAllActive();
         }
 
         return plans.stream().map(this::mapPlanToResponse).toList();
     }
 
     public AdminTravelPlanResponse getPlan(Long id) {
-        TravelPlan plan = travelPlanRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Travel Plan not found"));
+        GeneratedPlan plan = generatedPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Generated plan not found"));
         return mapPlanToResponse(plan);
     }
 
     @Transactional
     public void flagPlan(Long id) {
-        TravelPlan plan = travelPlanRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Travel Plan not found"));
+        GeneratedPlan plan = generatedPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Generated plan not found"));
         plan.setStatus("flagged");
-        travelPlanRepository.save(plan);
+        generatedPlanRepository.save(plan);
     }
 
     @Transactional
     public void archivePlan(Long id) {
-        TravelPlan plan = travelPlanRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Travel Plan not found"));
+        GeneratedPlan plan = generatedPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Generated plan not found"));
         plan.setStatus("archived");
-        travelPlanRepository.save(plan);
+        generatedPlanRepository.save(plan);
     }
 
     @Transactional
     public void deletePlan(Long id) {
-        travelPlanRepository.deleteById(id);
+        GeneratedPlan plan = generatedPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Generated plan not found"));
+        plan.setStatus("deleted");
+        generatedPlanRepository.save(plan);
     }
 
     public List<AdminInvoiceResponse> getInvoices() {
@@ -449,7 +491,7 @@ public class AdminAnalyticsService {
         return response;
     }
 
-    private AdminTravelPlanResponse mapPlanToResponse(TravelPlan plan) {
+    private AdminTravelPlanResponse mapPlanToResponse(GeneratedPlan plan) {
         AdminTravelPlanResponse response = new AdminTravelPlanResponse();
         response.setId(plan.getId());
 
@@ -468,25 +510,40 @@ public class AdminAnalyticsService {
         response.setDuration(plan.getDuration() != null ? plan.getDuration().toString() : "");
         response.setPurpose(plan.getPurpose());
         response.setRiskScore(plan.getRiskScore() != null ? plan.getRiskScore() : 0);
-
-        List<String> vaccinations = plan.getVaccinations() != null ? Arrays.asList(plan.getVaccinations().split(","))
-                : new ArrayList<>();
-        response.setVaccinations(vaccinations);
-
-        List<String> healthAlerts = plan.getHealthAlerts() != null ? Arrays.asList(plan.getHealthAlerts().split(","))
-                : new ArrayList<>();
-        response.setHealthAlerts(healthAlerts);
-
-        List<String> safetyAdvisories = plan.getSafetyAdvisories() != null
-                ? Arrays.asList(plan.getSafetyAdvisories().split(","))
-                : new ArrayList<>();
-        response.setSafetyAdvisories(safetyAdvisories);
+        response.setVaccinations(extractTextArray(plan.getPlanJson(), "vaccinations", "vaccine"));
+        response.setHealthAlerts(extractTextArray(plan.getPlanJson(), "healthRiskOverview", "summary"));
+        response.setSafetyAdvisories(extractTextArray(plan.getPlanJson(), "nextSteps", null));
+        response.setPlanJson(plan.getPlanJson());
 
         response.setStatus(plan.getStatus() != null ? plan.getStatus() : "active");
         response.setCreatedAt(plan.getCreatedAt());
-        response.setCreditUsed(plan.getUser() != null);
+        response.setCreditUsed(plan.getTravelPlan() != null && plan.getTravelPlan().getUser() != null);
 
         return response;
+    }
+
+    private List<String> extractTextArray(String json, String arrayField, String nestedKey) {
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+            com.fasterxml.jackson.databind.JsonNode array = root.path(arrayField);
+            if (!array.isArray()) {
+                return new ArrayList<>();
+            }
+            List<String> values = new ArrayList<>();
+            for (com.fasterxml.jackson.databind.JsonNode item : array) {
+                if (item.isTextual()) {
+                    values.add(item.asText());
+                } else if (nestedKey != null && item.has(nestedKey)) {
+                    values.add(item.path(nestedKey).asText());
+                }
+            }
+            return values;
+        } catch (Exception ignored) {
+            return new ArrayList<>();
+        }
     }
 
     private AdminInvoiceResponse mapInvoiceToResponse(Invoice invoice) {

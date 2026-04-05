@@ -1,17 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.employee;
 
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
-import com.TravelMedicineAdvisory.Server.domain.company.Company;
-import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
-import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
-import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +15,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -65,8 +66,7 @@ public class EmployeeService {
             return repository.findAllByCompanyId(companyId, pageable)
                     .map(this::toResponse);
         }
-        return repository.findAll(pageable)
-                .map(this::toResponse);
+        throw new IllegalArgumentException("Company ID is required");
     }
 
     public EmployeeResponse findById(Long id) {

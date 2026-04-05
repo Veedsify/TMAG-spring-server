@@ -3,7 +3,13 @@ package com.TravelMedicineAdvisory.Server.domain.companyadmin.report;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
-import com.TravelMedicineAdvisory.Server.domain.report.*;
+import com.TravelMedicineAdvisory.Server.domain.report.ComplianceAuditDto;
+import com.TravelMedicineAdvisory.Server.domain.report.ComplianceReportDto;
+import com.TravelMedicineAdvisory.Server.domain.report.DashboardAnalyticsDto;
+import com.TravelMedicineAdvisory.Server.domain.report.PlanHistoryDto;
+import com.TravelMedicineAdvisory.Server.domain.report.ReportService;
+import com.TravelMedicineAdvisory.Server.domain.report.UsageReportDto;
+import com.TravelMedicineAdvisory.Server.domain.report.UsageReportSummary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +26,12 @@ public class AdminReportController {
 
     public AdminReportController(ReportService reportService) {
         this.reportService = reportService;
+    }
+
+    @GetMapping("/dashboard/analytics")
+    public ResponseEntity<SuccessResponse> getDashboardAnalytics(@RequestParam(required = false) Long companyId) {
+        DashboardAnalyticsDto dto = reportService.getDashboardAnalytics(companyId, null);
+        return ResponseEntity.ok(new SuccessResponse("Dashboard analytics fetched successfully", dto));
     }
 
     @GetMapping("/usage")

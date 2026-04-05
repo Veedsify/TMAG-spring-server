@@ -34,18 +34,18 @@ public class CreditPricingSeeder implements CommandLineRunner {
         if (repository.count() > 0) return;
         logger.info("Seeding credit pricing with discount tiers...");
 
-        // Base NGN pricing: 5000 NGN per credit
-        // Discount Tier 1: 5000 NGN off when total >= 50000 NGN (10+ credits)
-        // Discount Tier 2: 8500 NGN off when total >= 100000 NGN (20+ credits)
-        // Discount Tier 3: 20000 NGN off when total >= 500000 NGN (100+ credits)
+        // Base NGN pricing: 50000 NGN per credit
+        // Discount Tier 1: 50000 NGN off when total >= 500000 NGN (10+ credits)
+        // Discount Tier 2: 85000 NGN off when total >= 1000000 NGN (20+ credits)
+        // Discount Tier 3: 200000 NGN off when total >= 5000000 NGN (100+ credits)
 
-        BigDecimal ngnPricePerCredit = new BigDecimal("5000.00");
-        BigDecimal ngnDiscountTier1Threshold = new BigDecimal("50000.00");
-        BigDecimal ngnDiscountTier1Amount = new BigDecimal("5000.00");
-        BigDecimal ngnDiscountTier2Threshold = new BigDecimal("100000.00");
-        BigDecimal ngnDiscountTier2Amount = new BigDecimal("8500.00");
-        BigDecimal ngnDiscountTier3Threshold = new BigDecimal("500000.00");
-        BigDecimal ngnDiscountTier3Amount = new BigDecimal("20000.00");
+        BigDecimal ngnPricePerCredit = new BigDecimal("50000.00");
+        BigDecimal ngnDiscountTier1Threshold = new BigDecimal("500000.00");
+        BigDecimal ngnDiscountTier1Amount = new BigDecimal("50000.00");
+        BigDecimal ngnDiscountTier2Threshold = new BigDecimal("1000000.00");
+        BigDecimal ngnDiscountTier2Amount = new BigDecimal("85000.00");
+        BigDecimal ngnDiscountTier3Threshold = new BigDecimal("5000000.00");
+        BigDecimal ngnDiscountTier3Amount = new BigDecimal("200000.00");
 
         List<CreditPricing> pricing = List.of(
             createPricingWithDiscounts(

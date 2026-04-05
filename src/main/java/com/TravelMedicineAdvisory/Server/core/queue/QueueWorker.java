@@ -14,6 +14,7 @@ import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
 import static com.TravelMedicineAdvisory.Server.core.queue.QueueService.KEY_DELAYED;
 import static com.TravelMedicineAdvisory.Server.core.queue.QueueService.KEY_FAILED;
 import static com.TravelMedicineAdvisory.Server.core.queue.QueueService.KEY_PENDING;
+import com.TravelMedicineAdvisory.Server.domain.plans.PlanGenerationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -27,13 +28,16 @@ public class QueueWorker {
     private final EmailService emailService;
     private final EmailTemplates emailTemplates;
     private final ObjectMapper objectMapper;
+    private final PlanGenerationService planGenerationService;
 
     public QueueWorker(StringRedisTemplate redis, EmailService emailService,
-            EmailTemplates emailTemplates, ObjectMapper objectMapper) {
+            EmailTemplates emailTemplates, ObjectMapper objectMapper,
+            PlanGenerationService planGenerationService) {
         this.redis = redis;
         this.emailService = emailService;
         this.emailTemplates = emailTemplates;
         this.objectMapper = objectMapper;
+        this.planGenerationService = planGenerationService;
     }
 
     @Scheduled(fixedDelayString = "${app.queue.worker.interval-ms:5000}")
@@ -80,6 +84,15 @@ public class QueueWorker {
 
         try {
             switch (msg.getType()) {
+                case GENERATE_TRAVEL_PLAN -> {
+                    Number travelPlanId = (Number) msg.getData().get("travelPlanId");
+                    if (travelPlanId == null) {
+                        throw new IllegalArgumentException("Missing travelPlanId in queue payload");
+                    }
+                    long planId = travelPlanId.longValue();
+                    logger.info("GENERATE_TRAVEL_PLAN starting: queueJobId={} travelPlanId={}", msg.getId(), planId);
+                    planGenerationService.processQueuedGeneration(planId);
+                }
                 case EMAIL_VERIFICATION ->
                     handleEmailJob(msg, "verification");
                 case EMAIL_PASSWORD_RESET ->
@@ -135,11 +148,20 @@ public class QueueWorker {
                 case EMAIL_NEWSLETTER_WELCOME ->
                     handleEmailJob(msg, "newsletter_welcome");
             }
-            logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
+            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
+                logger.info("GENERATE_TRAVEL_PLAN finished successfully: queueJobId={}", msg.getId());
+            } else {
+                logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
+            }
 
         } catch (Exception e) {
-            logger.error("Queue job [{}] id={} failed (attempt {}/{}): {}",
-                    msg.getType(), msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());
+            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
+                logger.error("GENERATE_TRAVEL_PLAN failed: queueJobId={} attempt={}/{} — {}",
+                        msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());
+            } else {
+                logger.error("Queue job [{}] id={} failed (attempt {}/{}): {}",
+                        msg.getType(), msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());
+            }
 
             if (msg.getAttempts() >= msg.getMaxAttempts()) {
                 // Dead-letter: store for inspection / manual replay

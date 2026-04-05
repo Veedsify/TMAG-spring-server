@@ -23,6 +23,9 @@ public class TravelPlan extends BaseEntity {
     private String country;
     private Integer duration;
     private String purpose;
+    private String tripType;
+    @Column(columnDefinition = "TEXT")
+    private String tripDetailsJson;
     private Integer riskScore;
     private String status;
     @Column(columnDefinition = "TEXT")
@@ -82,6 +85,22 @@ public class TravelPlan extends BaseEntity {
 
     public void setPurpose(String purpose) {
         this.purpose = purpose;
+    }
+
+    public String getTripType() {
+        return tripType;
+    }
+
+    public void setTripType(String tripType) {
+        this.tripType = tripType;
+    }
+
+    public String getTripDetailsJson() {
+        return tripDetailsJson;
+    }
+
+    public void setTripDetailsJson(String tripDetailsJson) {
+        this.tripDetailsJson = tripDetailsJson;
     }
 
     public Integer getRiskScore() {

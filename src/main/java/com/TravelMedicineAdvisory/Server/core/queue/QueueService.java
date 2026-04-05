@@ -42,7 +42,14 @@ public class QueueService {
             Map<String, Object> data = objectMapper.convertValue(payload, new TypeReference<>() {});
             QueueMessage msg = new QueueMessage(UUID.randomUUID().toString(), type, 0, 3, data);
             redis.opsForList().leftPush(KEY_PENDING, objectMapper.writeValueAsString(msg));
-            logger.debug("Dispatched queue job [{}] id={}", type, msg.getId());
+            if (type == JobType.GENERATE_TRAVEL_PLAN) {
+                logger.info("Queued GENERATE_TRAVEL_PLAN job id={} travelPlanId={} userId={}",
+                        msg.getId(),
+                        data.get("travelPlanId"),
+                        data.get("userId"));
+            } else {
+                logger.debug("Dispatched queue job [{}] id={}", type, msg.getId());
+            }
         } catch (JsonProcessingException e) {
             logger.error("Failed to serialize queue job [{}]: {}", type, e.getMessage());
             throw new RuntimeException("Failed to dispatch queue job", e);

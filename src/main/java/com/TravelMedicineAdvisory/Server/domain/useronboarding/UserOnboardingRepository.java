@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface UserOnboardingRepository extends JpaRepository<UserOnboarding, Long> {
     Optional<UserOnboarding> findByUser_Email(String email);
 
+    Optional<UserOnboarding> findByUser_Id(Long userId);
+
     void deleteByUser_Id(Long userId);
 }

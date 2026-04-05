@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.core.queue;
 
 public enum JobType {
+    GENERATE_TRAVEL_PLAN,
     EMAIL_VERIFICATION,
     EMAIL_PASSWORD_RESET,
     EMAIL_PASSWORD_CHANGED,

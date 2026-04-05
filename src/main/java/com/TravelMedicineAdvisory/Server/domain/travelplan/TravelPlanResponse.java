@@ -8,6 +8,8 @@ public record TravelPlanResponse(
     String country,
     Integer duration,
     String purpose,
+    String tripType,
+    String tripDetailsJson,
     Integer riskScore,
     String status,
     String medicalConsiderations,
@@ -21,5 +23,6 @@ public record TravelPlanResponse(
     Long employeeId,
     Long userId,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    GeneratedPlanPayload generatedPlan
 ) {}

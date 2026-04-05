@@ -15,6 +15,7 @@ import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlag;
 import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlagRepository;
+import com.TravelMedicineAdvisory.Server.domain.admin.credits.AdminCreditService;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
@@ -30,6 +31,7 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final CreditRepository creditRepository;
+    private final AdminCreditService adminCreditService;
     private final EmployeeRepository employeeRepository;
     private final CompanyUserRepository companyUserRepository;
     private final AbuseFlagRepository abuseFlagRepository;
@@ -38,12 +40,13 @@ public class AdminUserService {
     private final QueueService queueService;
 
     public AdminUserService(UserRepository userRepository, CreditRepository creditRepository,
-            EmployeeRepository employeeRepository,
+            AdminCreditService adminCreditService, EmployeeRepository employeeRepository,
             CompanyUserRepository companyUserRepository, AbuseFlagRepository abuseFlagRepository,
             TravelPlanRepository travelPlanRepository, PasswordEncoder passwordEncoder,
             QueueService queueService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
+        this.adminCreditService = adminCreditService;
         this.employeeRepository = employeeRepository;
         this.companyUserRepository = companyUserRepository;
         this.abuseFlagRepository = abuseFlagRepository;
@@ -114,24 +117,34 @@ public class AdminUserService {
         userRepository.save(user);
     }
 
+    /**
+     * Sets the user's remaining credit balance to {@code targetRemaining}.
+     * The admin UI sends the desired balance (not a delta); ledger entries are written via
+     * {@link AdminCreditService#adjustCredits(Map)}.
+     */
     @Transactional
-    public void resetCredits(Long id, Integer amount) {
+    public void resetCredits(Long id, Integer targetRemaining) {
+        if (targetRemaining == null) {
+            throw new IllegalArgumentException("amount is required");
+        }
+        if (targetRemaining < 0) {
+            throw new IllegalArgumentException("amount must be >= 0");
+        }
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Integer currentCredits = user.getCredits() != null ? user.getCredits() : 0;
+        int current = user.getCredits() != null ? user.getCredits() : 0;
+        int delta = targetRemaining - current;
+        if (delta == 0) {
+            return;
+        }
 
-        Credit credit = new Credit();
-        credit.setUser(user);
-        credit.setAmount(amount);
-        credit.setType("admin_add");
-        credit.setBalanceAfter(currentCredits + amount);
-        credit.setReference("Admin credit reset for user " + id);
-
-        creditRepository.save(credit);
-
-        user.setCredits(currentCredits + amount);
-        userRepository.save(user);
+        Map<String, Object> body = new HashMap<>();
+        body.put("userId", id);
+        body.put("amount", delta);
+        body.put("reason", "Admin set remaining credits to " + targetRemaining);
+        body.put("action", delta > 0 ? "admin_add" : "admin_deduct");
+        adminCreditService.adjustCredits(body);
     }
 
     public void resetPassword(Long id) {
