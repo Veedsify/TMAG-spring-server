@@ -109,8 +109,18 @@ public class AdminSystemService {
                 setting.setKey(key);
             }
 
-            if (value instanceof String) {
-                setting.setValue((String) value);
+            if (value instanceof String s) {
+                setting.setValue(s);
+                setting.setType("string");
+            } else if (value instanceof Boolean b) {
+                setting.setValue(String.valueOf(b));
+                setting.setType("boolean");
+            } else if (value instanceof Integer || value instanceof Long) {
+                setting.setValue(String.valueOf(value));
+                setting.setType("integer");
+            } else if (value instanceof Double || value instanceof Float) {
+                setting.setValue(String.valueOf(value));
+                setting.setType("decimal");
             } else {
                 setting.setValue(String.valueOf(value));
             }
@@ -162,6 +172,23 @@ public class AdminSystemService {
             } catch (NumberFormatException e) {
                 return value;
             }
+        }
+
+        // Auto-detect type when type field is null (legacy settings)
+        if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+            return "true".equalsIgnoreCase(value);
+        }
+        try {
+            if (value.contains(".")) {
+                return Double.parseDouble(value);
+            }
+            long l = Long.parseLong(value);
+            if (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE) {
+                return (int) l;
+            }
+            return l;
+        } catch (NumberFormatException e) {
+            // Not a number, return as string
         }
 
         return value;

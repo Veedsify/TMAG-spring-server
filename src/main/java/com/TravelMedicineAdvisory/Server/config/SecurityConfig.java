@@ -103,12 +103,22 @@ public class SecurityConfig {
                                 "/api/v1/blog-posts",
                                 "/api/v1/blog-posts/**",
                                 "/api/v1/system-settings",
-                                "/api/v1/system-settings/**")
+                                "/api/v1/system-settings/**",
+                                "/api/v1/ebooks",
+                                "/api/v1/ebooks/*",
+                                "/api/v1/ebooks/orders/*",
+                                "/api/v1/exchange-rates",
+                                "/api/v1/exchange-rates/**")
                         .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/contact",
-                                "/api/v1/newsletter/subscribe")
+                                "/api/v1/newsletter/subscribe",
+                                "/api/v1/ebooks/checkout",
+                                "/api/v1/ebooks/orders/verify",
+                                "/api/v1/cart/checkout")
                         .permitAll()
+                        .requestMatchers("/api/v1/cart", "/api/v1/cart/**")
+                        .authenticated()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

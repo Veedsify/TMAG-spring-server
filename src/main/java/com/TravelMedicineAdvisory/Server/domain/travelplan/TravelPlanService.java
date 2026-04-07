@@ -20,6 +20,8 @@ import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.PlanGenerationService;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,6 +41,7 @@ public class TravelPlanService {
     private final PlanGenerationService planGenerationService;
     private final GeneratedPlanRepository generatedPlanRepository;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
+    private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final ObjectMapper objectMapper;
 
     public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
@@ -46,6 +49,7 @@ public class TravelPlanService {
             PlanGenerationService planGenerationService,
             GeneratedPlanRepository generatedPlanRepository,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
+            TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             ObjectMapper objectMapper) {
         this.repository = repository;
         this.companyRepository = companyRepository;
@@ -54,6 +58,7 @@ public class TravelPlanService {
         this.planGenerationService = planGenerationService;
         this.generatedPlanRepository = generatedPlanRepository;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
+        this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -141,10 +146,27 @@ public class TravelPlanService {
         mapRequestToEntity(normalized, entity);
         entity.setStatus("QUEUED");
         TravelPlan saved = repository.save(entity);
+        persistQuestionnaireResponses(normalized, saved);
 
         planGenerationService.enqueueGeneration(saved.getId(), user.getId());
 
         return toResponse(saved);
+    }
+
+    private void persistQuestionnaireResponses(TravelPlanRequest request, TravelPlan travelPlan) {
+        if (!StringUtils.hasText(request.questionnaireResponses())) {
+            return;
+        }
+        TravelPlanQuestionnaire questionnaire = travelPlanQuestionnaireRepository
+                .findByTravelPlan_Id(travelPlan.getId())
+                .orElseGet(TravelPlanQuestionnaire::new);
+        questionnaire.setTravelPlan(travelPlan);
+        questionnaire.setUser(travelPlan.getUser());
+        questionnaire.setEmployee(travelPlan.getEmployee());
+        questionnaire.setCompany(travelPlan.getCompany());
+        questionnaire.setSource("create-plan");
+        questionnaire.setResponsesJson(request.questionnaireResponses().trim());
+        travelPlanQuestionnaireRepository.save(questionnaire);
     }
 
     public TravelPlanResponse update(Long id, TravelPlanRequest request) {
@@ -308,6 +330,7 @@ public class TravelPlanService {
                     request.medications(),
                     request.waterFood(),
                     request.emergencyContacts(),
+                    request.questionnaireResponses(),
                     request.companyId(),
                     request.employeeId(),
                     request.userId());

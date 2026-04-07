@@ -10,6 +10,8 @@ import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenera
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
@@ -46,6 +48,7 @@ public class PlanGenerationService {
     private final GeneratedPlanRepository generatedPlanRepository;
     private final PlanGenerationContextService contextService;
     private final UserOnboardingRepository userOnboardingRepository;
+    private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final AiGenerationClient aiGenerationClient;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
@@ -56,6 +59,7 @@ public class PlanGenerationService {
             GeneratedPlanRepository generatedPlanRepository,
             PlanGenerationContextService contextService,
             UserOnboardingRepository userOnboardingRepository,
+            TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             AiGenerationClient aiGenerationClient,
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
@@ -65,6 +69,7 @@ public class PlanGenerationService {
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
         this.userOnboardingRepository = userOnboardingRepository;
+        this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.aiGenerationClient = aiGenerationClient;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
@@ -112,8 +117,9 @@ public class PlanGenerationService {
         try {
             List<PlanGenerationContext> contexts = contextService.findEnabled();
             UserOnboarding onboarding = resolveOnboarding(travelPlan);
+            String travelPlanQuestionnaire = resolveTravelPlanQuestionnaire(travelPlan);
             String systemPrompt = buildSystemPrompt();
-            String userPrompt = buildUserPrompt(travelPlan, contexts, onboarding);
+            String userPrompt = buildUserPrompt(travelPlan, contexts, onboarding, travelPlanQuestionnaire);
 
             log.info(
                     "Calling AI for travelPlanId={} (admin context files={}, onboarding={})",
@@ -268,9 +274,9 @@ public class PlanGenerationService {
                 For RETURN trips, when Departure date and Return date appear in that section, set travelDates
                 to a clear human-readable range using those exact dates, and set tripAtGlance.durationDays
                 to the inclusive calendar day count (must match "Trip length" in the user prompt).
-                A separate "Traveller health context" block contains onboarding questionnaire JSON for
-                medical personalisation only; never infer this trip's destination or itinerary from it
-                (server removes trip_itinerary from that JSON; still treat the Current trip block as sole truth).
+                A separate "Traveller health context" block contains questionnaire JSON for medical
+                personalisation only; never infer this trip's destination or itinerary from it
+                (server still treats the Current trip block as sole truth).
                 Use concise, practical medical-travel guidance. Do not include markdown fences.
 
                 COVERAGE (mandatory — do not omit categories to save space):
@@ -338,10 +344,24 @@ public class PlanGenerationService {
         return userOnboardingRepository.findByUser_Id(user.getId()).orElse(null);
     }
 
+    private String resolveTravelPlanQuestionnaire(TravelPlan travelPlan) {
+        if (travelPlan == null || travelPlan.getId() == null) {
+            return null;
+        }
+        TravelPlanQuestionnaire questionnaire = travelPlanQuestionnaireRepository
+                .findByTravelPlan_Id(travelPlan.getId())
+                .orElse(null);
+        if (questionnaire == null || !StringUtils.hasText(questionnaire.getResponsesJson())) {
+            return null;
+        }
+        return questionnaire.getResponsesJson().trim();
+    }
+
     private String buildUserPrompt(
             TravelPlan travelPlan,
             List<PlanGenerationContext> contexts,
-            UserOnboarding onboarding
+            UserOnboarding onboarding,
+            String travelPlanQuestionnaire
     ) {
         StringBuilder builder = new StringBuilder();
         builder.append("Generate a travel health report for this trip.\n\n");
@@ -362,13 +382,20 @@ public class PlanGenerationService {
         }
         builder.append("\n");
 
-        builder.append("### Traveller health context (from UserOnboarding questionnaire — personalisation only)\n");
+        builder.append("### Traveller health context (personalisation only)\n");
         builder.append("Use for vaccines, conditions, allergies, prior travel immunity, activities preferences, etc.\n");
         builder.append("Do NOT use this block for this trip's destination, cities, or travel dates; the Current trip ")
                 .append("section above always wins.\n");
-        if (onboarding == null) {
-            builder.append("(No onboarding row linked to this user.)\n\n");
+
+        if (StringUtils.hasText(travelPlanQuestionnaire)) {
+            builder.append("Primary questionnaire source: travel_plan_questionnaires (fresh create-plan responses)\n");
+            builder.append("Questionnaire responses JSON:\n")
+                    .append(travelPlanQuestionnaire)
+                    .append("\n\n");
+        } else if (onboarding == null) {
+            builder.append("(No questionnaire context linked to this user.)\n\n");
         } else {
+            builder.append("Primary questionnaire source: user_onboardings (fallback)\n");
             if (StringUtils.hasText(onboarding.getNationality())) {
                 builder.append("Nationality: ").append(onboarding.getNationality().trim()).append("\n");
             }

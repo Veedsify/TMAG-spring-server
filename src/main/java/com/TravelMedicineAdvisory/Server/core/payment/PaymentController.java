@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.core.payment;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseService;
+import com.TravelMedicineAdvisory.Server.domain.ebook.EbookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,14 +21,17 @@ public class PaymentController {
     private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
     private final FlutterwaveService flutterwaveService;
     private final CreditPurchaseService creditPurchaseService;
+    private final EbookService ebookService;
     private final ObjectMapper objectMapper;
 
     public PaymentController(
             FlutterwaveService flutterwaveService,
             CreditPurchaseService creditPurchaseService,
+            EbookService ebookService,
             ObjectMapper objectMapper) {
         this.flutterwaveService = flutterwaveService;
         this.creditPurchaseService = creditPurchaseService;
+        this.ebookService = ebookService;
         this.objectMapper = objectMapper;
     }
 
@@ -128,13 +132,16 @@ public class PaymentController {
 
             logger.info("Processing webhook: txRef={}, flwRef={}, status={}, amount={}", txRef, flwRef, status, amount);
 
-            var result = creditPurchaseService.completePurchaseFromWebhook(txRef, flwRef, status, amount);
+            // Try credit purchase first, then ebook order
+            var creditResult = creditPurchaseService.completePurchaseFromWebhook(txRef, flwRef, status, amount);
+            var ebookResult = ebookService.completeOrderFromWebhook(txRef, flwRef, status, amount);
 
-            if (result != null) {
+            if (creditResult != null || ebookResult != null) {
                 logger.info("Webhook processed successfully for txRef: {}", txRef);
             } else {
-                logger.warn("Purchase not found for txRef: {}", txRef);
+                logger.warn("No purchase or ebook order found for txRef: {}", txRef);
             }
+            var result = creditResult != null ? creditResult : ebookResult;
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Webhook processed"));
         } catch (Exception e) {

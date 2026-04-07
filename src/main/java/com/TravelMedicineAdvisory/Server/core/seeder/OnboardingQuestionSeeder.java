@@ -40,22 +40,52 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
 
         List<OnboardingQuestionCategory> categories = new ArrayList<>();
 
+        OnboardingQuestionCategory basic = new OnboardingQuestionCategory();
+        basic.setCategoryKey("basic_information");
+        basic.setCategoryName("Basic Information");
+        basic.setCategoryIcon("shield-check");
+        basic.setCategoryDescription("Identity and contact details used to personalise your advisory.");
+        basic.setDisplayOrder(1);
+        basic.setIsOptional(false);
+        basic.setQuestions(BASIC_INFORMATION_QUESTIONS);
+        categories.add(basic);
+
         OnboardingQuestionCategory travel = new OnboardingQuestionCategory();
         travel.setCategoryKey("travel_details");
         travel.setCategoryName("Travel Details");
         travel.setCategoryIcon("plane");
-        travel.setCategoryDescription("Tell us about where you're going, accommodation, and planned activities.");
-        travel.setDisplayOrder(1);
+        travel.setCategoryDescription("Trip type, route, dates, and purpose.");
+        travel.setDisplayOrder(2);
         travel.setIsOptional(false);
         travel.setQuestions(TRAVEL_QUESTIONS);
         categories.add(travel);
+
+        OnboardingQuestionCategory accommodation = new OnboardingQuestionCategory();
+        accommodation.setCategoryKey("accommodation_environment");
+        accommodation.setCategoryName("Accommodation & Environment");
+        accommodation.setCategoryIcon("shield-check");
+        accommodation.setCategoryDescription("Where you will stay and the environment you'll spend most time in.");
+        accommodation.setDisplayOrder(3);
+        accommodation.setIsOptional(false);
+        accommodation.setQuestions(ACCOMMODATION_QUESTIONS);
+        categories.add(accommodation);
+
+        OnboardingQuestionCategory activities = new OnboardingQuestionCategory();
+        activities.setCategoryKey("planned_activities");
+        activities.setCategoryName("Planned Activities");
+        activities.setCategoryIcon("bug");
+        activities.setCategoryDescription("Activities that may affect travel health risks.");
+        activities.setDisplayOrder(4);
+        activities.setIsOptional(false);
+        activities.setQuestions(PLANNED_ACTIVITIES_QUESTIONS);
+        categories.add(activities);
 
         OnboardingQuestionCategory medical = new OnboardingQuestionCategory();
         medical.setCategoryKey("medical_history");
         medical.setCategoryName("Medical History");
         medical.setCategoryIcon("heart-pulse");
-        medical.setCategoryDescription("These details help us keep recommendations safe and personalised.");
-        medical.setDisplayOrder(2);
+        medical.setCategoryDescription("Medical history and medication context for safe recommendations.");
+        medical.setDisplayOrder(5);
         medical.setIsOptional(false);
         medical.setQuestions(MEDICAL_QUESTIONS);
         categories.add(medical);
@@ -64,28 +94,38 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         vaccines.setCategoryKey("vaccination_history");
         vaccines.setCategoryName("Vaccination & Travel Health History");
         vaccines.setCategoryIcon("syringe");
-        vaccines.setCategoryDescription("Share your vaccine and recent travel health history.");
-        vaccines.setDisplayOrder(3);
+        vaccines.setCategoryDescription("Your vaccine and prior travel-health preparation history.");
+        vaccines.setDisplayOrder(6);
         vaccines.setIsOptional(false);
         vaccines.setQuestions(VACCINE_QUESTIONS);
         categories.add(vaccines);
 
         OnboardingQuestionCategory awareness = new OnboardingQuestionCategory();
-        awareness.setCategoryKey("malaria_tropical");
+        awareness.setCategoryKey("awareness_preparation");
         awareness.setCategoryName("Awareness & Preparation");
         awareness.setCategoryIcon("shield-check");
-        awareness.setCategoryDescription("Tell us about your travel planning and post-travel guidance preferences.");
-        awareness.setDisplayOrder(4);
+        awareness.setCategoryDescription("Preparation status before travel.");
+        awareness.setDisplayOrder(7);
         awareness.setIsOptional(false);
         awareness.setQuestions(AWARENESS_QUESTIONS);
         categories.add(awareness);
 
+        OnboardingQuestionCategory afterTravel = new OnboardingQuestionCategory();
+        afterTravel.setCategoryKey("after_travel");
+        afterTravel.setCategoryName("After Travel");
+        afterTravel.setCategoryIcon("plane");
+        afterTravel.setCategoryDescription("Post-travel guidance preferences and additional context.");
+        afterTravel.setDisplayOrder(8);
+        afterTravel.setIsOptional(false);
+        afterTravel.setQuestions(AFTER_TRAVEL_QUESTIONS);
+        categories.add(afterTravel);
+
         OnboardingQuestionCategory risk = new OnboardingQuestionCategory();
-        risk.setCategoryKey("safety_preparedness");
+        risk.setCategoryKey("personal_health_risk_behaviours");
         risk.setCategoryName("Personal Health & Risk Behaviours");
         risk.setCategoryIcon("bug");
-        risk.setCategoryDescription("Optional but important. Responses are confidential and used only for your advisory.");
-        risk.setDisplayOrder(5);
+        risk.setCategoryDescription("Optional but important. Responses are confidential and advisory-only.");
+        risk.setDisplayOrder(9);
         risk.setIsOptional(true);
         risk.setQuestions(RISK_BEHAVIOUR_QUESTIONS);
         categories.add(risk);
@@ -113,33 +153,68 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         logger.info("Onboarding question categories synced. Created: {}, Updated: {}", createdCount, updatedCount);
     }
 
-    private static final String TRAVEL_QUESTIONS = """
+    private static final String BASIC_INFORMATION_QUESTIONS = """
             [
               {
-                "key": "travel_countries",
-                "text": "What country or countries will you be traveling to?",
-                "type": "multi_country",
+                "key": "full_name_passport",
+                "text": "Full name (as on passport):",
+                "type": "text",
                 "required": true
               },
               {
-                "key": "travel_city_region",
-                "text": "City or region (if known):",
-                "type": "text",
-                "required": false,
-                "placeholder": "e.g. Accra, Northern Region"
-              },
-              {
-                "key": "departure_date",
-                "text": "Departure date:",
+                "key": "date_of_birth",
+                "text": "Date of birth:",
                 "type": "date",
                 "required": true
               },
               {
-                "key": "return_date_or_duration",
-                "text": "Return date (or expected duration of stay):",
+                "key": "gender",
+                "text": "Biological sex (for health advisory purposes):",
+                "type": "radio",
+                "required": true,
+                "options": [
+                  {"value": "male", "label": "Male"},
+                  {"value": "female", "label": "Female"},
+                  {"value": "prefer_not_to_say", "label": "Prefer not to say"}
+                ]
+              },
+              {
+                "key": "nationality",
+                "text": "Nationality:",
+                "type": "country",
+                "required": true
+              },
+              {
+                "key": "current_residence_country",
+                "text": "Country of current residence:",
+                "type": "country",
+                "required": true
+              },
+              {
+                "key": "email_address",
+                "text": "Email address:",
                 "type": "text",
                 "required": true,
-                "placeholder": "e.g. 2026-08-20 or 3 weeks"
+                "placeholder": "name@example.com"
+              },
+              {
+                "key": "phone_number",
+                "text": "Phone number:",
+                "type": "text",
+                "required": true,
+                "placeholder": "+234..."
+              }
+            ]
+            """;
+
+    private static final String TRAVEL_QUESTIONS = """
+            [
+              {
+                "key": "trip_itinerary",
+                "text": "Trip type and itinerary",
+                "description": "Start by selecting Single trip, Round trip, or Multi-stop.",
+                "type": "trip_itinerary",
+                "required": true
               },
               {
                 "key": "purpose_of_travel",
@@ -174,7 +249,12 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
                   {"value": "friends", "label": "With friends"},
                   {"value": "colleagues", "label": "With colleagues"}
                 ]
-              },
+              }
+            ]
+            """;
+
+    private static final String ACCOMMODATION_QUESTIONS = """
+            [
               {
                 "key": "main_accommodation",
                 "text": "Where will you mainly be staying?",
@@ -206,7 +286,12 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
                   {"value": "rural", "label": "Rural areas"},
                   {"value": "both", "label": "Both"}
                 ]
-              },
+              }
+            ]
+            """;
+
+    private static final String PLANNED_ACTIVITIES_QUESTIONS = """
+            [
               {
                 "key": "planned_activities",
                 "text": "Do you plan to engage in any of the following? (Select all that apply)",
@@ -436,11 +521,16 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
                   {"value": "no", "label": "No"},
                   {"value": "planning", "label": "Planning to get one"}
                 ]
-              },
+              }
+            ]
+            """;
+
+    private static final String AFTER_TRAVEL_QUESTIONS = """
+            [
               {
                 "key": "wants_post_travel_guidance",
                 "text": "Would you like to receive post-travel health guidance after you return?",
-                "description": "Post-travel assessment is included in the Platinum plan. If selected and you are on a lower tier, an upgrade option will be offered.",
+                "description": "Post-travel assessment is included in the Platinum plan. If selected and you are on a lower tier, you will be offered an upgrade.",
                 "type": "radio",
                 "required": true,
                 "options": [

@@ -628,4 +628,34 @@ public class EmailTemplates {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;");
     }
+
+    // ─── Ebook delivery email ─────────────────────────────────────────────────
+
+    public String ebookDeliveryEmail(String buyerName, String ebookTitle, String versionLabel,
+                                      String downloadUrl, String currencySymbol, String amount, String txRef) {
+        String content =
+                badge("Download Ready") +
+                heading("Your ebook is ready") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(buyerName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Thank you for your purchase! Your copy of <strong style=\"" + STRONG_STYLE + "\">" + esc(ebookTitle) + "</strong> (" + esc(versionLabel) + " edition) is ready to download.</p>" +
+                infoBox("Ebook: <strong>" + esc(ebookTitle) + "</strong><br/>Edition: " + esc(versionLabel) + "<br/>Amount Paid: " + esc(currencySymbol) + " " + esc(amount) + "<br/>Order Ref: " + esc(txRef)) +
+                tealButton("Download Your Ebook", downloadUrl) +
+                divider() +
+                fine("Keep this email safe &mdash; it contains your personal download link. If you have any issues, reply to this email and we&rsquo;ll assist you promptly.");
+        return wrap("Your TMAG Ebook is Ready", content);
+    }
+
+    public String ebookOrderConfirmationEmail(String buyerName, String ebookTitle,
+                                               String currencySymbol, String amount, String txRef) {
+        String content =
+                badge("Order Confirmed") +
+                heading("Payment received") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(buyerName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">We&rsquo;ve received your payment for <strong style=\"" + STRONG_STYLE + "\">" + esc(ebookTitle) + "</strong>.</p>" +
+                infoBox("Ebook: <strong>" + esc(ebookTitle) + "</strong><br/>Amount: " + esc(currencySymbol) + " " + esc(amount) + "<br/>Order Ref: " + esc(txRef)) +
+                divider() +
+                "<p style=\"" + P_STYLE + "\">You will receive a separate email shortly with your download link. If you don&rsquo;t receive it within 5 minutes, please check your spam folder.</p>" +
+                fine("Questions? Contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
+        return wrap("Order Confirmed — TMAG Ebook", content);
+    }
 }

@@ -147,6 +147,10 @@ public class QueueWorker {
                     handleEmailJob(msg, "contact_submission");
                 case EMAIL_NEWSLETTER_WELCOME ->
                     handleEmailJob(msg, "newsletter_welcome");
+                case EMAIL_EBOOK_DELIVERY ->
+                    handleEmailJob(msg, "ebook_delivery");
+                case EMAIL_EBOOK_ORDER_CONFIRMATION ->
+                    handleEmailJob(msg, "ebook_order_confirmation");
             }
             if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
                 logger.info("GENERATE_TRAVEL_PLAN finished successfully: queueJobId={}", msg.getId());
@@ -275,6 +279,22 @@ public class QueueWorker {
                 emailTemplates.contactSubmissionEmail(name, senderEmail, inquiryType, subject, message);
             case "newsletter_welcome" ->
                 emailTemplates.newsletterWelcomeEmail(firstName);
+            case "ebook_delivery" ->
+                emailTemplates.ebookDeliveryEmail(
+                        vars.getOrDefault("buyerName", "there"),
+                        vars.getOrDefault("ebookTitle", ""),
+                        vars.getOrDefault("versionLabel", ""),
+                        vars.getOrDefault("downloadUrl", "#"),
+                        vars.getOrDefault("currencySymbol", "$"),
+                        vars.getOrDefault("amount", ""),
+                        vars.getOrDefault("txRef", ""));
+            case "ebook_order_confirmation" ->
+                emailTemplates.ebookOrderConfirmationEmail(
+                        vars.getOrDefault("buyerName", "there"),
+                        vars.getOrDefault("ebookTitle", ""),
+                        vars.getOrDefault("currencySymbol", "$"),
+                        vars.getOrDefault("amount", ""),
+                        vars.getOrDefault("txRef", ""));
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

@@ -16,6 +16,7 @@ public record TravelPlanRequest(
     String medications,
     String waterFood,
     String emergencyContacts,
+    String questionnaireResponses,
     Long companyId,
     Long employeeId,
     Long userId
