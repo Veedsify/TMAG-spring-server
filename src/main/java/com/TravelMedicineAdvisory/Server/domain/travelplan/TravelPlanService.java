@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -126,8 +127,7 @@ public class TravelPlanService {
             user = employee.getUser();
         }
 
-        Employee employee = employeeRepository.findByUser(user)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+        Optional<Employee> employee = employeeRepository.findByUser(user);
 
         if (user.getCredits() < 1) {
             throw new RuntimeException("Insufficient credits");
@@ -136,8 +136,11 @@ public class TravelPlanService {
         user.setCredits(user.getCredits() - 1);
         userRepository.save(user);
 
-        employee.setCreditsAllocated(user.getCredits()); // keep in sync, no extra deduction
-        employeeRepository.save(employee);
+        if (employee.isPresent()) {
+            Employee employeeEntity = employee.get();
+            employeeEntity.setCreditsAllocated(user.getCredits()); // keep in sync, no extra deduction
+            employeeRepository.save(employeeEntity);
+        }
 
         validateReturnTripOrThrow(request);
         TravelPlanRequest normalized = normalizeDurationForReturnTrip(request);

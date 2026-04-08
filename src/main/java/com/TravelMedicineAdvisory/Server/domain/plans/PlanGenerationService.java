@@ -34,9 +34,11 @@ import java.util.NoSuchElementException;
 
 /**
  * AI generation pipeline for travel health plans created by end users (dashboard / HR flows).
- * Uses {@link UserOnboarding#getResponsesJson()} for traveller health personalisation; trip destination
- * and itinerary always come from the {@link TravelPlan} request (onboarding trip fields are stripped).
- * Admins curate {@link PlanGenerationContext} reference materials for prompts.
+ * For a user's first active travel plan, traveller health context comes from
+ * {@link UserOnboarding#getResponsesJson()} (onboarding questionnaire). For later plans, context comes from
+ * {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire} when present,
+ * with onboarding as fallback. Trip destination and itinerary always come from the {@link TravelPlan} request
+ * (onboarding trip fields are stripped). Admins curate {@link PlanGenerationContext} reference materials for prompts.
  */
 @Service
 @Transactional
@@ -117,15 +119,18 @@ public class PlanGenerationService {
         try {
             List<PlanGenerationContext> contexts = contextService.findEnabled();
             UserOnboarding onboarding = resolveOnboarding(travelPlan);
-            String travelPlanQuestionnaire = resolveTravelPlanQuestionnaire(travelPlan);
+            boolean firstTravelPlanForUser = isFirstActiveTravelPlanForUser(travelPlan);
+            String travelPlanQuestionnaire = resolveTravelPlanQuestionnaire(travelPlan, firstTravelPlanForUser);
             String systemPrompt = buildSystemPrompt();
-            String userPrompt = buildUserPrompt(travelPlan, contexts, onboarding, travelPlanQuestionnaire);
+            String userPrompt = buildUserPrompt(travelPlan, contexts, onboarding, travelPlanQuestionnaire,
+                    firstTravelPlanForUser);
 
             log.info(
-                    "Calling AI for travelPlanId={} (admin context files={}, onboarding={})",
+                    "Calling AI for travelPlanId={} (admin context files={}, onboarding={}, firstPlanForUser={})",
                     travelPlanId,
                     contexts.size(),
-                    onboarding != null);
+                    onboarding != null,
+                    firstTravelPlanForUser);
 
             AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt);
             JsonNode structuredOutput = parseJson(result.content());
@@ -344,8 +349,15 @@ public class PlanGenerationService {
         return userOnboardingRepository.findByUser_Id(user.getId()).orElse(null);
     }
 
-    private String resolveTravelPlanQuestionnaire(TravelPlan travelPlan) {
+    /**
+     * When this is the user's first active plan, onboarding JSON is the authoritative health questionnaire;
+     * create-plan responses are still stored but not fed to the model for that generation.
+     */
+    private String resolveTravelPlanQuestionnaire(TravelPlan travelPlan, boolean firstTravelPlanForUser) {
         if (travelPlan == null || travelPlan.getId() == null) {
+            return null;
+        }
+        if (firstTravelPlanForUser) {
             return null;
         }
         TravelPlanQuestionnaire questionnaire = travelPlanQuestionnaireRepository
@@ -357,11 +369,23 @@ public class PlanGenerationService {
         return questionnaire.getResponsesJson().trim();
     }
 
+    /**
+     * True when this plan is the only non-deleted {@link TravelPlan} row for its user (the typical first plan case).
+     */
+    private boolean isFirstActiveTravelPlanForUser(TravelPlan travelPlan) {
+        User user = travelPlan.getUser();
+        if (user == null || user.getId() == null) {
+            return false;
+        }
+        return travelPlanRepository.countByUserId(user.getId()) == 1;
+    }
+
     private String buildUserPrompt(
             TravelPlan travelPlan,
             List<PlanGenerationContext> contexts,
             UserOnboarding onboarding,
-            String travelPlanQuestionnaire
+            String travelPlanQuestionnaire,
+            boolean firstTravelPlanForUser
     ) {
         StringBuilder builder = new StringBuilder();
         builder.append("Generate a travel health report for this trip.\n\n");
@@ -388,14 +412,18 @@ public class PlanGenerationService {
                 .append("section above always wins.\n");
 
         if (StringUtils.hasText(travelPlanQuestionnaire)) {
-            builder.append("Primary questionnaire source: travel_plan_questionnaires (fresh create-plan responses)\n");
+            builder.append("Primary questionnaire source: travel_plan_questionnaires (create-plan responses)\n");
             builder.append("Questionnaire responses JSON:\n")
                     .append(travelPlanQuestionnaire)
                     .append("\n\n");
         } else if (onboarding == null) {
             builder.append("(No questionnaire context linked to this user.)\n\n");
         } else {
-            builder.append("Primary questionnaire source: user_onboardings (fallback)\n");
+            if (firstTravelPlanForUser) {
+                builder.append("Primary questionnaire source: user_onboardings (onboarding questionnaire; first travel plan)\n");
+            } else {
+                builder.append("Primary questionnaire source: user_onboardings (fallback; no create-plan questionnaire)\n");
+            }
             if (StringUtils.hasText(onboarding.getNationality())) {
                 builder.append("Nationality: ").append(onboarding.getNationality().trim()).append("\n");
             }
