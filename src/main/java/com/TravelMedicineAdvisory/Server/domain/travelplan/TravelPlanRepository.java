@@ -12,8 +12,9 @@ import java.util.List;
 @Repository
 public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
     Page<TravelPlan> findAllByCompanyId(Long companyId, Pageable pageable);
+    Page<TravelPlan> findAllByUserId(Long userId, Pageable pageable);
 
-    List<TravelPlan> findByUserId(Long userId);
+    List<TravelPlan> findByUserId(Long userId, Pageable pageable);
 
     List<TravelPlan> findByCompanyId(Long companyId);
 

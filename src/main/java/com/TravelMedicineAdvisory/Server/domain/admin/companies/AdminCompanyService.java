@@ -18,6 +18,9 @@ import com.TravelMedicineAdvisory.Server.domain.company.BillingStatus;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.Tier;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanCode;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
@@ -35,6 +38,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 public class AdminCompanyService {
 
     private final CompanyRepository companyRepository;
+    private final PlanRepository planRepository;
     private final EmployeeRepository employeeRepository;
     private final CompanyUserRepository companyUserRepository;
     private final CreditRepository creditRepository;
@@ -46,6 +50,7 @@ public class AdminCompanyService {
     private final QueueService queueService;
 
     public AdminCompanyService(CompanyRepository companyRepository,
+            PlanRepository planRepository,
             EmployeeRepository employeeRepository,
             CompanyUserRepository companyUserRepository,
             CreditRepository creditRepository,
@@ -56,6 +61,7 @@ public class AdminCompanyService {
             PasswordEncoder passwordEncoder,
             QueueService queueService) {
         this.companyRepository = companyRepository;
+        this.planRepository = planRepository;
         this.employeeRepository = employeeRepository;
         this.companyUserRepository = companyUserRepository;
         this.randomNumberGenerator = randomNumberGenerator;
@@ -109,6 +115,11 @@ public class AdminCompanyService {
         company.setCompanyCode(companyCode);
         company.setBillingStatus(BillingStatus.ACTIVE);
         company.setTier(Tier.STANDARD);
+        PlanEntity defaultPlan = planRepository.findByCode(PlanCode.BRONZE)
+                .orElseThrow(() -> new IllegalStateException("Bronze plan not found"));
+        company.setActivePlan(defaultPlan);
+        company.setPlan(defaultPlan.getCode().name());
+        company.setTotalCredits(defaultPlan.getSignupCredits());
         company = companyRepository.save(company);
 
         // Create default HR Admin user for this company
@@ -231,7 +242,13 @@ public class AdminCompanyService {
             company.setContactPhone((String) updates.get("contactPhone"));
         }
         if (updates.containsKey("plan")) {
-            company.setPlan((String) updates.get("plan"));
+            String requestedPlan = (String) updates.get("plan");
+            company.setPlan(requestedPlan);
+            try {
+                PlanCode code = PlanCode.valueOf(requestedPlan.toUpperCase());
+                planRepository.findByCode(code).ifPresent(company::setActivePlan);
+            } catch (IllegalArgumentException ignored) {
+            }
         }
 
         company = companyRepository.save(company);

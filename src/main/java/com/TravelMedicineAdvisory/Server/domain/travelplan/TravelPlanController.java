@@ -39,8 +39,11 @@ public class TravelPlanController {
     }
 
     @GetMapping
-    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable) {
-        Page<TravelPlanResponse> page = service.findAll(companyId, pageable);
+    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable, @AuthenticationPrincipal AppUserDetails user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Page<TravelPlanResponse> page = service.findAll(companyId, user.getUserId(), pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
@@ -69,8 +72,11 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
+    public ResponseEntity<SuccessResponse> getById(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id, user.getUserId())));
     }
 
     @PostMapping

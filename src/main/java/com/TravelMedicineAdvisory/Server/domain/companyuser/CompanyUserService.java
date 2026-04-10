@@ -81,11 +81,15 @@ public class CompanyUserService {
                 .filter(cu -> cu.getCompany() != null)  
                 .map(cu -> {
                     Company c = cu.getCompany();
+                    String resolvedPlan = c.getActivePlan() != null && c.getActivePlan().getCode() != null
+                            ? c.getActivePlan().getCode().name()
+                            : c.getPlan();
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", c.getId());
                     m.put("name", c.getName());
                     m.put("industry", c.getIndustry());
-                    m.put("plan", c.getPlan());
+                    m.put("plan", resolvedPlan);
+                    m.put("active_plan_id", c.getActivePlan() != null ? c.getActivePlan().getId() : null);
                     m.put("company_code", c.getCompanyCode());
                     m.put("total_credits", c.getTotalCredits());
                     m.put("used_credits", c.getUsedCredits());

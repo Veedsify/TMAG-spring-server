@@ -10,6 +10,7 @@ public record CompanyResponse(
     Integer usedCredits,
     Integer employeeCount,
     String plan,
+    Long activePlanId,
     String companyCode,
     Long logoId,
     BillingCurrency billingCurrency,

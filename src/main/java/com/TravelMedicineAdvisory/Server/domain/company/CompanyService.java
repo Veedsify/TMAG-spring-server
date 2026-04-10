@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanRepository;
 
 @Service
 @Transactional
@@ -18,11 +20,14 @@ public class CompanyService {
     private final CompanyRepository repository;
     private final CreditRepository creditRepository;
     private final RandomNumberGenerator randomNumberGenerator;
+    private final PlanRepository planRepository;
 
-    public CompanyService(CompanyRepository repository, CreditRepository creditRepository, RandomNumberGenerator randomNumberGenerator) {
+    public CompanyService(CompanyRepository repository, CreditRepository creditRepository,
+            RandomNumberGenerator randomNumberGenerator, PlanRepository planRepository) {
         this.repository = repository;
         this.creditRepository = creditRepository;
         this.randomNumberGenerator = randomNumberGenerator;
+        this.planRepository = planRepository;
     }
 
     public Page<CompanyResponse> findAll(Pageable pageable) {
@@ -108,6 +113,9 @@ public class CompanyService {
     }
 
     private CompanyResponse toResponse(Company entity) {
+        String resolvedPlan = entity.getActivePlan() != null && entity.getActivePlan().getCode() != null
+                ? entity.getActivePlan().getCode().name()
+                : entity.getPlan();
         return new CompanyResponse(
                 entity.getId(),
                 entity.getName(),
@@ -115,7 +123,8 @@ public class CompanyService {
                 entity.getTotalCredits(),
                 entity.getUsedCredits(),
                 entity.getEmployeeCount(),
-                entity.getPlan(),
+                resolvedPlan,
+                entity.getActivePlan() != null ? entity.getActivePlan().getId() : null,
                 entity.getCompanyCode(),
                 entity.getLogo() != null ? entity.getLogo().getId() : null,
                 entity.getBillingCurrency(),
@@ -141,6 +150,12 @@ public class CompanyService {
         }
         if (request.plan() != null) {
             entity.setPlan(request.plan());
+        }
+        if (request.activePlanId() != null) {
+            PlanEntity plan = planRepository.findById(request.activePlanId())
+                    .orElseThrow(() -> new NoSuchElementException("Plan not found"));
+            entity.setActivePlan(plan);
+            entity.setPlan(plan.getCode().name());
         }
         if (request.companyCode() != null) {
             entity.setCompanyCode(request.companyCode());

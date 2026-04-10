@@ -13,6 +13,8 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
 import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
+import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedger;
+import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedgerRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -42,6 +44,7 @@ public class DataExportService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final PlanUsageLedgerRepository planUsageLedgerRepository;
     private final QueueService queueService;
     private final AdminNotificationService adminNotificationService;
 
@@ -52,6 +55,7 @@ public class DataExportService {
             CompanyRepository companyRepository,
             UserRepository userRepository,
             CompanyUserRepository companyUserRepository,
+            PlanUsageLedgerRepository planUsageLedgerRepository,
             QueueService queueService,
             AdminNotificationService adminNotificationService) {
         this.employeeRepository = employeeRepository;
@@ -61,6 +65,7 @@ public class DataExportService {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
         this.companyUserRepository = companyUserRepository;
+        this.planUsageLedgerRepository = planUsageLedgerRepository;
         this.queueService = queueService;
         this.adminNotificationService = adminNotificationService;
     }
@@ -137,6 +142,11 @@ public class DataExportService {
     public List<Map<String, Object>> exportBilling(Long companyId) {
         List<Invoice> invoices = invoiceRepository.findByCompanyId(companyId);
         return invoices.stream().map(this::mapInvoiceToExport).collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> exportUsage(Long companyId) {
+        List<PlanUsageLedger> entries = planUsageLedgerRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        return entries.stream().map(this::mapUsageToExport).collect(Collectors.toList());
     }
 
     public String exportBillingCsv(Long companyId) {
@@ -221,6 +231,17 @@ public class DataExportService {
                 "dueDate", inv.getDueDate() != null ? inv.getDueDate().toString() : "",
                 "paidAt", inv.getPaidAt() != null ? inv.getPaidAt().toString() : "",
                 "paymentMethod", inv.getPaymentMethod() != null ? inv.getPaymentMethod() : "");
+    }
+
+    private Map<String, Object> mapUsageToExport(PlanUsageLedger entry) {
+        return Map.of(
+                "id", entry.getId(),
+                "action", entry.getAction() != null ? entry.getAction() : "",
+                "ipAddress", entry.getIpAddress() != null ? entry.getIpAddress() : "",
+                "userId", entry.getUser() != null ? entry.getUser().getId() : 0,
+                "planDestination", entry.getTravelPlan() != null && entry.getTravelPlan().getDestination() != null
+                        ? entry.getTravelPlan().getDestination() : "",
+                "createdAt", entry.getCreatedAt() != null ? entry.getCreatedAt().toString() : "");
     }
 
     private String escapeCsv(String value) {

@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
@@ -37,6 +38,7 @@ public class TravelPlanService {
 
     private final TravelPlanRepository repository;
     private final CompanyRepository companyRepository;
+    private final CompanyUserRepository companyUserRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
     private final PlanGenerationService planGenerationService;
@@ -46,6 +48,7 @@ public class TravelPlanService {
     private final ObjectMapper objectMapper;
 
     public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
+            CompanyUserRepository companyUserRepository,
             EmployeeRepository employeeRepository, UserRepository userRepository,
             PlanGenerationService planGenerationService,
             GeneratedPlanRepository generatedPlanRepository,
@@ -54,6 +57,7 @@ public class TravelPlanService {
             ObjectMapper objectMapper) {
         this.repository = repository;
         this.companyRepository = companyRepository;
+        this.companyUserRepository = companyUserRepository;
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.planGenerationService = planGenerationService;
@@ -63,18 +67,26 @@ public class TravelPlanService {
         this.objectMapper = objectMapper;
     }
 
-    public Page<TravelPlanResponse> findAll(Long companyId, Pageable pageable) {
+    @Transactional(readOnly = true)
+    public Page<TravelPlanResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
         if (companyId != null) {
+            if (!isUserInCompany(currentUserId, companyId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this company's plans");
+            }
             return repository.findAllByCompanyId(companyId, pageable)
                     .map(this::toResponse);
         }
-        return repository.findAll(pageable)
+        return repository.findAllByUserId(currentUserId, pageable)
                 .map(this::toResponse);
     }
 
-    public TravelPlanResponse findById(Long id) {
+    @Transactional(readOnly = true)
+    public TravelPlanResponse findById(Long id, Long currentUserId) {
         TravelPlan entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
+        if (!canAccessPlan(entity, currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this travel plan");
+        }
         GeneratedPlanPayload generated = generatedPlanRepository.findByTravelPlanId(id)
                 .map(this::toGeneratedPayload)
                 .orElse(null);
@@ -110,6 +122,24 @@ public class TravelPlanService {
         return s.length() > 48 ? s.substring(0, 48) : s;
     }
 
+    private boolean canAccessPlan(TravelPlan plan, Long currentUserId) {
+        if (plan.getUser() != null && plan.getUser().getId().equals(currentUserId)) {
+            return true;
+        }
+        if (plan.getCompany() != null) {
+            return isUserInCompany(currentUserId, plan.getCompany().getId());
+        }
+        return false;
+    }
+
+    private boolean isUserInCompany(Long userId, Long companyId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+        return companyUserRepository.findAllByUser(user).stream()
+                .map(companyUser -> companyUser.getCompany().getId())
+                .anyMatch(companyId::equals);
+    }
+
     @Transactional
     public TravelPlanResponse create(TravelPlanRequest request) {
 
@@ -138,8 +168,21 @@ public class TravelPlanService {
 
         if (employee.isPresent()) {
             Employee employeeEntity = employee.get();
-            employeeEntity.setCreditsAllocated(user.getCredits()); // keep in sync, no extra deduction
+            int used = employeeEntity.getCreditsUsed() != null ? employeeEntity.getCreditsUsed() : 0;
+            employeeEntity.setCreditsUsed(used + 1);
+            int plans = employeeEntity.getPlansGenerated() != null ? employeeEntity.getPlansGenerated() : 0;
+            employeeEntity.setPlansGenerated(plans + 1);
             employeeRepository.save(employeeEntity);
+
+            if (employeeEntity.getCompany() != null) {
+                Company company = companyRepository.findById(employeeEntity.getCompany().getId())
+                        .orElse(null);
+                if (company != null) {
+                    int companyUsed = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
+                    company.setUsedCredits(companyUsed + 1);
+                    companyRepository.save(company);
+                }
+            }
         }
 
         validateReturnTripOrThrow(request);

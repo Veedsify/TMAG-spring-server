@@ -121,7 +121,10 @@ public class AdminAnalyticsService {
                             .sum();
                 })
                 .sum();
-        stats.setTotalCreditsConsumed(individualUsed);
+        long corporateUsed = companyRepository.findAllActive().stream()
+                .mapToInt(c -> c.getUsedCredits() != null ? c.getUsedCredits() : 0)
+                .sum();
+        stats.setTotalCreditsConsumed(individualUsed + corporateUsed);
 
         stats.setTotalTravelPlans(travelPlanRepository.countAllActive());
         stats.setSuspendedUsers(userRepository.countSuspended());
@@ -210,33 +213,41 @@ public class AdminAnalyticsService {
         corpVsInd.put("individual", userRepository.countByType("INDIVIDUAL"));
         analytics.setCorporateVsIndividual(corpVsInd);
 
-        // Peak usage times — aggregate AI request logs by hour of day
+        // Peak usage times — aggregate AI request logs by hour of day (all 24 hours, 0-filled)
         List<Map<String, Object>> peakTimes = new ArrayList<>();
         List<AiRequestLog> allAiLogs = aiRequestLogRepository.findAll();
         Map<Integer, Long> hourCounts = new HashMap<>();
         for (AiRequestLog log : allAiLogs) {
-            if (log.getCreatedAt() != null) {
+            if (log.getCreatedAt() != null && log.getDeletedAt() == null) {
                 int hour = log.getCreatedAt().getHour();
                 hourCounts.merge(hour, 1L, Long::sum);
             }
         }
         for (int hour = 0; hour < 24; hour++) {
-            if (hourCounts.containsKey(hour)) {
-                Map<String, Object> entry = new HashMap<>();
-                entry.put("hour", hour);
-                entry.put("requests", hourCounts.get(hour));
-                peakTimes.add(entry);
-            }
-        }
-        if (peakTimes.isEmpty()) {
-            for (int hour = 8; hour <= 17; hour++) {
-                Map<String, Object> entry = new HashMap<>();
-                entry.put("hour", hour);
-                entry.put("requests", 0);
-                peakTimes.add(entry);
-            }
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("hour", hour);
+            entry.put("requests", hourCounts.getOrDefault(hour, 0L));
+            peakTimes.add(entry);
         }
         analytics.setPeakUsageTimes(peakTimes);
+
+        // Requests per model — count AI logs grouped by model
+        Map<String, Long> modelCounts = new HashMap<>();
+        for (AiRequestLog log : allAiLogs) {
+            if (log.getDeletedAt() == null && log.getModelUsed() != null && !log.getModelUsed().isBlank()) {
+                modelCounts.merge(log.getModelUsed(), 1L, Long::sum);
+            }
+        }
+        List<Map<String, Object>> requestsByModel = modelCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(e -> {
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("model", e.getKey());
+                    entry.put("requests", e.getValue());
+                    return entry;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        analytics.setRequestsByModel(requestsByModel);
 
         // Monthly requests & revenue — aggregate by month from AI logs and invoices
         List<Map<String, Object>> monthly = new ArrayList<>();
@@ -252,24 +263,44 @@ public class AdminAnalyticsService {
         String analyticsBaseCurrency = getBaseCurrency();
         Map<String, Double> currencyRates = getExchangeRates();
         List<Invoice> allInvoices = invoiceRepository.findAllActive();
+        // Use YearMonth as key for correct chronological sorting
+        Map<java.time.YearMonth, Long> monthlyRequestsByYM = new java.util.TreeMap<>();
+        Map<java.time.YearMonth, Double> monthlyRevenueByYM = new java.util.TreeMap<>();
+        java.time.format.DateTimeFormatter ymParser = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
+        for (Map.Entry<String, Long> e : monthlyRequestCounts.entrySet()) {
+            try {
+                java.time.YearMonth ym = java.time.YearMonth.parse(e.getKey(), ymParser);
+                monthlyRequestsByYM.merge(ym, e.getValue(), Long::sum);
+            } catch (Exception ignored) {}
+        }
         for (Invoice inv : allInvoices) {
             if (inv.getPaidAt() != null && inv.getAmount() != null) {
-                String monthKey = inv.getPaidAt().format(monthFmt);
+                java.time.YearMonth ym = java.time.YearMonth.from(inv.getPaidAt());
                 double converted = convertToBase(inv.getAmount(), inv.getCurrency(), analyticsBaseCurrency, currencyRates);
-                monthlyRevenue.merge(monthKey, converted, Double::sum);
+                monthlyRevenueByYM.merge(ym, converted, Double::sum);
             }
         }
-        Set<String> allMonths = new java.util.TreeSet<>();
-        allMonths.addAll(monthlyRequestCounts.keySet());
-        allMonths.addAll(monthlyRevenue.keySet());
-        for (String monthKey : allMonths) {
+        Set<java.time.YearMonth> allYMs = new java.util.TreeSet<>();
+        allYMs.addAll(monthlyRequestsByYM.keySet());
+        allYMs.addAll(monthlyRevenueByYM.keySet());
+        for (java.time.YearMonth ym : allYMs) {
             Map<String, Object> entry = new HashMap<>();
-            entry.put("month", monthKey);
-            entry.put("requests", monthlyRequestCounts.getOrDefault(monthKey, 0L));
-            entry.put("revenue", monthlyRevenue.getOrDefault(monthKey, 0.0));
+            entry.put("month", ym.format(monthFmt));
+            entry.put("requests", monthlyRequestsByYM.getOrDefault(ym, 0L));
+            entry.put("revenue", monthlyRevenueByYM.getOrDefault(ym, 0.0));
             monthly.add(entry);
         }
         analytics.setMonthlyRequests(monthly);
+
+        // Risk distribution — count travel plans by risk score bucket
+        List<Map<String, Object>> riskDist = new ArrayList<>();
+        long lowCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() < 40).count();
+        long medCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 40 && p.getRiskScore() < 70).count();
+        long highCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 70).count();
+        Map<String, Object> lowEntry = new HashMap<>(); lowEntry.put("risk", "Low"); lowEntry.put("count", lowCount); riskDist.add(lowEntry);
+        Map<String, Object> medEntry = new HashMap<>(); medEntry.put("risk", "Medium"); medEntry.put("count", medCount); riskDist.add(medEntry);
+        Map<String, Object> highEntry = new HashMap<>(); highEntry.put("risk", "High"); highEntry.put("count", highCount); riskDist.add(highEntry);
+        analytics.setRiskDistribution(riskDist);
 
         // Daily active users — users who logged in each day of the past week
         List<Map<String, Object>> dailyActive = new ArrayList<>();

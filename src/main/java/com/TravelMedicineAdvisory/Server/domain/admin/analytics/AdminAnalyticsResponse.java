@@ -11,6 +11,8 @@ public class AdminAnalyticsResponse {
     private List<Map<String, Object>> monthlyRequests;
     private List<Map<String, Object>> dailyActiveUsers;
     private List<Map<String, Object>> creditUsageByType;
+    private List<Map<String, Object>> requestsByModel;
+    private List<Map<String, Object>> riskDistribution;
 
     public AdminAnalyticsResponse() {}
 
@@ -28,4 +30,8 @@ public class AdminAnalyticsResponse {
     public void setDailyActiveUsers(List<Map<String, Object>> dailyActiveUsers) { this.dailyActiveUsers = dailyActiveUsers; }
     public List<Map<String, Object>> getCreditUsageByType() { return creditUsageByType; }
     public void setCreditUsageByType(List<Map<String, Object>> creditUsageByType) { this.creditUsageByType = creditUsageByType; }
+    public List<Map<String, Object>> getRequestsByModel() { return requestsByModel; }
+    public void setRequestsByModel(List<Map<String, Object>> requestsByModel) { this.requestsByModel = requestsByModel; }
+    public List<Map<String, Object>> getRiskDistribution() { return riskDistribution; }
+    public void setRiskDistribution(List<Map<String, Object>> riskDistribution) { this.riskDistribution = riskDistribution; }
 }

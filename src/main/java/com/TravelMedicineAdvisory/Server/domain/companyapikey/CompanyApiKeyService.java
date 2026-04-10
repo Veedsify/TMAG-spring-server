@@ -11,11 +11,16 @@ import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanCode;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -27,13 +32,15 @@ public class CompanyApiKeyService {
 
     private final CompanyApiKeyRepository repository;
     private final CompanyRepository companyRepository;
+    private final CompanyUserRepository companyUserRepository;
     private final UserRepository userRepository;
     private final QueueService queueService;
 
     public CompanyApiKeyService(CompanyApiKeyRepository repository, CompanyRepository companyRepository,
-            UserRepository userRepository, QueueService queueService) {
+            CompanyUserRepository companyUserRepository, UserRepository userRepository, QueueService queueService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
+        this.companyUserRepository = companyUserRepository;
         this.userRepository = userRepository;
         this.queueService = queueService;
     }
@@ -43,6 +50,7 @@ public class CompanyApiKeyService {
     public CreateResult create(CompanyApiKeyRequest request) {
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
+        ensureApiAccess(company);
 
         String rawKey = generateRawKey();
         String keyHash = hashKey(rawKey);
@@ -64,35 +72,39 @@ public class CompanyApiKeyService {
     }
 
     private void sendApiKeyEmail(CompanyApiKey apiKey, boolean created, String companyName) {
-        User adminUser = userRepository.findById(
-                companyRepository.findById(apiKey.getCompany().getId())
-                        .map(c -> c.getId())
-                        .orElse(0L))
-                .orElse(null);
+        CompanyUser firstAdmin = companyUserRepository.findAdminsByCompanyId(apiKey.getCompany().getId()).stream()
+                .filter(cu -> cu.getUser() != null && cu.getUser().getEmail() != null)
+                .findFirst().orElse(null);
 
-        if (adminUser != null) {
-            String firstName = adminUser.getFirstName() != null ? adminUser.getFirstName() : "there";
-            if (created) {
-                queueService.dispatch(JobType.EMAIL_API_KEY_CREATED, Map.of(
-                        "to", adminUser.getEmail(),
-                        "subject", "New API key created for " + companyName,
-                        "variables", Map.of(
-                                "firstName", firstName,
-                                "keyName", apiKey.getName(),
-                                "companyName", companyName)));
-            } else {
-                queueService.dispatch(JobType.EMAIL_API_KEY_REVOKED, Map.of(
-                        "to", adminUser.getEmail(),
-                        "subject", "API key revoked for " + companyName,
-                        "variables", Map.of(
-                                "firstName", firstName,
-                                "keyName", apiKey.getName(),
-                                "companyName", companyName)));
-            }
+        if (firstAdmin == null || firstAdmin.getUser() == null) {
+            return;
+        }
+
+        User adminUser = firstAdmin.getUser();
+        String firstName = adminUser.getFirstName() != null ? adminUser.getFirstName() : "there";
+        if (created) {
+            queueService.dispatch(JobType.EMAIL_API_KEY_CREATED, Map.of(
+                    "to", adminUser.getEmail(),
+                    "subject", "New API key created for " + companyName,
+                    "variables", Map.of(
+                            "firstName", firstName,
+                            "keyName", apiKey.getName(),
+                            "companyName", companyName)));
+        } else {
+            queueService.dispatch(JobType.EMAIL_API_KEY_REVOKED, Map.of(
+                    "to", adminUser.getEmail(),
+                    "subject", "API key revoked for " + companyName,
+                    "variables", Map.of(
+                            "firstName", firstName,
+                            "keyName", apiKey.getName(),
+                            "companyName", companyName)));
         }
     }
 
     public List<CompanyApiKeyResponse> listByCompany(Long companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+        ensureApiAccess(company);
         return repository.findByCompanyIdAndStatus(companyId, CompanyApiKey.ApiKeyStatus.ACTIVE)
                 .stream()
                 .map(this::toResponse)
@@ -101,6 +113,10 @@ public class CompanyApiKeyService {
 
     @Transactional
     public void revoke(Long id, Long companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+        ensureApiAccess(company);
+
         CompanyApiKey entity = repository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new NoSuchElementException("API key not found"));
 
@@ -109,6 +125,16 @@ public class CompanyApiKeyService {
 
         String companyName = entity.getCompany() != null ? entity.getCompany().getName() : "your company";
         sendApiKeyEmail(entity, false, companyName);
+    }
+
+    private void ensureApiAccess(Company company) {
+        String resolvedPlanCode = company.getActivePlan() != null && company.getActivePlan().getCode() != null
+                ? company.getActivePlan().getCode().name()
+                : company.getPlan();
+        if (!PlanCode.DIAMOND.name().equalsIgnoreCase(resolvedPlanCode)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "API keys are available for Diamond companies only");
+        }
     }
 
     private String generateRawKey() {

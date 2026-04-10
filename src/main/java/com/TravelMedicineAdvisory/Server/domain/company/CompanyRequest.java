@@ -9,6 +9,7 @@ public record CompanyRequest(
     Integer usedCredits,
     Integer employeeCount,
     String plan,
+    @JsonProperty("active_plan_id") Long activePlanId,
     String companyCode,
     Long logoId,
     @JsonProperty("billing_currency") BillingCurrency billingCurrency

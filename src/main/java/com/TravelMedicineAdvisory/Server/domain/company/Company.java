@@ -7,6 +7,7 @@ import org.hibernate.annotations.SQLDelete;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
+import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +15,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -33,6 +35,10 @@ public class Company extends BaseEntity {
     @Column(name = "employee_count")
     private Integer employeeCount;
     private String plan;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "active_plan_id")
+    private PlanEntity activePlan;
     @Column(name = "company_code", unique = true)
     private String companyCode;
 
@@ -111,6 +117,14 @@ public class Company extends BaseEntity {
 
     public void setPlan(String plan) {
         this.plan = plan;
+    }
+
+    public PlanEntity getActivePlan() {
+        return activePlan;
+    }
+
+    public void setActivePlan(PlanEntity activePlan) {
+        this.activePlan = activePlan;
     }
 
     public String getCompanyCode() {
