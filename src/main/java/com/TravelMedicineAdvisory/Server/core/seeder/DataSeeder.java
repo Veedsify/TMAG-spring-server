@@ -274,14 +274,19 @@ public class DataSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedPlans() {
-        upsertPlan(PlanCode.BRONZE, "Bronze", 100, 100, false, false, false, false);
-        upsertPlan(PlanCode.SILVER, "Silver", 200, 500, true, true, true, false);
-        upsertPlan(PlanCode.GOLD, "Gold", 500, 1_000, true, true, true, false);
-        upsertPlan(PlanCode.DIAMOND, "Diamond", 1000, 100_000, true, true, true, true);
+        upsertPlan(PlanCode.BRONZE, "Bronze", 100, 100, false, false, false, false,
+                new java.math.BigDecimal("499"), new java.math.BigDecimal("750000"), new java.math.BigDecimal("459"), new java.math.BigDecimal("399"));
+        upsertPlan(PlanCode.SILVER, "Silver", 200, 500, true, true, true, false,
+                new java.math.BigDecimal("999"), new java.math.BigDecimal("1500000"), new java.math.BigDecimal("919"), new java.math.BigDecimal("799"));
+        upsertPlan(PlanCode.GOLD, "Gold", 500, 1_000, true, true, true, false,
+                new java.math.BigDecimal("2499"), new java.math.BigDecimal("3750000"), new java.math.BigDecimal("2299"), new java.math.BigDecimal("1999"));
+        upsertPlan(PlanCode.DIAMOND, "Diamond", 1000, 100_000, true, true, true, true,
+                new java.math.BigDecimal("4999"), new java.math.BigDecimal("7500000"), new java.math.BigDecimal("4599"), new java.math.BigDecimal("3999"));
     }
 
     private void upsertPlan(PlanCode code, String displayName, int signupCredits, int maxEmployees,
-            boolean customSupport, boolean apiAccess, boolean multiAdmin, boolean highEmployeeLimit) {
+            boolean customSupport, boolean apiAccess, boolean multiAdmin, boolean highEmployeeLimit,
+            java.math.BigDecimal priceUsd, java.math.BigDecimal priceNgn, java.math.BigDecimal priceEur, java.math.BigDecimal priceGbp) {
         PlanEntity plan = planRepository.findByCode(code).orElseGet(PlanEntity::new);
         plan.setCode(code);
         plan.setDisplayName(displayName);
@@ -291,6 +296,10 @@ public class DataSeeder implements CommandLineRunner {
         plan.setApiAccessEnabled(apiAccess);
         plan.setMultipleAdminAccountsEnabled(multiAdmin);
         plan.setHighEmployeeLimitEnabled(highEmployeeLimit);
+        plan.setPriceUsd(priceUsd);
+        plan.setPriceNgn(priceNgn);
+        plan.setPriceEur(priceEur);
+        plan.setPriceGbp(priceGbp);
         planRepository.save(plan);
     }
 

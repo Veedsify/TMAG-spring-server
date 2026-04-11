@@ -103,6 +103,18 @@ public class PlanService {
         if (request.highEmployeeLimitEnabled() != null) {
             entity.setHighEmployeeLimitEnabled(request.highEmployeeLimitEnabled());
         }
+        if (request.priceUsd() != null) {
+            entity.setPriceUsd(request.priceUsd());
+        }
+        if (request.priceNgn() != null) {
+            entity.setPriceNgn(request.priceNgn());
+        }
+        if (request.priceEur() != null) {
+            entity.setPriceEur(request.priceEur());
+        }
+        if (request.priceGbp() != null) {
+            entity.setPriceGbp(request.priceGbp());
+        }
     }
 
     public PlanResponse toResponse(PlanEntity entity) {
@@ -116,6 +128,10 @@ public class PlanService {
                 entity.getApiAccessEnabled(),
                 entity.getMultipleAdminAccountsEnabled(),
                 entity.getHighEmployeeLimitEnabled(),
+                entity.getPriceUsd(),
+                entity.getPriceNgn(),
+                entity.getPriceEur(),
+                entity.getPriceGbp(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }

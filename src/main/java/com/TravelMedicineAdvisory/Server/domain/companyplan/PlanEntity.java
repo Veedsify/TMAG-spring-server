@@ -4,6 +4,8 @@ import org.hibernate.annotations.SQLDelete;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -39,6 +41,18 @@ public class PlanEntity extends BaseEntity {
 
     @Column(name = "high_employee_limit_enabled", nullable = false)
     private Boolean highEmployeeLimitEnabled = Boolean.FALSE;
+
+    @Column(name = "price_usd", nullable = false)
+    private BigDecimal priceUsd;
+
+    @Column(name = "price_ngn", nullable = false)
+    private BigDecimal priceNgn;
+
+    @Column(name = "price_eur")
+    private BigDecimal priceEur;
+
+    @Column(name = "price_gbp")
+    private BigDecimal priceGbp;
 
     public PlanCode getCode() {
         return code;
@@ -102,5 +116,37 @@ public class PlanEntity extends BaseEntity {
 
     public void setHighEmployeeLimitEnabled(Boolean highEmployeeLimitEnabled) {
         this.highEmployeeLimitEnabled = highEmployeeLimitEnabled;
+    }
+
+    public BigDecimal getPriceUsd() {
+        return priceUsd;
+    }
+
+    public void setPriceUsd(BigDecimal priceUsd) {
+        this.priceUsd = priceUsd;
+    }
+
+    public BigDecimal getPriceNgn() {
+        return priceNgn;
+    }
+
+    public void setPriceNgn(BigDecimal priceNgn) {
+        this.priceNgn = priceNgn;
+    }
+
+    public BigDecimal getPriceEur() {
+        return priceEur;
+    }
+
+    public void setPriceEur(BigDecimal priceEur) {
+        this.priceEur = priceEur;
+    }
+
+    public BigDecimal getPriceGbp() {
+        return priceGbp;
+    }
+
+    public void setPriceGbp(BigDecimal priceGbp) {
+        this.priceGbp = priceGbp;
     }
 }

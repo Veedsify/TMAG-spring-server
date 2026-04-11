@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.companyplan;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record PlanResponse(
@@ -12,6 +13,10 @@ public record PlanResponse(
         Boolean apiAccessEnabled,
         Boolean multipleAdminAccountsEnabled,
         Boolean highEmployeeLimitEnabled,
+        BigDecimal priceUsd,
+        BigDecimal priceNgn,
+        BigDecimal priceEur,
+        BigDecimal priceGbp,
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {
 }
