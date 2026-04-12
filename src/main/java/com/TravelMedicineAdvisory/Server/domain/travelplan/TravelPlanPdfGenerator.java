@@ -190,6 +190,12 @@ public class TravelPlanPdfGenerator {
         sb.append(".lvl-m{color:").append(GOLD).append(";font-weight:700;background:").append(GOLD_SOFT).append("}");
         sb.append(".lvl-l{color:").append(GREEN).append(";font-weight:700;background:").append(GREEN_SOFT).append("}");
 
+        // Urgency badge (for specialist referrals)
+        sb.append(".urgency{display:inline-block;padding:2px 7px;border-radius:2px;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}");
+        sb.append(".urgency-urgent{color:").append(RED).append(";background:").append(RED_SOFT).append(";border:1px solid ").append(RED_BORDER).append("}");
+        sb.append(".urgency-before{color:").append(GOLD).append(";background:").append(GOLD_SOFT).append(";border:1px solid ").append(GOLD_BORDER).append("}");
+        sb.append(".urgency-routine{color:").append(GREEN).append(";background:").append(GREEN_SOFT).append(";border:1px solid ").append(GREEN_BORDER).append("}");
+
         // Alert box
         sb.append(".alert{background:").append(RED_SOFT)
                 .append(";border:1px solid ").append(RED_BORDER)
@@ -363,6 +369,40 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
+        // Flight & Journey Health
+        JsonNode flight = root.path("flightHealth");
+        if (flight.isObject() && flightNonEmpty(flight)) {
+            appendTableStart(sb, "Flight &amp; journey health", 1);
+            if (flight.path("vteRiskLevel").isTextual() && StringUtils.hasText(flight.get("vteRiskLevel").asText())) {
+                String vteLvl = flight.get("vteRiskLevel").asText();
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append("<strong>VTE Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(vteLvl)).append("\">")
+                        .append(escapeHtml(vteLvl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            JsonNode prevention = flight.path("preventionMeasures");
+            if (prevention.isArray() && prevention.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Prevention measures</td></tr>");
+                for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
+                    JsonNode line = pit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            if (flight.path("medifClearanceRequired").asBoolean(false)) {
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append("<div class=\"alert\"><div class=\"alert-t\">Airline MEDIF clearance required</div>")
+                        .append("<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
+                        .append("</td></tr>");
+            }
+            if (flight.path("medicationTimingGuidance").isTextual() && StringUtils.hasText(flight.get("medicationTimingGuidance").asText())) {
+                appendKVRow(sb, "Medication timing guidance", flight.get("medicationTimingGuidance").asText(), 0, 1);
+            }
+            sb.append("</table>");
+        }
+
         JsonNode vacs = root.path("vaccinations");
         if (vacs.isArray() && vacs.size() > 0) {
             appendTableStart(sb, "Vaccinations", 3);
@@ -390,6 +430,42 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
+        // Malaria Prevention
+        JsonNode malaria = root.path("malariaPrevention");
+        if (malaria.isObject() && malariaNonEmpty(malaria)) {
+            appendTableStart(sb, "Malaria prevention", 1);
+            if (malaria.path("riskLevel").isTextual() && StringUtils.hasText(malaria.get("riskLevel").asText())) {
+                String mrl = malaria.get("riskLevel").asText();
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append("<strong>Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(mrl)).append("\">")
+                        .append(escapeHtml(mrl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            if (malaria.path("recommendedAgent").isTextual() && StringUtils.hasText(malaria.get("recommendedAgent").asText())) {
+                StringBuilder agentInfo = new StringBuilder();
+                agentInfo.append(malaria.get("recommendedAgent").asText());
+                if (malaria.path("rationale").isTextual() && StringUtils.hasText(malaria.get("rationale").asText())) {
+                    agentInfo.append("\n\n").append(malaria.get("rationale").asText());
+                }
+                appendKVRow(sb, "Recommended chemoprophylaxis", agentInfo.toString(), 0, 1);
+            }
+            JsonNode mosquito = malaria.path("mosquitoProtection");
+            if (mosquito.isArray() && mosquito.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Mosquito protection measures</td></tr>");
+                for (Iterator<JsonNode> mit = mosquito.elements(); mit.hasNext();) {
+                    JsonNode line = mit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            if (malaria.path("contraindications").isTextual() && StringUtils.hasText(malaria.get("contraindications").asText())) {
+                appendKVRow(sb, "Contraindications / alternatives", malaria.get("contraindications").asText(), 0, 1);
+            }
+            sb.append("</table>");
+        }
+
         JsonNode recs = root.path("recommendations");
         if (recs.isArray() && recs.size() > 0) {
             appendTableStart(sb, "Medical advice &amp; recommendations", 2);
@@ -402,6 +478,144 @@ public class TravelPlanPdfGenerator {
                         .append("<td class=\"c\" style=\"width:32%\"><strong>").append(escapeHtml(r.path("title").asText("—"))).append("</strong></td>")
                         .append("<td class=\"c\">").append(escapeHtml(r.path("details").asText(""))).append("</td>")
                         .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        // Medical Conditions
+        JsonNode conditions = root.path("medicalConditions");
+        if (conditions.isArray() && conditions.size() > 0) {
+            appendTableStart(sb, "Medical conditions &amp; precautions", 2);
+            sb.append("<tr><th class=\"h\">Condition</th><th class=\"h\">Precautions</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = conditions.elements(); it.hasNext(); rowIdx++) {
+                JsonNode c = it.next();
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\" style=\"width:32%\"><strong>").append(escapeHtml(c.path("condition").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\">").append(escapeHtml(c.path("precautions").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        // Medication Logistics
+        JsonNode medLog = root.path("medicationLogistics");
+        if (medLog.isObject() && medicationLogisticsNonEmpty(medLog)) {
+            appendTableStart(sb, "Medication logistics", 2);
+            int rows = countMedicationLogisticsRows(medLog);
+            int i = 0;
+            i += appendKVRow(sb, "Packaging", textOrNull(medLog, "packaging"), i, rows);
+            i += appendKVRow(sb, "Supply rule", textOrNull(medLog, "supplyRule"), i, rows);
+            if (medLog.path("destinationLegalityCheck").asBoolean(false)) {
+                i += appendKVRow(sb, "Destination legality verified", "Yes — confirm all medications are legal at destination.", i, rows);
+            }
+            if (medLog.path("coldChainRequired").asBoolean(false)) {
+                i += appendKVRow(sb, "Cold chain required", "Yes — use insulated pouches (e.g. Frio) and verify refrigeration availability.", i, rows);
+            }
+            sb.append("</table>");
+        }
+
+        // Clinical Flags
+        JsonNode clinicalFlags = root.path("clinicalFlags");
+        if (clinicalFlags.isArray() && clinicalFlags.size() > 0) {
+            appendTableStart(sb, "Clinical decision flags", 1);
+            for (Iterator<JsonNode> it = clinicalFlags.elements(); it.hasNext();) {
+                JsonNode flag = it.next();
+                if (flag.isTextual()) {
+                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(flag.asText())).append("</td></tr>");
+                }
+            }
+            sb.append("</table>");
+        }
+
+        // Contraindications
+        JsonNode contraindications = root.path("contraindications");
+        if (contraindications.isArray() && contraindications.size() > 0) {
+            appendTableStart(sb, "Contraindications (medications &amp; vaccines)", 1);
+            for (Iterator<JsonNode> it = contraindications.elements(); it.hasNext();) {
+                JsonNode item = it.next();
+                if (item.isTextual()) {
+                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(item.asText())).append("</td></tr>");
+                }
+            }
+            sb.append("</table>");
+        }
+
+        // Specialist Referrals
+        JsonNode referrals = root.path("specialistReferrals");
+        if (referrals.isArray() && referrals.size() > 0) {
+            appendTableStart(sb, "Specialist referrals", 3);
+            sb.append("<tr><th class=\"h\">Condition</th><th class=\"h\">Specialist</th><th class=\"h\">Urgency</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = referrals.elements(); it.hasNext(); rowIdx++) {
+                JsonNode ref = it.next();
+                String urgency = ref.path("urgency").asText("—");
+                String urgencyBadge = urgencyBadgeClass(urgency);
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("condition").asText("—"))).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("specialist").asText("—"))).append("</td>")
+                        .append("<td class=\"c\" style=\"text-align:center\"><span class=\"urgency ").append(urgencyBadge).append("\">")
+                        .append(escapeHtml(urgency)).append("</span></td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        // Sexual Health
+        JsonNode sexualHealth = root.path("sexualHealth");
+        if (sexualHealth.isObject() && sexualHealthNonEmpty(sexualHealth)) {
+            appendTableStart(sb, "Sexual health &amp; risk behaviours", 1);
+            if (sexualHealth.path("riskLevel").isTextual() && StringUtils.hasText(sexualHealth.get("riskLevel").asText())) {
+                String shl = sexualHealth.get("riskLevel").asText();
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append("<strong>Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(shl)).append("\">")
+                        .append(escapeHtml(shl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            JsonNode prevention = sexualHealth.path("preventionAdvice");
+            if (prevention.isArray() && prevention.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Prevention advice</td></tr>");
+                for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
+                    JsonNode line = pit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            if (sexualHealth.path("prepPepDiscussion").asBoolean(false)) {
+                appendKVRow(sb, "PrEP/PEP", "PrEP/PEP availability discussed for high-risk destination.", 0, 1);
+            }
+            sb.append("</table>");
+        }
+
+        // Pregnancy Guidance
+        JsonNode pregnancy = root.path("pregnancyGuidance");
+        if (pregnancy.isObject() && pregnancyNonEmpty(pregnancy)) {
+            appendTableStart(sb, "Pregnancy &amp; reproductive health", 1);
+            if (pregnancy.path("trimesterSpecificAdvice").isTextual() && StringUtils.hasText(pregnancy.get("trimesterSpecificAdvice").asText())) {
+                appendKVRow(sb, "Trimester guidance", pregnancy.get("trimesterSpecificAdvice").asText(), 0, 1);
+            }
+            if (pregnancy.path("antimalarialSafety").isTextual() && StringUtils.hasText(pregnancy.get("antimalarialSafety").asText())) {
+                appendKVRow(sb, "Antimalarial safety", pregnancy.get("antimalarialSafety").asText(), 0, 1);
+            }
+            JsonNode liveVaxCx = pregnancy.path("liveVaccineContraindications");
+            if (liveVaxCx.isArray() && liveVaxCx.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Live vaccine contraindications</td></tr>");
+                for (Iterator<JsonNode> lit = liveVaxCx.elements(); lit.hasNext();) {
+                    JsonNode line = lit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            if (pregnancy.path("airlineRestrictions").isTextual() && StringUtils.hasText(pregnancy.get("airlineRestrictions").asText())) {
+                appendKVRow(sb, "Airline restrictions", pregnancy.get("airlineRestrictions").asText(), 0, 1);
+            }
+            if (pregnancy.path("contraceptionCounselling").isTextual() && StringUtils.hasText(pregnancy.get("contraceptionCounselling").asText())) {
+                appendKVRow(sb, "Contraception counselling", pregnancy.get("contraceptionCounselling").asText(), 0, 1);
             }
             sb.append("</table>");
         }
@@ -703,6 +917,61 @@ public class TravelPlanPdfGenerator {
                 || (itinerary.path("summary").isTextual() && StringUtils.hasText(itinerary.get("summary").asText()))
                 || (itinerary.path("routeAdvice").isArray() && itinerary.get("routeAdvice").size() > 0)
                 || (itinerary.path("returnGuidance").isArray() && itinerary.get("returnGuidance").size() > 0);
+    }
+
+    private static boolean flightNonEmpty(JsonNode flight) {
+        return (flight.path("vteRiskLevel").isTextual() && StringUtils.hasText(flight.get("vteRiskLevel").asText()))
+                || (flight.path("preventionMeasures").isArray() && flight.get("preventionMeasures").size() > 0)
+                || flight.path("medifClearanceRequired").asBoolean(false)
+                || (flight.path("medicationTimingGuidance").isTextual() && StringUtils.hasText(flight.get("medicationTimingGuidance").asText()));
+    }
+
+    private static boolean malariaNonEmpty(JsonNode malaria) {
+        return (malaria.path("riskLevel").isTextual() && StringUtils.hasText(malaria.get("riskLevel").asText()))
+                || (malaria.path("recommendedAgent").isTextual() && StringUtils.hasText(malaria.get("recommendedAgent").asText()))
+                || (malaria.path("mosquitoProtection").isArray() && malaria.get("mosquitoProtection").size() > 0)
+                || (malaria.path("contraindications").isTextual() && StringUtils.hasText(malaria.get("contraindications").asText()));
+    }
+
+    private static boolean medicationLogisticsNonEmpty(JsonNode medLog) {
+        return (medLog.path("packaging").isTextual() && StringUtils.hasText(medLog.get("packaging").asText()))
+                || (medLog.path("supplyRule").isTextual() && StringUtils.hasText(medLog.get("supplyRule").asText()))
+                || medLog.path("destinationLegalityCheck").asBoolean(false)
+                || medLog.path("coldChainRequired").asBoolean(false);
+    }
+
+    private static int countMedicationLogisticsRows(JsonNode medLog) {
+        int n = 0;
+        if (StringUtils.hasText(textOrNull(medLog, "packaging"))) n++;
+        if (StringUtils.hasText(textOrNull(medLog, "supplyRule"))) n++;
+        if (medLog.path("destinationLegalityCheck").asBoolean(false)) n++;
+        if (medLog.path("coldChainRequired").asBoolean(false)) n++;
+        return n;
+    }
+
+    private static boolean sexualHealthNonEmpty(JsonNode sh) {
+        return (sh.path("riskLevel").isTextual() && StringUtils.hasText(sh.get("riskLevel").asText()))
+                || (sh.path("preventionAdvice").isArray() && sh.get("preventionAdvice").size() > 0)
+                || sh.path("prepPepDiscussion").asBoolean(false);
+    }
+
+    private static boolean pregnancyNonEmpty(JsonNode pg) {
+        return (pg.path("trimesterSpecificAdvice").isTextual() && StringUtils.hasText(pg.get("trimesterSpecificAdvice").asText()))
+                || (pg.path("antimalarialSafety").isTextual() && StringUtils.hasText(pg.get("antimalarialSafety").asText()))
+                || (pg.path("liveVaccineContraindications").isArray() && pg.get("liveVaccineContraindications").size() > 0)
+                || (pg.path("airlineRestrictions").isTextual() && StringUtils.hasText(pg.get("airlineRestrictions").asText()))
+                || (pg.path("contraceptionCounselling").isTextual() && StringUtils.hasText(pg.get("contraceptionCounselling").asText()));
+    }
+
+    private static String urgencyBadgeClass(String urgency) {
+        String u = urgency != null ? urgency.toUpperCase() : "";
+        if (u.contains("URGENT")) {
+            return "urgency-urgent";
+        }
+        if (u.contains("BEFORE")) {
+            return "urgency-before";
+        }
+        return "urgency-routine";
     }
 
     private static String riskLabel(Integer score) {

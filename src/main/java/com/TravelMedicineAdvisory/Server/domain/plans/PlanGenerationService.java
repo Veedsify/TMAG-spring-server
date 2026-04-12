@@ -33,12 +33,17 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
- * AI generation pipeline for travel health plans created by end users (dashboard / HR flows).
+ * AI generation pipeline for travel health plans created by end users
+ * (dashboard / HR flows).
  * For a user's first active travel plan, traveller health context comes from
- * {@link UserOnboarding#getResponsesJson()} (onboarding questionnaire). For later plans, context comes from
- * {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire} when present,
- * with onboarding as fallback. Trip destination and itinerary always come from the {@link TravelPlan} request
- * (onboarding trip fields are stripped). Admins curate {@link PlanGenerationContext} reference materials for prompts.
+ * {@link UserOnboarding#getResponsesJson()} (onboarding questionnaire). For
+ * later plans, context comes from
+ * {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire}
+ * when present,
+ * with onboarding as fallback. Trip destination and itinerary always come from
+ * the {@link TravelPlan} request
+ * (onboarding trip fields are stripped). Admins curate
+ * {@link PlanGenerationContext} reference materials for prompts.
  */
 @Service
 @Transactional
@@ -55,6 +60,8 @@ public class PlanGenerationService {
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
     private final QueueService queueService;
+    private final ClinicalContextExtractor clinicalContextExtractor;
+    private final SystemPromptBuilder systemPromptBuilder;
 
     public PlanGenerationService(
             TravelPlanRepository travelPlanRepository,
@@ -65,8 +72,9 @@ public class PlanGenerationService {
             AiGenerationClient aiGenerationClient,
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
-            QueueService queueService
-    ) {
+            QueueService queueService,
+            ClinicalContextExtractor clinicalContextExtractor,
+            SystemPromptBuilder systemPromptBuilder) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
@@ -76,14 +84,16 @@ public class PlanGenerationService {
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
         this.queueService = queueService;
+        this.clinicalContextExtractor = clinicalContextExtractor;
+        this.systemPromptBuilder = systemPromptBuilder;
     }
 
     public void enqueueGeneration(Long travelPlanId, Long userId) {
-        log.info("Travel plan generation requested: travelPlanId={} userId={} (queued for async processing)", travelPlanId, userId);
+        log.info("Travel plan generation requested: travelPlanId={} userId={} (queued for async processing)",
+                travelPlanId, userId);
         queueService.dispatch(JobType.GENERATE_TRAVEL_PLAN, Map.of(
                 "travelPlanId", travelPlanId,
-                "userId", userId
-        ));
+                "userId", userId));
     }
 
     public void processQueuedGeneration(Long travelPlanId) {
@@ -121,16 +131,33 @@ public class PlanGenerationService {
             UserOnboarding onboarding = resolveOnboarding(travelPlan);
             boolean firstTravelPlanForUser = isFirstActiveTravelPlanForUser(travelPlan);
             String travelPlanQuestionnaire = resolveTravelPlanQuestionnaire(travelPlan, firstTravelPlanForUser);
-            String systemPrompt = buildSystemPrompt();
+
+            // Extract clinical context from questionnaire
+            String questionnaireJson = resolveQuestionnaireJson(onboarding, travelPlanQuestionnaire);
+            ClinicalContext clinicalContext = clinicalContextExtractor.extract(travelPlan, questionnaireJson);
+
+            // Check for hard stop - if triggered, skip AI and return structured hard stop
+            // response
+            if (clinicalContext.hardStop().triggered()) {
+                log.warn("Hard stop triggered for travelPlanId={}: {}", travelPlanId,
+                        clinicalContext.hardStop().condition());
+                handleHardStop(travelPlan, generatedPlan, aiLog, clinicalContext, startedAt);
+                return;
+            }
+
+            // Build enriched system prompt with clinical intelligence
+            String systemPrompt = systemPromptBuilder.build(clinicalContext);
             String userPrompt = buildUserPrompt(travelPlan, contexts, onboarding, travelPlanQuestionnaire,
                     firstTravelPlanForUser);
 
             log.info(
-                    "Calling AI for travelPlanId={} (admin context files={}, onboarding={}, firstPlanForUser={})",
+                    "Calling AI for travelPlanId={} (admin context files={}, onboarding={}, firstPlanForUser={}, triggeredTrees={}, overallRisk={})",
                     travelPlanId,
                     contexts.size(),
                     onboarding != null,
-                    firstTravelPlanForUser);
+                    firstTravelPlanForUser,
+                    clinicalContext.triggeredTrees().size(),
+                    clinicalContext.overallRiskLevel());
 
             AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt);
             JsonNode structuredOutput = parseJson(result.content());
@@ -224,9 +251,66 @@ public class PlanGenerationService {
                 "variables", Map.of(
                         "firstName", firstName,
                         "destination", travelPlan.getDestination(),
-                        "companyName", companyName
-                )
-        ));
+                        "companyName", companyName)));
+    }
+
+    private String resolveQuestionnaireJson(UserOnboarding onboarding, String travelPlanQuestionnaire) {
+        if (StringUtils.hasText(travelPlanQuestionnaire)) {
+            return travelPlanQuestionnaire;
+        }
+        if (onboarding != null && StringUtils.hasText(onboarding.getResponsesJson())) {
+            return OnboardingResponsesSanitizer.stripItineraryFields(onboarding.getResponsesJson(), objectMapper);
+        }
+        return null;
+    }
+
+    private void handleHardStop(TravelPlan travelPlan, GeneratedPlan generatedPlan, AiRequestLog aiLog,
+            ClinicalContext clinicalContext, Instant startedAt) {
+        long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
+
+        // Build hard stop JSON response
+        String hardStopJson = buildHardStopJson(clinicalContext);
+
+        generatedPlan.setPlanJson(hardStopJson);
+        generatedPlan.setStatus("hard_stop");
+        generatedPlan.setProcessingTimeMs(elapsedMs);
+        generatedPlan.setErrorMessage(null);
+        generatedPlanRepository.save(generatedPlan);
+
+        travelPlan.setStatus("HARD_STOP");
+        travelPlan.setMedicalConsiderations("HARD STOP: " + clinicalContext.hardStop().condition());
+        travelPlan.setHealthAlerts(clinicalContext.hardStop().reason());
+        travelPlan.setSafetyAdvisories(
+                "Specialist clearance required: " + clinicalContext.hardStop().recommendedSpecialist());
+        travelPlanRepository.save(travelPlan);
+
+        aiLog.setStatus("hard_stop");
+        aiLog.setOutputSummary("Hard stop triggered: " + clinicalContext.hardStop().condition());
+        aiLog.setProcessingTimeMs(elapsedMs);
+        aiRequestLogRepository.save(aiLog);
+
+        log.info("Travel plan hard stop completed: travelPlanId={} condition=\"{}\" durationMs={}",
+                travelPlan.getId(), clinicalContext.hardStop().condition(), elapsedMs);
+    }
+
+    private String buildHardStopJson(ClinicalContext clinicalContext) {
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                    "reportTitle", "Travel Health Advisory - Specialist Clearance Required",
+                    "hardStop", Map.of(
+                            "conditionTriggered", clinicalContext.hardStop().condition(),
+                            "reason", clinicalContext.hardStop().reason(),
+                            "recommendedSpecialist", clinicalContext.hardStop().recommendedSpecialist()),
+                    "overallRiskLevel", "VERY_HIGH",
+                    "medicalDisclaimer", ClinicalRules.MANDATORY_DISCLAIMER,
+                    "nextSteps", List.of(
+                            "Do not proceed with travel at this time without specialist clearance",
+                            "Consult with: " + clinicalContext.hardStop().recommendedSpecialist(),
+                            "Obtain written clearance before rebooking travel",
+                            "Contact TMAG support if you have questions about this advisory")));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Failed to build hard stop JSON", ex);
+        }
     }
 
     private String buildSystemPrompt() {
@@ -350,8 +434,10 @@ public class PlanGenerationService {
     }
 
     /**
-     * When this is the user's first active plan, onboarding JSON is the authoritative health questionnaire;
-     * create-plan responses are still stored but not fed to the model for that generation.
+     * When this is the user's first active plan, onboarding JSON is the
+     * authoritative health questionnaire;
+     * create-plan responses are still stored but not fed to the model for that
+     * generation.
      */
     private String resolveTravelPlanQuestionnaire(TravelPlan travelPlan, boolean firstTravelPlanForUser) {
         if (travelPlan == null || travelPlan.getId() == null) {
@@ -370,7 +456,8 @@ public class PlanGenerationService {
     }
 
     /**
-     * True when this plan is the only non-deleted {@link TravelPlan} row for its user (the typical first plan case).
+     * True when this plan is the only non-deleted {@link TravelPlan} row for its
+     * user (the typical first plan case).
      */
     private boolean isFirstActiveTravelPlanForUser(TravelPlan travelPlan) {
         User user = travelPlan.getUser();
@@ -385,8 +472,7 @@ public class PlanGenerationService {
             List<PlanGenerationContext> contexts,
             UserOnboarding onboarding,
             String travelPlanQuestionnaire,
-            boolean firstTravelPlanForUser
-    ) {
+            boolean firstTravelPlanForUser) {
         StringBuilder builder = new StringBuilder();
         builder.append("Generate a travel health report for this trip.\n\n");
 
@@ -394,20 +480,24 @@ public class PlanGenerationService {
                 .append("trip duration, purpose, and dates in the report JSON)\n");
         builder.append("Destination: ").append(nullSafe(travelPlan.getDestination())).append("\n");
         builder.append("Country: ").append(nullSafe(travelPlan.getCountry())).append("\n");
-        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0).append("\n");
+        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)
+                .append("\n");
         builder.append("Purpose: ").append(nullSafe(travelPlan.getPurpose())).append("\n");
         builder.append("Trip Type: ").append(resolveTripType(travelPlan.getTripType())).append("\n");
         appendReturnScheduleLines(travelPlan, builder);
         builder.append("Trip Stops JSON: ").append(extractTripStopsJson(travelPlan)).append("\n");
-        builder.append("Risk Score (app): ").append(travelPlan.getRiskScore() != null ? travelPlan.getRiskScore() : 0).append("\n");
+        builder.append("Risk Score (app): ").append(travelPlan.getRiskScore() != null ? travelPlan.getRiskScore() : 0)
+                .append("\n");
         builder.append("Traveller display name: ").append(resolveTravellerName(travelPlan.getUser())).append("\n");
         if (StringUtils.hasText(travelPlan.getMedicalConsiderations())) {
-            builder.append("User notes for this trip: ").append(travelPlan.getMedicalConsiderations().trim()).append("\n");
+            builder.append("User notes for this trip: ").append(travelPlan.getMedicalConsiderations().trim())
+                    .append("\n");
         }
         builder.append("\n");
 
         builder.append("### Traveller health context (personalisation only)\n");
-        builder.append("Use for vaccines, conditions, allergies, prior travel immunity, activities preferences, etc.\n");
+        builder.append(
+                "Use for vaccines, conditions, allergies, prior travel immunity, activities preferences, etc.\n");
         builder.append("Do NOT use this block for this trip's destination, cities, or travel dates; the Current trip ")
                 .append("section above always wins.\n");
 
@@ -420,9 +510,11 @@ public class PlanGenerationService {
             builder.append("(No questionnaire context linked to this user.)\n\n");
         } else {
             if (firstTravelPlanForUser) {
-                builder.append("Primary questionnaire source: user_onboardings (onboarding questionnaire; first travel plan)\n");
+                builder.append(
+                        "Primary questionnaire source: user_onboardings (onboarding questionnaire; first travel plan)\n");
             } else {
-                builder.append("Primary questionnaire source: user_onboardings (fallback; no create-plan questionnaire)\n");
+                builder.append(
+                        "Primary questionnaire source: user_onboardings (fallback; no create-plan questionnaire)\n");
             }
             if (StringUtils.hasText(onboarding.getNationality())) {
                 builder.append("Nationality: ").append(onboarding.getNationality().trim()).append("\n");
@@ -430,7 +522,8 @@ public class PlanGenerationService {
             if (StringUtils.hasText(onboarding.getUserType())) {
                 builder.append("Onboarding user type: ").append(onboarding.getUserType().trim()).append("\n");
             }
-            String sanitized = OnboardingResponsesSanitizer.stripItineraryFields(onboarding.getResponsesJson(), objectMapper);
+            String sanitized = OnboardingResponsesSanitizer.stripItineraryFields(onboarding.getResponsesJson(),
+                    objectMapper);
             boolean hasResponses = StringUtils.hasText(sanitized) && !"{}".equals(sanitized);
             if (hasResponses) {
                 builder.append("Questionnaire responses JSON (trip_itinerary removed server-side):\n")
@@ -546,7 +639,8 @@ public class PlanGenerationService {
     private String compactSummary(JsonNode jsonNode) {
         String destination = jsonNode.path("destination").asText("");
         int recommendationCount = jsonNode.path("recommendations").isArray()
-                ? jsonNode.path("recommendations").size() : 0;
+                ? jsonNode.path("recommendations").size()
+                : 0;
         return "Generated structured plan for " + destination + " with " + recommendationCount + " recommendations";
     }
 

@@ -39,7 +39,8 @@ public class TravelPlanController {
     }
 
     @GetMapping
-    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable, @AuthenticationPrincipal AppUserDetails user) {
+    public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable,
+            @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -48,15 +49,14 @@ public class TravelPlanController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
+                page.getTotalPages());
         PaginatedResponse<TravelPlanResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
-       
+
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -72,7 +72,8 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse> getById(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
+    public ResponseEntity<SuccessResponse> getById(@PathVariable Long id,
+            @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
