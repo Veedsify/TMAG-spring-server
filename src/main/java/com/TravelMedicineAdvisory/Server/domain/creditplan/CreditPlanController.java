@@ -1,23 +1,21 @@
-package com.TravelMedicineAdvisory.Server.domain.companyplan;
+package com.TravelMedicineAdvisory.Server.domain.creditplan;
 
+import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
-
-import io.swagger.v3.oas.annotations.tags.Tag;
-
-@Tag(name = "Public · Plans")
+@Tag(name = "Public · User Credit Plans")
 @RestController
-@RequestMapping("/api/v1/public/plans")
-public class PlanController {
+@RequestMapping("/api/v1/user-credit-plans")
+public class CreditPlanController {
 
-    private final PlanService service;
+    private final CreditPlanService service;
 
-    public PlanController(PlanService service) {
+    public CreditPlanController(CreditPlanService service) {
         this.service = service;
     }
 

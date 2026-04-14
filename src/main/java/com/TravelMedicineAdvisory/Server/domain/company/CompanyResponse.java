@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.company;
 
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import java.time.LocalDateTime;
 
 public record CompanyResponse(
@@ -10,10 +11,10 @@ public record CompanyResponse(
     Integer usedCredits,
     Integer employeeCount,
     String plan,
-    Long activePlanId,
     String companyCode,
     Long logoId,
     BillingCurrency billingCurrency,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    CreditPlanResponse creditPlan
 ) {}

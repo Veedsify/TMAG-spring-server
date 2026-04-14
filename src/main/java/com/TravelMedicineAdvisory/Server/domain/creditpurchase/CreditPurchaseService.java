@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.creditpurchase;
 
+import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
@@ -8,11 +9,13 @@ import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricing;
 import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +42,8 @@ public class CreditPurchaseService {
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
     private final QueueService queueService;
+    private final ExchangeRateService exchangeRateService;
+    private final CreditPlanRepository userCreditPlanRepository;
 
     @Value("${app.payment.flutterwave.callback-url:http://localhost:3000/payment/callback}")
     private String callbackUrl;
@@ -50,7 +55,9 @@ public class CreditPurchaseService {
             CreditRepository creditRepository,
             UserRepository userRepository,
             FlutterwaveService flutterwaveService,
-            QueueService queueService) {
+            QueueService queueService,
+            ExchangeRateService exchangeRateService,
+            CreditPlanRepository userCreditPlanRepository) {
         this.purchaseRepository = purchaseRepository;
         this.pricingRepository = pricingRepository;
         this.pricingService = pricingService;
@@ -58,6 +65,8 @@ public class CreditPurchaseService {
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
         this.queueService = queueService;
+        this.exchangeRateService = exchangeRateService;
+        this.userCreditPlanRepository = userCreditPlanRepository;
     }
 
     public record PurchaseInitiationResult(
@@ -81,32 +90,41 @@ public class CreditPurchaseService {
             throw new IllegalStateException("Company users cannot purchase credits directly. Please contact your HR department.");
         }
 
-        CreditPricing pricing = pricingService.getPricingEntity(request.currency());
-
-        if (request.credits() < pricing.getMinCredits() || request.credits() > pricing.getMaxCredits()) {
-            throw new IllegalArgumentException("Credits must be between " + pricing.getMinCredits() + " and " + pricing.getMaxCredits());
+        // Resolve the user's credit plan; fall back to STANDARD if none assigned
+        CreditPlan creditPlan = user.getCreditPlan();
+        if (creditPlan == null) {
+            creditPlan = userCreditPlanRepository.findByIsDefaultTrue()
+                    .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD).orElse(null));
+        }
+        if (creditPlan == null) {
+            throw new IllegalStateException("No pricing plan assigned to user");
         }
 
-        var priceCalculation = pricingService.calculatePriceWithDiscount(request.currency(), request.credits());
+        BillingCurrency currency = user.getBillingCurrency() != null ? user.getBillingCurrency() : BillingCurrency.USD;
+        String currencyCode = currency.name();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
+        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(creditPlan.getBasePriceUsd(), currencyCode);
+        BigDecimal totalAmount = pricePerCredit.multiply(BigDecimal.valueOf(request.credits()));
+
         String txRef = flutterwaveService.generateTransactionReference();
 
         CreditPurchase purchase = new CreditPurchase();
         purchase.setTxRef(txRef);
         purchase.setUser(user);
         purchase.setCreditsPurchased(request.credits());
-        purchase.setCurrency(request.currency());
-        purchase.setCurrencySymbol(pricing.getCurrencySymbol());
-        purchase.setPricePerCredit(pricing.getPricePerCredit());
-        purchase.setAmount(priceCalculation.totalPrice());
+        purchase.setCurrency(currency);
+        purchase.setCurrencySymbol(currencySymbol);
+        purchase.setPricePerCredit(pricePerCredit);
+        purchase.setAmount(totalAmount);
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
         logger.info("Initiating Flutterwave payment for txRef={}, credits={}, amount={}", 
-            txRef, request.credits(), priceCalculation.totalPrice());
+            txRef, request.credits(), totalAmount);
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
-            priceCalculation.totalPrice(),
-            request.currency().name(),
+            totalAmount,
+            currencyCode,
             user.getEmail(),
             user.getName() != null ? user.getName() : user.getFirstName() + " " + user.getLastName(),
             "TMAG Credit Purchase - " + request.credits() + " credits",
@@ -128,12 +146,12 @@ public class CreditPurchaseService {
                 txRef,
                 paymentResponse.paymentLink(),
                 request.credits(),
-                priceCalculation.basePrice(),
-                priceCalculation.discountAmount(),
-                priceCalculation.totalPrice(),
-                request.currency(),
-                pricing.getCurrencySymbol(),
-                pricing.getPricePerCredit(),
+                totalAmount,
+                BigDecimal.ZERO,
+                totalAmount,
+                currency,
+                currencySymbol,
+                pricePerCredit,
                 purchase.getId()
             );
         } else {

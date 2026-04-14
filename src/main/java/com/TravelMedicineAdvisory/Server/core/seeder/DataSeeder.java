@@ -18,10 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanCode;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
@@ -57,7 +56,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final CompanyRepository companyRepository;
-    private final PlanRepository planRepository;
+    private final CreditPlanRepository userCreditPlanRepository;
     private final EmployeeRepository employeeRepository;
     private final CompanyUserRepository companyUserRepository;
     private final CountryRepository countryRepository;
@@ -73,7 +72,7 @@ public class DataSeeder implements CommandLineRunner {
             PermissionRepository permissionRepository,
             RolePermissionRepository rolePermissionRepository,
             CompanyRepository companyRepository,
-            PlanRepository planRepository,
+            CreditPlanRepository userCreditPlanRepository,
             EmployeeRepository employeeRepository,
             CompanyUserRepository companyUserRepository,
             CountryRepository countryRepository,
@@ -88,7 +87,7 @@ public class DataSeeder implements CommandLineRunner {
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.companyRepository = companyRepository;
-        this.planRepository = planRepository;
+        this.userCreditPlanRepository = userCreditPlanRepository;
         this.employeeRepository = employeeRepository;
         this.companyUserRepository = companyUserRepository;
         this.countryRepository = countryRepository;
@@ -112,7 +111,6 @@ public class DataSeeder implements CommandLineRunner {
         this.seedRoles();
         seedPermissions();
         seedRolePermissions();
-        seedPlans();
         seedCompany();
         seedAdminUser();
         seedCountries();
@@ -273,50 +271,16 @@ public class DataSeeder implements CommandLineRunner {
     // ======================== COMPANY ========================
 
     @Transactional
-    protected void seedPlans() {
-        upsertPlan(PlanCode.BRONZE, "Bronze", 100, 100, false, false, false, false,
-                new java.math.BigDecimal("499"), new java.math.BigDecimal("750000"), new java.math.BigDecimal("459"), new java.math.BigDecimal("399"));
-        upsertPlan(PlanCode.SILVER, "Silver", 200, 500, true, true, true, false,
-                new java.math.BigDecimal("999"), new java.math.BigDecimal("1500000"), new java.math.BigDecimal("919"), new java.math.BigDecimal("799"));
-        upsertPlan(PlanCode.GOLD, "Gold", 500, 1_000, true, true, true, false,
-                new java.math.BigDecimal("2499"), new java.math.BigDecimal("3750000"), new java.math.BigDecimal("2299"), new java.math.BigDecimal("1999"));
-        upsertPlan(PlanCode.DIAMOND, "Diamond", 1000, 100_000, true, true, true, true,
-                new java.math.BigDecimal("4999"), new java.math.BigDecimal("7500000"), new java.math.BigDecimal("4599"), new java.math.BigDecimal("3999"));
-    }
-
-    private void upsertPlan(PlanCode code, String displayName, int signupCredits, int maxEmployees,
-            boolean customSupport, boolean apiAccess, boolean multiAdmin, boolean highEmployeeLimit,
-            java.math.BigDecimal priceUsd, java.math.BigDecimal priceNgn, java.math.BigDecimal priceEur, java.math.BigDecimal priceGbp) {
-        PlanEntity plan = planRepository.findByCode(code).orElseGet(PlanEntity::new);
-        plan.setCode(code);
-        plan.setDisplayName(displayName);
-        plan.setSignupCredits(signupCredits);
-        plan.setMaxEmployees(maxEmployees);
-        plan.setCustomSupportEnabled(customSupport);
-        plan.setApiAccessEnabled(apiAccess);
-        plan.setMultipleAdminAccountsEnabled(multiAdmin);
-        plan.setHighEmployeeLimitEnabled(highEmployeeLimit);
-        plan.setPriceUsd(priceUsd);
-        plan.setPriceNgn(priceNgn);
-        plan.setPriceEur(priceEur);
-        plan.setPriceGbp(priceGbp);
-        planRepository.save(plan);
-    }
-
-    @Transactional
     protected void seedCompany() {
         if (companyRepository.count() > 0)
             return;
 
-        PlanEntity bronzePlan = planRepository.findByCode(PlanCode.BRONZE)
-                .orElseThrow(() -> new IllegalStateException("Bronze plan must exist before seeding companies"));
-
         Company company = new Company();
         company.setName("TechCorp Global");
         company.setIndustry("Technology");
-        company.setPlan(PlanCode.BRONZE.name());
-        company.setActivePlan(bronzePlan);
-        company.setTotalCredits(bronzePlan.getSignupCredits());
+        company.setPlan(CreditPlanCode.STANDARD.name());
+        userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD).ifPresent(company::setCreditPlan);
+        company.setTotalCredits(0);
         company.setUsedCredits(0);
         company.setEmployeeCount(0);
         company.setCompanyCode("TMA-" + randomNumberGenerator.generateNumber());

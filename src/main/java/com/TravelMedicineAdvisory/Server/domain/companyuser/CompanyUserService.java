@@ -81,20 +81,22 @@ public class CompanyUserService {
                 .filter(cu -> cu.getCompany() != null)  
                 .map(cu -> {
                     Company c = cu.getCompany();
-                    String resolvedPlan = c.getActivePlan() != null && c.getActivePlan().getCode() != null
-                            ? c.getActivePlan().getCode().name()
+                    String resolvedPlan = c.getCreditPlan() != null && c.getCreditPlan().getCode() != null
+                            ? c.getCreditPlan().getCode().name()
                             : c.getPlan();
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", c.getId());
                     m.put("name", c.getName());
                     m.put("industry", c.getIndustry());
                     m.put("plan", resolvedPlan);
-                    m.put("active_plan_id", c.getActivePlan() != null ? c.getActivePlan().getId() : null);
                     m.put("company_code", c.getCompanyCode());
                     m.put("total_credits", c.getTotalCredits());
                     m.put("used_credits", c.getUsedCredits());
                     m.put("employee_count", c.getEmployeeCount());
                     m.put("billing_currency", c.getBillingCurrency());
+                    m.put("credit_plan", c.getCreditPlan() != null
+                            ? com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse.from(c.getCreditPlan())
+                            : null);
                     m.put("role", cu.getRole());
                     m.put("credits_allocated", cu.getCreditsAllocated());
                     m.put("credits_used", cu.getCreditsUsed());

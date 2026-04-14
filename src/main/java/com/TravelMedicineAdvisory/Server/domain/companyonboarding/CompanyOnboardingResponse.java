@@ -13,6 +13,7 @@ public record CompanyOnboardingResponse(
         String website,
         String billingCurrency,
         String selectedPlanCode,
+        Integer creditCount,
         String sampleRequest,
         List<TeamMemberResponse> teamMembers,
         String txRef,

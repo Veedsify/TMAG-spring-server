@@ -87,7 +87,10 @@ public class UserService {
                 entity.getRole() != null ? entity.getRole().getId() : null,
                 entity.getBillingCurrency(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                entity.getCreditPlan() != null
+                        ? com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse.from(entity.getCreditPlan())
+                        : null);
     }
 
     private void mapRequestToEntity(UserRequest request, User entity) {

@@ -12,6 +12,9 @@ import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -55,6 +58,7 @@ public class AuthService {
     private final CreditRepository creditRepository;
     private final CompanyUserRepository companyUserRepository;
     private final AdminNotificationService adminNotificationService;
+    private final CreditPlanRepository userCreditPlanRepository;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -75,9 +79,10 @@ public class AuthService {
             AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
             QueueService queueService, CreditRepository creditRepository, 
             CompanyUserRepository companyUserRepository,
-            AdminNotificationService adminNotificationService) {
+            AdminNotificationService adminNotificationService,
+            CreditPlanRepository userCreditPlanRepository) {
         this.userRepository = userRepository;
-        this.creditRepository=  creditRepository;
+        this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -86,6 +91,7 @@ public class AuthService {
         this.queueService = queueService;
         this.companyUserRepository = companyUserRepository;
         this.adminNotificationService = adminNotificationService;
+        this.userCreditPlanRepository = userCreditPlanRepository;
     }
 
     @Transactional
@@ -125,6 +131,7 @@ public class AuthService {
         user.setBillingCurrency(BillingCurrency.NGN);
         user.setRole(role);
         user.setLastLogin(LocalDateTime.now());
+        user.setCreditPlan(resolveDefaultCreditPlan());
 
         User savedUser = userRepository.save(user);
 
@@ -276,6 +283,7 @@ public class AuthService {
                 user.setBillingCurrency(BillingCurrency.NGN);
                 user.setRole(role);
                 user.setLastLogin(LocalDateTime.now());
+                user.setCreditPlan(resolveDefaultCreditPlan());
                 if (pictureUrl != null) {
                     user.setAvatarUrl(pictureUrl);
                 }
@@ -462,6 +470,11 @@ public class AuthService {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    private CreditPlan resolveDefaultCreditPlan() {
+        return userCreditPlanRepository.findByIsDefaultTrue()
+                .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD).orElse(null));
     }
 
     private Role determineUserRole() {

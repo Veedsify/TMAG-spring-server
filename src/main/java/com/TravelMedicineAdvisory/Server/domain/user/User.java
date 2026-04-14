@@ -9,6 +9,7 @@ import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -102,6 +103,10 @@ public class User extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_credit_plan_id")
+    private CreditPlan userCreditPlan;
 
     public String getFirstName() {
         return firstName;
@@ -317,5 +322,13 @@ public class User extends BaseEntity {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public CreditPlan getCreditPlan() {
+        return userCreditPlan;
+    }
+
+    public void setCreditPlan(CreditPlan userCreditPlan) {
+        this.userCreditPlan = userCreditPlan;
     }
 }

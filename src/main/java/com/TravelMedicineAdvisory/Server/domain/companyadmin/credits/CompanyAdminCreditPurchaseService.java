@@ -1,16 +1,15 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.credits;
 
+import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySetting;
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricing;
 import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingService;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseRepository;
@@ -19,6 +18,9 @@ import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
 import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +46,8 @@ public class CompanyAdminCreditPurchaseService {
     private final CreditPurchaseRepository purchaseRepository;
     private final FlutterwaveService flutterwaveService;
     private final InvoiceRepository invoiceRepository;
+    private final ExchangeRateService exchangeRateService;
+    private final CreditPlanRepository userCreditPlanRepository;
 
     @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
     private String callbackUrl;
@@ -59,7 +63,9 @@ public class CompanyAdminCreditPurchaseService {
             CreditPricingService pricingService,
             CreditPurchaseRepository purchaseRepository,
             FlutterwaveService flutterwaveService,
-            InvoiceRepository invoiceRepository) {
+            InvoiceRepository invoiceRepository,
+            ExchangeRateService exchangeRateService,
+            CreditPlanRepository userCreditPlanRepository) {
         this.companyRepository = companyRepository;
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
@@ -68,6 +74,8 @@ public class CompanyAdminCreditPurchaseService {
         this.purchaseRepository = purchaseRepository;
         this.flutterwaveService = flutterwaveService;
         this.invoiceRepository = invoiceRepository;
+        this.exchangeRateService = exchangeRateService;
+        this.userCreditPlanRepository = userCreditPlanRepository;
     }
 
     public record CompanyPricingResult(
@@ -93,23 +101,25 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
-
-        CreditPricing pricing = pricingService.getPricingEntity(currency);
+        CreditPlan plan = resolveCompanyCreditPlan(company);
+        String currencyCode = currency.name();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
+        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
 
         return new CompanyPricingResult(
                 company.getId(),
                 company.getName(),
                 currency,
-                pricing.getCurrencySymbol(),
-                pricing.getPricePerCredit(),
-                pricing.getMinCredits(),
-                pricing.getMaxCredits(),
-                pricing.getDiscountTier1Threshold(),
-                pricing.getDiscountTier1Amount(),
-                pricing.getDiscountTier2Threshold(),
-                pricing.getDiscountTier2Amount(),
-                pricing.getDiscountTier3Threshold(),
-                pricing.getDiscountTier3Amount(),
+                currencySymbol,
+                pricePerCredit,
+                1,
+                10000,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 company.getTotalCredits() != null ? company.getTotalCredits() : 0,
                 company.getUsedCredits() != null ? company.getUsedCredits() : 0
         );
@@ -133,20 +143,23 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
-
-        var calculation = pricingService.calculatePriceWithDiscount(currency, credits);
+        CreditPlan plan = resolveCompanyCreditPlan(company);
+        String currencyCode = currency.name();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
+        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
+        BigDecimal basePrice = pricePerCredit.multiply(BigDecimal.valueOf(credits));
 
         return new PurchaseQuoteResult(
                 companyId,
                 company.getName(),
                 credits,
-                calculation.basePrice(),
-                calculation.discountAmount(),
-                calculation.totalPrice(),
+                basePrice,
+                BigDecimal.ZERO,
+                basePrice,
                 currency,
-                calculation.currencySymbol(),
-                pricingService.getPricingEntity(currency).getPricePerCredit(),
-                calculation.appliedDiscountTier()
+                currencySymbol,
+                pricePerCredit,
+                null
         );
     }
 
@@ -172,14 +185,12 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
+        CreditPlan plan = resolveCompanyCreditPlan(company);
+        String currencyCode = currency.name();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
+        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
+        BigDecimal totalAmount = pricePerCredit.multiply(BigDecimal.valueOf(credits));
 
-        CreditPricing pricing = pricingService.getPricingEntity(currency);
-
-        if (credits < pricing.getMinCredits() || credits > pricing.getMaxCredits()) {
-            throw new IllegalArgumentException("Credits must be between " + pricing.getMinCredits() + " and " + pricing.getMaxCredits());
-        }
-
-        var priceCalculation = pricingService.calculatePriceWithDiscount(currency, credits);
         String txRef = flutterwaveService.generateTransactionReference();
 
         CreditPurchase purchase = new CreditPurchase();
@@ -188,17 +199,17 @@ public class CompanyAdminCreditPurchaseService {
         purchase.setCompanyId(companyId);
         purchase.setCreditsPurchased(credits);
         purchase.setCurrency(currency);
-        purchase.setCurrencySymbol(pricing.getCurrencySymbol());
-        purchase.setPricePerCredit(pricing.getPricePerCredit());
-        purchase.setAmount(priceCalculation.totalPrice());
+        purchase.setCurrencySymbol(currencySymbol);
+        purchase.setPricePerCredit(pricePerCredit);
+        purchase.setAmount(totalAmount);
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
         String redirectUrl = (useHrCallback ? hrCallbackUrl : callbackUrl) + "?tx_ref=" + txRef;
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
-                priceCalculation.totalPrice(),
-                currency.name(),
+                totalAmount,
+                currencyCode,
                 user.getEmail(),
                 user.getName() != null ? user.getName() : user.getEmail(),
                 "TMAG Company Credit Purchase - " + company.getName() + " - " + credits + " credits",
@@ -215,15 +226,15 @@ public class CompanyAdminCreditPurchaseService {
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
             logger.info("Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, hr={}",
-                    txRef, companyId, credits, priceCalculation.totalPrice(), useHrCallback);
+                    txRef, companyId, credits, totalAmount, useHrCallback);
 
             return new InitiatePurchaseResult(
                     txRef,
                     paymentResponse.paymentLink(),
                     credits,
-                    priceCalculation.totalPrice(),
+                    totalAmount,
                     currency,
-                    pricing.getCurrencySymbol(),
+                    currencySymbol,
                     purchase.getId()
             );
         } else {
@@ -358,6 +369,15 @@ public class CompanyAdminCreditPurchaseService {
         CreditPurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found"));
         return CreditPurchaseResponse.from(purchase);
+    }
+
+    private CreditPlan resolveCompanyCreditPlan(Company company) {
+        if (company.getCreditPlan() != null) {
+            return company.getCreditPlan();
+        }
+        return userCreditPlanRepository.findByIsDefaultTrue()
+                .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD)
+                        .orElseThrow(() -> new IllegalStateException("No credit pricing plan configured")));
     }
 
     private BillingCurrency resolveBillingCurrency(Company company) {

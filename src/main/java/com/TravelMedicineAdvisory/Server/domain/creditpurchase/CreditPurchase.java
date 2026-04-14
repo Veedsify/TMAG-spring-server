@@ -22,7 +22,7 @@ public class CreditPurchase extends BaseEntity {
     private String flwRef;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Column(name = "company_id")
@@ -38,7 +38,7 @@ public class CreditPurchase extends BaseEntity {
     @Column(name = "currency_symbol")
     private String currencySymbol;
 
-    @Column(name = "price_per_credit", nullable = false, precision = 10, scale = 2)
+    @Column(name = "price_per_credit", precision = 10, scale = 2)
     private BigDecimal pricePerCredit;
 
     @Column(nullable = false, precision = 10, scale = 2)

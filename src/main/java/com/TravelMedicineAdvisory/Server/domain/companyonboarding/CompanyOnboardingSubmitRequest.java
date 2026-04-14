@@ -10,6 +10,7 @@ public record CompanyOnboardingSubmitRequest(
         String website,
         String billingCurrency,
         String selectedPlanCode,
+        Integer creditCount,
         String sampleRequest,
         List<TeamMemberRequest> teamMembers) {
 

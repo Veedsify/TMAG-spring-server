@@ -17,8 +17,7 @@ import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKey;
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKeyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanService;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanService;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
@@ -44,7 +43,7 @@ public class CompanyAdminManagementService {
     private final CompanyApiKeyRepository companyApiKeyRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final InvoiceRepository invoiceRepository;
-    private final PlanService planService;
+    private final CreditPlanService userCreditPlanService;
     private final QueueService queueService;
 
     public CompanyAdminManagementService(
@@ -58,7 +57,7 @@ public class CompanyAdminManagementService {
             CompanyApiKeyRepository companyApiKeyRepository,
             TravelPlanRepository travelPlanRepository,
             InvoiceRepository invoiceRepository,
-            PlanService planService,
+            CreditPlanService userCreditPlanService,
             QueueService queueService) {
         this.companyRepository = companyRepository;
         this.companyUserRepository = companyUserRepository;
@@ -70,7 +69,7 @@ public class CompanyAdminManagementService {
         this.companyApiKeyRepository = companyApiKeyRepository;
         this.travelPlanRepository = travelPlanRepository;
         this.invoiceRepository = invoiceRepository;
-        this.planService = planService;
+        this.userCreditPlanService = userCreditPlanService;
         this.queueService = queueService;
     }
 
@@ -283,7 +282,7 @@ public class CompanyAdminManagementService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getPlan(Long planId) {
-        return Map.of("plan", planService.findById(planId));
+        return Map.of("plan", userCreditPlanService.findById(planId));
     }
 
     private Map<String, Object> mapCompanyUser(CompanyUser companyUser) {
@@ -324,9 +323,8 @@ public class CompanyAdminManagementService {
     }
 
     private String resolvePlanCode(Company company) {
-        PlanEntity activePlan = company.getActivePlan();
-        if (activePlan != null && activePlan.getCode() != null) {
-            return activePlan.getCode().name();
+        if (company.getCreditPlan() != null && company.getCreditPlan().getCode() != null) {
+            return company.getCreditPlan().getCode().name();
         }
         return company.getPlan();
     }

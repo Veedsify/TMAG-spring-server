@@ -108,7 +108,9 @@ public class SecurityConfig {
                                 "/api/v1/ebooks/*",
                                 "/api/v1/ebooks/orders/*",
                                 "/api/v1/exchange-rates",
-                                "/api/v1/exchange-rates/**")
+                                "/api/v1/exchange-rates/**",
+                                "/api/v1/user-credit-plans",
+                                "/api/v1/user-credit-plans/**")
                         .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/contact",

@@ -7,7 +7,7 @@ import org.hibernate.annotations.SQLDelete;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.core.storage.Attachment;
-import com.TravelMedicineAdvisory.Server.domain.companyplan.PlanEntity;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,8 +37,8 @@ public class Company extends BaseEntity {
     private String plan;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "active_plan_id")
-    private PlanEntity activePlan;
+    @JoinColumn(name = "credit_plan_id")
+    private CreditPlan creditPlan;
     @Column(name = "company_code", unique = true)
     private String companyCode;
 
@@ -117,14 +117,6 @@ public class Company extends BaseEntity {
 
     public void setPlan(String plan) {
         this.plan = plan;
-    }
-
-    public PlanEntity getActivePlan() {
-        return activePlan;
-    }
-
-    public void setActivePlan(PlanEntity activePlan) {
-        this.activePlan = activePlan;
     }
 
     public String getCompanyCode() {
@@ -212,5 +204,13 @@ public class Company extends BaseEntity {
         int total = totalCredits != null ? totalCredits : 0;
         int used = usedCredits != null ? usedCredits : 0;
         return total - used;
+    }
+
+    public CreditPlan getCreditPlan() {
+        return creditPlan;
+    }
+
+    public void setCreditPlan(CreditPlan creditPlan) {
+        this.creditPlan = creditPlan;
     }
 }

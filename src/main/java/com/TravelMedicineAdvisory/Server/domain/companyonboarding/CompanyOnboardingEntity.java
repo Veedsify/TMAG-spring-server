@@ -80,6 +80,9 @@ public class CompanyOnboardingEntity extends BaseEntity {
     @Column(name = "created_company_id")
     private Long createdCompanyId;
 
+    @Column(name = "credit_count", nullable = false)
+    private Integer creditCount = 0;
+
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
 
@@ -139,4 +142,7 @@ public class CompanyOnboardingEntity extends BaseEntity {
 
     public Long getCreatedCompanyId() { return createdCompanyId; }
     public void setCreatedCompanyId(Long createdCompanyId) { this.createdCompanyId = createdCompanyId; }
+
+    public Integer getCreditCount() { return creditCount; }
+    public void setCreditCount(Integer creditCount) { this.creditCount = creditCount; }
 }
