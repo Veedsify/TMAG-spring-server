@@ -2,6 +2,9 @@ package com.TravelMedicineAdvisory.Server.core.seeder;
 
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.OnboardingQuestionCategory;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.OnboardingQuestionCategoryRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,8 +14,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @Order(2)
@@ -24,9 +29,11 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     private boolean seederEnabled;
 
     private final OnboardingQuestionCategoryRepository repository;
+    private final ObjectMapper objectMapper;
 
-    public OnboardingQuestionSeeder(OnboardingQuestionCategoryRepository repository) {
+    public OnboardingQuestionSeeder(OnboardingQuestionCategoryRepository repository, ObjectMapper objectMapper) {
         this.repository = repository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -39,6 +46,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         logger.info("Seeding onboarding questions...");
 
         List<OnboardingQuestionCategory> categories = new ArrayList<>();
+        Set<String> seenQuestionKeys = new HashSet<>();
 
         OnboardingQuestionCategory personal = new OnboardingQuestionCategory();
         personal.setCategoryKey("personal_information");
@@ -47,7 +55,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         personal.setCategoryDescription("Identity and contact details used to personalise your advisory.");
         personal.setDisplayOrder(1);
         personal.setIsOptional(false);
-        personal.setQuestions(PERSONAL_INFORMATION_QUESTIONS);
+        personal.setQuestions(removeDuplicateQuestionKeys(PERSONAL_INFORMATION_QUESTIONS, seenQuestionKeys, "personal_information"));
         categories.add(personal);
 
         OnboardingQuestionCategory travel = new OnboardingQuestionCategory();
@@ -57,7 +65,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         travel.setCategoryDescription("Trip type, route, dates, flight details, purpose, and companions.");
         travel.setDisplayOrder(2);
         travel.setIsOptional(false);
-        travel.setQuestions(TRAVEL_QUESTIONS);
+        travel.setQuestions(removeDuplicateQuestionKeys(TRAVEL_QUESTIONS, seenQuestionKeys, "travel_details"));
         categories.add(travel);
 
         OnboardingQuestionCategory accommodation = new OnboardingQuestionCategory();
@@ -67,7 +75,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         accommodation.setCategoryDescription("Where you will stay and the environment type.");
         accommodation.setDisplayOrder(3);
         accommodation.setIsOptional(false);
-        accommodation.setQuestions(ACCOMMODATION_QUESTIONS);
+        accommodation.setQuestions(removeDuplicateQuestionKeys(ACCOMMODATION_QUESTIONS, seenQuestionKeys, "accommodation_environment"));
         categories.add(accommodation);
 
         OnboardingQuestionCategory activities = new OnboardingQuestionCategory();
@@ -77,7 +85,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         activities.setCategoryDescription("Activities that may affect travel health risks.");
         activities.setDisplayOrder(4);
         activities.setIsOptional(false);
-        activities.setQuestions(PLANNED_ACTIVITIES_QUESTIONS);
+        activities.setQuestions(removeDuplicateQuestionKeys(PLANNED_ACTIVITIES_QUESTIONS, seenQuestionKeys, "planned_activities"));
         categories.add(activities);
 
         OnboardingQuestionCategory medical = new OnboardingQuestionCategory();
@@ -87,7 +95,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         medical.setCategoryDescription("Medical conditions, medications, allergies, and obstetric history.");
         medical.setDisplayOrder(5);
         medical.setIsOptional(false);
-        medical.setQuestions(MEDICAL_QUESTIONS);
+        medical.setQuestions(removeDuplicateQuestionKeys(MEDICAL_QUESTIONS, seenQuestionKeys, "medical_history"));
         categories.add(medical);
 
         OnboardingQuestionCategory vaccines = new OnboardingQuestionCategory();
@@ -97,7 +105,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         vaccines.setCategoryDescription("Your vaccine history and prior travel-health preparation.");
         vaccines.setDisplayOrder(6);
         vaccines.setIsOptional(false);
-        vaccines.setQuestions(VACCINE_QUESTIONS);
+        vaccines.setQuestions(removeDuplicateQuestionKeys(VACCINE_QUESTIONS, seenQuestionKeys, "vaccination_history"));
         categories.add(vaccines);
 
         OnboardingQuestionCategory travelHistory = new OnboardingQuestionCategory();
@@ -107,7 +115,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         travelHistory.setCategoryDescription("Your recent international travel and health experiences abroad.");
         travelHistory.setDisplayOrder(7);
         travelHistory.setIsOptional(false);
-        travelHistory.setQuestions(TRAVEL_HISTORY_QUESTIONS);
+        travelHistory.setQuestions(removeDuplicateQuestionKeys(TRAVEL_HISTORY_QUESTIONS, seenQuestionKeys, "travel_history"));
         categories.add(travelHistory);
 
         OnboardingQuestionCategory awareness = new OnboardingQuestionCategory();
@@ -117,7 +125,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         awareness.setCategoryDescription("Insurance and physician access before travel.");
         awareness.setDisplayOrder(8);
         awareness.setIsOptional(false);
-        awareness.setQuestions(AWARENESS_QUESTIONS);
+        awareness.setQuestions(removeDuplicateQuestionKeys(AWARENESS_QUESTIONS, seenQuestionKeys, "awareness_preparation"));
         categories.add(awareness);
 
         OnboardingQuestionCategory risk = new OnboardingQuestionCategory();
@@ -127,7 +135,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         risk.setCategoryDescription("Optional but important. Responses are confidential and advisory-only.");
         risk.setDisplayOrder(9);
         risk.setIsOptional(true);
-        risk.setQuestions(RISK_BEHAVIOUR_QUESTIONS);
+        risk.setQuestions(removeDuplicateQuestionKeys(RISK_BEHAVIOUR_QUESTIONS, seenQuestionKeys, "personal_health_risk_behaviours"));
         categories.add(risk);
 
         int createdCount = 0;
@@ -151,6 +159,34 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         }
 
         logger.info("Onboarding question categories synced. Created: {}, Updated: {}", createdCount, updatedCount);
+    }
+
+    private String removeDuplicateQuestionKeys(String questionsJson, Set<String> seenKeys, String categoryKey) {
+        try {
+            JsonNode root = objectMapper.readTree(questionsJson);
+            if (!root.isArray()) {
+                return questionsJson;
+            }
+
+            ArrayNode filtered = objectMapper.createArrayNode();
+            for (JsonNode questionNode : root) {
+                JsonNode keyNode = questionNode.get("key");
+                String key = keyNode != null ? keyNode.asText().trim() : "";
+                if (key.isEmpty()) {
+                    filtered.add(questionNode);
+                    continue;
+                }
+                if (!seenKeys.add(key)) {
+                    logger.warn("Skipping duplicate onboarding question key '{}' from category '{}'", key, categoryKey);
+                    continue;
+                }
+                filtered.add(questionNode);
+            }
+            return objectMapper.writeValueAsString(filtered);
+        } catch (Exception ex) {
+            logger.warn("Failed to deduplicate onboarding questions for category '{}': {}", categoryKey, ex.getMessage());
+            return questionsJson;
+        }
     }
 
     // ── Section 1: Personal Information (Q1-Q8) ──────────────────────────────

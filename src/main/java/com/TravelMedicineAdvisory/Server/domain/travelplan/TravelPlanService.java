@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.core.utils.QuestionnaireResponseSanitizer;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
@@ -211,7 +212,7 @@ public class TravelPlanService {
         questionnaire.setEmployee(travelPlan.getEmployee());
         questionnaire.setCompany(travelPlan.getCompany());
         questionnaire.setSource("create-plan");
-        questionnaire.setResponsesJson(request.questionnaireResponses().trim());
+        questionnaire.setResponsesJson(QuestionnaireResponseSanitizer.sanitize(request.questionnaireResponses(), objectMapper));
         travelPlanQuestionnaireRepository.save(questionnaire);
     }
 

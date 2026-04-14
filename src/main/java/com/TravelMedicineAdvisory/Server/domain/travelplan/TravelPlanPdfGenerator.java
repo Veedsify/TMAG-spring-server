@@ -91,7 +91,7 @@ public class TravelPlanPdfGenerator {
             appendLegacyBody(sb, plan);
         }
 
-        appendGenerationFooter(sb, generatedPlan);
+        // appendGenerationFooter(sb, generatedPlan);
         sb.append("<p class=\"closing\">Travel Medicine Advisory Global \u2014 not a substitute for professional medical advice.</p>");
         sb.append("</div>");
         sb.append("</body></html>");

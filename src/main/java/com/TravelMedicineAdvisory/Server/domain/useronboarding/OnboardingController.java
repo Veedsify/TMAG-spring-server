@@ -28,6 +28,7 @@ import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.core.utils.QuestionnaireResponseSanitizer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Tag(name = "Onboarding")
@@ -186,7 +187,7 @@ public class OnboardingController {
         boolean complete = Boolean.TRUE.equals(body.get("complete"));
 
         entity.setUser(user);
-        entity.setResponsesJson(responsesJson);
+        entity.setResponsesJson(QuestionnaireResponseSanitizer.sanitize(responsesJson, objectMapper));
 
         if (complete) {
             entity.setQuestionnaireCompleted(true);
