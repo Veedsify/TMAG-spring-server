@@ -9,6 +9,7 @@ import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.slf4j.Logger;
@@ -47,9 +48,42 @@ public class InvoiceService {
                 .map(this::toResponse);
     }
 
-    public InvoiceResponse findById(Long id) {
+    public Page<InvoiceResponse> findAllByUser(User currentUser, Pageable pageable) {
+        Long companyId = getCompanyIdForUser(currentUser);
+        Page<Invoice> page;
+        if (companyId != null) {
+            page = repository.findAllActiveByCompanyId(companyId, pageable);
+        } else {
+            page = repository.findAllActiveByUserId(currentUser.getId(), pageable);
+        }
+        return page.map(this::toResponse);
+    }
+
+    private Long getCompanyIdForUser(User user) {
+        List<CompanyUser> companyUsers = companyUserRepository.findAllByUser(user);
+        if (!companyUsers.isEmpty() && companyUsers.get(0).getCompany() != null) {
+            return companyUsers.get(0).getCompany().getId();
+        }
+        return null;
+    }
+
+    private boolean matchesUserScope(Invoice invoice, Long companyId, Long userId) {
+        if (companyId != null && invoice.getCompany() != null && invoice.getCompany().getId().equals(companyId)) {
+            return true;
+        }
+        if (invoice.getUser() != null && invoice.getUser().getId().equals(userId)) {
+            return true;
+        }
+        return false;
+    }
+
+    public InvoiceResponse findById(Long id, User currentUser) {
         Invoice entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Invoice not found"));
+        Long companyId = getCompanyIdForUser(currentUser);
+        if (!matchesUserScope(entity, companyId, currentUser.getId())) {
+            throw new NoSuchElementException("Invoice not found");
+        }
         return toResponse(entity);
     }
 

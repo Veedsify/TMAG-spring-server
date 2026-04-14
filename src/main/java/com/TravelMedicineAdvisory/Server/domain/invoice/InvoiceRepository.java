@@ -27,8 +27,14 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     @Query("SELECT i FROM Invoice i WHERE i.company.id = :companyId AND i.deletedAt IS NULL ORDER BY i.createdAt DESC")
     List<Invoice> findAllActiveByCompanyId(@Param("companyId") Long companyId);
 
+    @Query("SELECT i FROM Invoice i WHERE i.company.id = :companyId AND i.deletedAt IS NULL")
+    Page<Invoice> findAllActiveByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
+
     @Query("SELECT i FROM Invoice i WHERE i.user.id = :userId AND i.deletedAt IS NULL ORDER BY i.createdAt DESC")
     List<Invoice> findAllActiveByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT i FROM Invoice i WHERE i.user.id = :userId AND i.deletedAt IS NULL")
+    Page<Invoice> findAllActiveByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("SELECT i FROM Invoice i WHERE i.status = :status AND i.deletedAt IS NULL ORDER BY i.createdAt DESC")
     List<Invoice> findAllActiveByStatus(@Param("status") String status);

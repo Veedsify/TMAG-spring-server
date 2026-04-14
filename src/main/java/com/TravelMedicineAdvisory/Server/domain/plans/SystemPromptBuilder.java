@@ -7,20 +7,23 @@ import java.util.stream.Collectors;
 /**
  * Builds the complete AI system prompt for travel health plan generation.
  *
- * The prompt is structured in 9 parts, mirroring the original system-prompt.txt:
- * 1. Role &amp; Identity
- * 2. Scope &amp; Hard Limits
- * 3. Input Format (questionnaire mapping Q1–Q43)
+ * The prompt is structured in 11 parts:
+ * 1. Role & Identity
+ * 2. Scope & Hard Limits
+ * 2A. Destination Validation Rules
+ * 3. Input Format (questionnaire mapping from OnboardingQuestionSeeder)
  * 4. Processing Rules (execution order, cross-links, intensity modifier)
  * 5. Decision Trees Reference Library (all 14 trees with full clinical logic)
  * 6. Dynamic Pre-Computed Clinical Context (flags from ClinicalContextExtractor)
  * 7. Hard Stop Conditions
- * 8. Output Format &amp; JSON Schema
- * 9. Tone Rules &amp; Mandatory Disclaimer
+ * 8. Output Format & JSON Schema
+ * 9. Mandatory Coverage Requirements
+ * 10. Tone Rules & Mandatory Disclaimer
+ * 11. Mandatory Disclaimer
  *
  * Questionnaire data comes from:
  * - {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire}
- *   (responsesJson — per-trip questionnaire, JSON keyed by question sections/numbers)
+ *   (responsesJson — per-trip questionnaire, JSON keyed by question keys)
  * - {@link com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding}
  *   (responsesJson — initial health onboarding, keyed by OnboardingQuestionCategory)
  *
@@ -50,6 +53,14 @@ public class SystemPromptBuilder {
         prompt.append(ClinicalRules.SCOPE_LIMITS).append("\n\n");
 
         // ================================================================
+        // PART 2A — DESTINATION VALIDATION RULES
+        // ================================================================
+        prompt.append("═══════════════════════════════════════════════════════════\n");
+        prompt.append("PART 2A — DESTINATION VALIDATION RULES\n");
+        prompt.append("═══════════════════════════════════════════════════════════\n\n");
+        prompt.append(ClinicalRules.DESTINATION_VALIDATION_RULES).append("\n\n");
+
+        // ================================================================
         // PART 3 — INPUT FORMAT
         // ================================================================
         prompt.append("═══════════════════════════════════════════════════════════\n");
@@ -57,20 +68,17 @@ public class SystemPromptBuilder {
         prompt.append("═══════════════════════════════════════════════════════════\n\n");
         prompt.append(ClinicalRules.INPUT_FORMAT).append("\n\n");
 
-        prompt.append("Questionnaire structure:\n");
-        prompt.append("  • TravelPlanQuestionnaire.responsesJson — per-trip questionnaire responses,\n");
-        prompt.append("    keyed by section/question number (e.g. \"q2\", \"q9\", \"q28\", \"q30\").\n");
-        prompt.append("  • UserOnboarding.responsesJson — initial health onboarding, organised by\n");
-        prompt.append("    OnboardingQuestionCategory (each category contains a questions JSON array).\n");
-        prompt.append("  • Sections 1–9 cover Questions 1–43 total.\n");
-        prompt.append("  • Q8 = preferred language for output.\n");
-        prompt.append("  • Q2 = date of birth (calculate age).\n");
-        prompt.append("  • Q3 = sex; Q28 = pregnant; Q29 = could become pregnant.\n");
-        prompt.append("  • Q9–11 = destinations; Q12–13 = duration; Q14–15 = flight/journey.\n");
-        prompt.append("  • Q16 = purpose; Q17 = companions; Q18–19 = accommodation.\n");
-        prompt.append("  • Q20–21 = activities; Q22–27 = medical history.\n");
-        prompt.append("  • Q25–26 = medications & allergies; Q30–32 = vaccination history.\n");
-        prompt.append("  • Q33–36 = previous travel history; Q39–43 = risk behaviours (Section 9).\n\n");
+        prompt.append("Questionnaire structure (from OnboardingQuestionSeeder):\n");
+        prompt.append("  • Sections 1–9 correspond to onboarding categories:\n");
+        prompt.append("    Section 1: Personal Information (date_of_birth, gender, preferred_language)\n");
+        prompt.append("    Section 2: Travel Details (trip_itinerary, longest_flight_leg_hours, purpose_of_travel, travel_companions)\n");
+        prompt.append("    Section 3: Accommodation & Environment (main_accommodation, stay_environment)\n");
+        prompt.append("    Section 4: Planned Activities (planned_activities, altitude_travel, activity_frequency)\n");
+        prompt.append("    Section 5: Medical History (chronic_medical_conditions, immunocompromised, current_medications, allergies, pregnancy_status, could_become_pregnant)\n");
+        prompt.append("    Section 6: Vaccination & Travel Health (travel_related_vaccines_received, routine_vaccinations_status, vaccine_reaction_history)\n");
+        prompt.append("    Section 7: Travel History (international_travel_last_12_months, travel_frequency, previous_trip_health_preparations, previous_trip_health_problems)\n");
+        prompt.append("    Section 8: Awareness & Preparation (has_primary_care_physician, travel_insurance)\n");
+        prompt.append("    Section 9: Personal Health & Risk Behaviours (anticipated_risk_behaviours, sexual_activity_protection, sti_history, substance_use_adherence_risk)\n\n");
 
         // ================================================================
         // PART 4 — PROCESSING RULES
