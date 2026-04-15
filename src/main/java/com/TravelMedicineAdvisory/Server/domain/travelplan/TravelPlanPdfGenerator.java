@@ -76,7 +76,8 @@ public class TravelPlanPdfGenerator {
         appendStyles(sb);
         sb.append("</head><body>");
 
-        // Full-bleed hero wrapper — teal bg bleeds to page edge (page has 0 side margins)
+        // Full-bleed hero wrapper — teal bg bleeds to page edge (page has 0 side
+        // margins)
         sb.append("<div class=\"hero-wrap\">");
         appendHero(sb, plan, generatedPlan);
         sb.append("</div>");
@@ -92,7 +93,8 @@ public class TravelPlanPdfGenerator {
         }
 
         // appendGenerationFooter(sb, generatedPlan);
-        sb.append("<p class=\"closing\">Travel Medicine Advisory Global \u2014 not a substitute for professional medical advice.</p>");
+        sb.append(
+                "<p class=\"closing\">Travel Medicine Advisory Global \u2014 not a substitute for professional medical advice.</p>");
         sb.append("</div>");
         sb.append("</body></html>");
         return sb.toString();
@@ -103,16 +105,22 @@ public class TravelPlanPdfGenerator {
         sb.append("<style>");
 
         // Fonts
-        sb.append("@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-Regular.ttf') format('truetype');font-weight:400}");
-        sb.append("@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-SemiBold.ttf') format('truetype');font-weight:600}");
-        sb.append("@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-Bold.ttf') format('truetype');font-weight:700}");
-        sb.append("@font-face{font-family:'Fraunces';src:url('classpath:/fonts/Fraunces-Regular.ttf') format('truetype');font-weight:400}");
-        sb.append("@font-face{font-family:'Fraunces';src:url('classpath:/fonts/Fraunces-Bold.ttf') format('truetype');font-weight:700}");
+        sb.append(
+                "@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-Regular.ttf') format('truetype');font-weight:400}");
+        sb.append(
+                "@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-SemiBold.ttf') format('truetype');font-weight:600}");
+        sb.append(
+                "@font-face{font-family:'Hanken Grotesk';src:url('classpath:/fonts/HankenGrotesk-Bold.ttf') format('truetype');font-weight:700}");
+        sb.append(
+                "@font-face{font-family:'Fraunces';src:url('classpath:/fonts/Fraunces-Regular.ttf') format('truetype');font-weight:400}");
+        sb.append(
+                "@font-face{font-family:'Fraunces';src:url('classpath:/fonts/Fraunces-Bold.ttf') format('truetype');font-weight:700}");
 
         // Reset
         sb.append("*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}");
 
-        // Page — zero side/top margins so hero bleeds edge-to-edge; bottom margin holds page-number box
+        // Page — zero side/top margins so hero bleeds edge-to-edge; bottom margin holds
+        // page-number box
         sb.append("@page{size:A4;margin:0 0 16mm 0}");
         sb.append("@page{@bottom-left{content:'Travel Medicine Advisory Global';")
                 .append("font-family:'Hanken Grotesk',Arial,sans-serif;font-size:7pt;color:#9a8a7a;padding-left:16mm}}");
@@ -127,24 +135,31 @@ public class TravelPlanPdfGenerator {
         // ── Hero ──────────────────────────────────────────────────────────────
         sb.append(".hero-wrap{background:").append(TEAL_DEEP).append("}");
         sb.append(".brand-strip{padding:10px 16mm 8px;border-bottom:1px solid rgba(255,255,255,0.08)}");
-        sb.append(".brand-name{font-size:6.5pt;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#ffffff}");
+        sb.append(
+                ".brand-name{font-size:6.5pt;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#ffffff}");
         sb.append(".brand-sub{font-size:6pt;color:#ffffff;letter-spacing:0.07em;margin-top:2px}");
 
         sb.append("table.hero-tbl{width:100%;border-collapse:collapse}");
         sb.append(".hero-left{padding:18px 0 18px 16mm;width:64%;vertical-align:top}");
         sb.append(".hero-right{padding:18px 16mm 18px 10px;width:36%;vertical-align:top;text-align:right}");
-        sb.append(".doc-title{font-family:'Fraunces',Georgia,serif;font-size:22pt;color:#ffffff;font-weight:700;line-height:1.1;margin:0 0 9px}");
+        sb.append(
+                ".doc-title{font-family:'Fraunces',Georgia,serif;font-size:22pt;color:#ffffff;font-weight:700;line-height:1.1;margin:0 0 9px}");
         sb.append(".hero-meta{font-size:8.5pt;color:#ffffff;margin:0 0 3px;line-height:1.4}");
         sb.append(".hero-dates{font-size:8.5pt;color:#7dd3c4;font-weight:600;margin:0 0 3px}");
         sb.append(".hero-traveller{font-size:8.5pt;color:#ffffff;margin-top:10px}");
         sb.append(".hero-traveller strong{color:#ffffff;font-weight:700}");
 
         // Badges on dark hero bg
-        sb.append(".badge{display:block;padding:5px 10px;border-radius:3px;font-size:7.5pt;font-weight:700;text-align:center;margin-bottom:5px;line-height:1.3}");
-        sb.append(".b-low{background:").append(GREEN_SOFT).append(";color:").append(GREEN).append(";border:1px solid ").append(GREEN_BORDER).append("}");
-        sb.append(".b-mod{background:").append(GOLD_SOFT).append(";color:").append(GOLD).append(";border:1px solid ").append(GOLD_BORDER).append("}");
-        sb.append(".b-hi{background:").append(RED_SOFT).append(";color:").append(RED).append(";border:1px solid ").append(RED_BORDER).append("}");
-        sb.append(".b-nu{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.2)}");
+        sb.append(
+                ".badge{display:block;padding:5px 10px;border-radius:3px;font-size:7.5pt;font-weight:700;text-align:center;margin-bottom:5px;line-height:1.3}");
+        sb.append(".b-low{background:").append(GREEN_SOFT).append(";color:").append(GREEN).append(";border:1px solid ")
+                .append(GREEN_BORDER).append("}");
+        sb.append(".b-mod{background:").append(GOLD_SOFT).append(";color:").append(GOLD).append(";border:1px solid ")
+                .append(GOLD_BORDER).append("}");
+        sb.append(".b-hi{background:").append(RED_SOFT).append(";color:").append(RED).append(";border:1px solid ")
+                .append(RED_BORDER).append("}");
+        sb.append(
+                ".b-nu{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.2)}");
 
         // Accent rule at foot of hero
         sb.append(".hero-rule{height:3px;background:").append(TEAL_MID).append("}");
@@ -160,17 +175,20 @@ public class TravelPlanPdfGenerator {
         // Section heading
         sb.append("td.cap,th.cap{background:").append(BG_SUBTLE)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ").append(BORDER).append("}");
+                .append(";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ")
+                .append(BORDER).append("}");
 
         // Sub-section heading
         sb.append("td.cap-sub{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ").append(TEAL_BORDER).append("}");
+                .append(";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ")
+                .append(TEAL_BORDER).append("}");
 
         // KV label / value
         sb.append("td.lbl{width:26%;background:").append(BG_SUBTLE)
                 .append(";color:").append(MUTED)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ").append(BORDER_LT).append("}");
+                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ")
+                .append(BORDER_LT).append("}");
         sb.append("td.val{color:").append(DARK)
                 .append(";padding:8px 12px;border-bottom:1px solid ").append(BORDER_LT)
                 .append(";line-height:1.5;white-space:pre-wrap;font-size:9.5pt}");
@@ -179,7 +197,8 @@ public class TravelPlanPdfGenerator {
         // Column headers + data cells
         sb.append("th.h{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ").append(TEAL_BORDER).append(";text-align:left}");
+                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ")
+                .append(TEAL_BORDER).append(";text-align:left}");
         sb.append("td.c{padding:8px 12px;border:1px solid ").append(BORDER)
                 .append(";vertical-align:top;line-height:1.5;white-space:pre-wrap;color:").append(DARK)
                 .append(";font-size:9.5pt}");
@@ -191,10 +210,14 @@ public class TravelPlanPdfGenerator {
         sb.append(".lvl-l{color:").append(GREEN).append(";font-weight:700;background:").append(GREEN_SOFT).append("}");
 
         // Urgency badge (for specialist referrals)
-        sb.append(".urgency{display:inline-block;padding:2px 7px;border-radius:2px;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}");
-        sb.append(".urgency-urgent{color:").append(RED).append(";background:").append(RED_SOFT).append(";border:1px solid ").append(RED_BORDER).append("}");
-        sb.append(".urgency-before{color:").append(GOLD).append(";background:").append(GOLD_SOFT).append(";border:1px solid ").append(GOLD_BORDER).append("}");
-        sb.append(".urgency-routine{color:").append(GREEN).append(";background:").append(GREEN_SOFT).append(";border:1px solid ").append(GREEN_BORDER).append("}");
+        sb.append(
+                ".urgency{display:inline-block;padding:2px 7px;border-radius:2px;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}");
+        sb.append(".urgency-urgent{color:").append(RED).append(";background:").append(RED_SOFT)
+                .append(";border:1px solid ").append(RED_BORDER).append("}");
+        sb.append(".urgency-before{color:").append(GOLD).append(";background:").append(GOLD_SOFT)
+                .append(";border:1px solid ").append(GOLD_BORDER).append("}");
+        sb.append(".urgency-routine{color:").append(GREEN).append(";background:").append(GREEN_SOFT)
+                .append(";border:1px solid ").append(GREEN_BORDER).append("}");
 
         // Alert box
         sb.append(".alert{background:").append(RED_SOFT)
@@ -296,7 +319,8 @@ public class TravelPlanPdfGenerator {
                 appendTableStart(sb, "Trip at a glance", 2);
                 int i = 0;
                 i += appendKVRow(sb, "Duration", glance.path("durationDays").isNumber()
-                        ? glance.get("durationDays").asInt() + " days" : null, i, rows);
+                        ? glance.get("durationDays").asInt() + " days"
+                        : null, i, rows);
                 i += appendKVRow(sb, "Purpose", textOrNull(glance, "purpose"), i, rows);
                 i += appendKVRow(sb, "Travelling", textOrNull(glance, "travelling"), i, rows);
                 i += appendKVRow(sb, "Accommodation", textOrNull(glance, "accommodation"), i, rows);
@@ -324,15 +348,19 @@ public class TravelPlanPdfGenerator {
             if (routeAdvice.isArray() && routeAdvice.size() > 0) {
                 sb.append("<tr><td class=\"cap-sub\">Route guidance by stop</td></tr>");
                 sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none\">");
-                sb.append("<tr><th class=\"h\">Stop</th><th class=\"h\">Country</th><th class=\"h\">Guidance</th></tr>");
+                sb.append(
+                        "<tr><th class=\"h\">Stop</th><th class=\"h\">Country</th><th class=\"h\">Guidance</th></tr>");
                 int rowIdx = 0;
                 for (Iterator<JsonNode> it = routeAdvice.elements(); it.hasNext(); rowIdx++) {
                     JsonNode stop = it.next();
                     String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                     sb.append("<tr").append(alt).append(">")
-                            .append("<td class=\"c\">").append(escapeHtml(stop.path("stop").asText("—"))).append("</td>")
-                            .append("<td class=\"c\">").append(escapeHtml(stop.path("country").asText("—"))).append("</td>")
-                            .append("<td class=\"c\">").append(escapeHtml(stop.path("guidance").asText(""))).append("</td>")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("stop").asText("—")))
+                            .append("</td>")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("country").asText("—")))
+                            .append("</td>")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("guidance").asText("")))
+                            .append("</td>")
                             .append("</tr>");
                 }
                 sb.append("</table></td></tr>");
@@ -362,7 +390,8 @@ public class TravelPlanPdfGenerator {
                 String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                 sb.append("<tr").append(alt).append(">")
                         .append("<td class=\"c\">").append(escapeHtml(r.path("category").asText("—"))).append("</td>")
-                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">").append(escapeHtml(lvl.toUpperCase())).append("</td>")
+                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">")
+                        .append(escapeHtml(lvl.toUpperCase())).append("</td>")
                         .append("<td class=\"c\">").append(escapeHtml(r.path("summary").asText(""))).append("</td>")
                         .append("</tr>");
             }
@@ -372,10 +401,11 @@ public class TravelPlanPdfGenerator {
         // Flight & Journey Health
         JsonNode flight = root.path("flightHealth");
         if (flight.isObject() && flightNonEmpty(flight)) {
-            appendTableStart(sb, "Flight &amp; journey health", 1);
+            appendTableStart(sb, "Flight &amp; journey health", 2);
             if (flight.path("vteRiskLevel").isTextual() && StringUtils.hasText(flight.get("vteRiskLevel").asText())) {
                 String vteLvl = flight.get("vteRiskLevel").asText();
-                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
                         .append("<strong>VTE Risk Level:</strong> ")
                         .append("<span class=\"").append(levelClass(vteLvl)).append("\">")
                         .append(escapeHtml(vteLvl.toUpperCase()))
@@ -383,21 +413,24 @@ public class TravelPlanPdfGenerator {
             }
             JsonNode prevention = flight.path("preventionMeasures");
             if (prevention.isArray() && prevention.size() > 0) {
-                sb.append("<tr><td class=\"cap-sub\">Prevention measures</td></tr>");
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Prevention measures</td></tr>");
                 for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
                     JsonNode line = pit.next();
                     if (line.isTextual()) {
-                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
                     }
                 }
             }
             if (flight.path("medifClearanceRequired").asBoolean(false)) {
-                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
                         .append("<div class=\"alert\"><div class=\"alert-t\">Airline MEDIF clearance required</div>")
                         .append("<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
                         .append("</td></tr>");
             }
-            if (flight.path("medicationTimingGuidance").isTextual() && StringUtils.hasText(flight.get("medicationTimingGuidance").asText())) {
+            if (flight.path("medicationTimingGuidance").isTextual()
+                    && StringUtils.hasText(flight.get("medicationTimingGuidance").asText())) {
                 appendKVRow(sb, "Medication timing guidance", flight.get("medicationTimingGuidance").asText(), 0, 1);
             }
             sb.append("</table>");
@@ -422,7 +455,8 @@ public class TravelPlanPdfGenerator {
                 }
                 String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                 sb.append("<tr").append(alt).append(">")
-                        .append("<td class=\"c\"><strong>").append(escapeHtml(v.path("vaccine").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\"><strong>").append(escapeHtml(v.path("vaccine").asText("—")))
+                        .append("</strong></td>")
                         .append("<td class=\"c\">").append(escapeHtml(v.path("status").asText("—"))).append("</td>")
                         .append("<td class=\"c\">").append(escapeHtml(guide.toString())).append("</td>")
                         .append("</tr>");
@@ -433,16 +467,18 @@ public class TravelPlanPdfGenerator {
         // Malaria Prevention
         JsonNode malaria = root.path("malariaPrevention");
         if (malaria.isObject() && malariaNonEmpty(malaria)) {
-            appendTableStart(sb, "Malaria prevention", 1);
+            appendTableStart(sb, "Malaria prevention", 3);
             if (malaria.path("riskLevel").isTextual() && StringUtils.hasText(malaria.get("riskLevel").asText())) {
                 String mrl = malaria.get("riskLevel").asText();
-                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
                         .append("<strong>Risk Level:</strong> ")
                         .append("<span class=\"").append(levelClass(mrl)).append("\">")
                         .append(escapeHtml(mrl.toUpperCase()))
                         .append("</span></td></tr>");
             }
-            if (malaria.path("recommendedAgent").isTextual() && StringUtils.hasText(malaria.get("recommendedAgent").asText())) {
+            if (malaria.path("recommendedAgent").isTextual()
+                    && StringUtils.hasText(malaria.get("recommendedAgent").asText())) {
                 StringBuilder agentInfo = new StringBuilder();
                 agentInfo.append(malaria.get("recommendedAgent").asText());
                 if (malaria.path("rationale").isTextual() && StringUtils.hasText(malaria.get("rationale").asText())) {
@@ -452,15 +488,17 @@ public class TravelPlanPdfGenerator {
             }
             JsonNode mosquito = malaria.path("mosquitoProtection");
             if (mosquito.isArray() && mosquito.size() > 0) {
-                sb.append("<tr><td class=\"cap-sub\">Mosquito protection measures</td></tr>");
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Mosquito protection measures</td></tr>");
                 for (Iterator<JsonNode> mit = mosquito.elements(); mit.hasNext();) {
                     JsonNode line = mit.next();
                     if (line.isTextual()) {
-                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
                     }
                 }
             }
-            if (malaria.path("contraindications").isTextual() && StringUtils.hasText(malaria.get("contraindications").asText())) {
+            if (malaria.path("contraindications").isTextual()
+                    && StringUtils.hasText(malaria.get("contraindications").asText())) {
                 appendKVRow(sb, "Contraindications / alternatives", malaria.get("contraindications").asText(), 0, 1);
             }
             sb.append("</table>");
@@ -475,7 +513,8 @@ public class TravelPlanPdfGenerator {
                 JsonNode r = it.next();
                 String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                 sb.append("<tr").append(alt).append(">")
-                        .append("<td class=\"c\" style=\"width:32%\"><strong>").append(escapeHtml(r.path("title").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                        .append(escapeHtml(r.path("title").asText("—"))).append("</strong></td>")
                         .append("<td class=\"c\">").append(escapeHtml(r.path("details").asText(""))).append("</td>")
                         .append("</tr>");
             }
@@ -492,7 +531,8 @@ public class TravelPlanPdfGenerator {
                 JsonNode c = it.next();
                 String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                 sb.append("<tr").append(alt).append(">")
-                        .append("<td class=\"c\" style=\"width:32%\"><strong>").append(escapeHtml(c.path("condition").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                        .append(escapeHtml(c.path("condition").asText("—"))).append("</strong></td>")
                         .append("<td class=\"c\">").append(escapeHtml(c.path("precautions").asText(""))).append("</td>")
                         .append("</tr>");
             }
@@ -508,10 +548,12 @@ public class TravelPlanPdfGenerator {
             i += appendKVRow(sb, "Packaging", textOrNull(medLog, "packaging"), i, rows);
             i += appendKVRow(sb, "Supply rule", textOrNull(medLog, "supplyRule"), i, rows);
             if (medLog.path("destinationLegalityCheck").asBoolean(false)) {
-                i += appendKVRow(sb, "Destination legality verified", "Yes — confirm all medications are legal at destination.", i, rows);
+                i += appendKVRow(sb, "Destination legality verified",
+                        "Yes — confirm all medications are legal at destination.", i, rows);
             }
             if (medLog.path("coldChainRequired").asBoolean(false)) {
-                i += appendKVRow(sb, "Cold chain required", "Yes — use insulated pouches (e.g. Frio) and verify refrigeration availability.", i, rows);
+                i += appendKVRow(sb, "Cold chain required",
+                        "Yes — use insulated pouches (e.g. Frio) and verify refrigeration availability.", i, rows);
             }
             sb.append("</table>");
         }
@@ -546,7 +588,8 @@ public class TravelPlanPdfGenerator {
         JsonNode referrals = root.path("specialistReferrals");
         if (referrals.isArray() && referrals.size() > 0) {
             appendTableStart(sb, "Specialist referrals", 3);
-            sb.append("<tr><th class=\"h\">Condition</th><th class=\"h\">Specialist</th><th class=\"h\">Urgency</th></tr>");
+            sb.append(
+                    "<tr><th class=\"h\">Condition</th><th class=\"h\">Specialist</th><th class=\"h\">Urgency</th></tr>");
             int rowIdx = 0;
             for (Iterator<JsonNode> it = referrals.elements(); it.hasNext(); rowIdx++) {
                 JsonNode ref = it.next();
@@ -554,9 +597,12 @@ public class TravelPlanPdfGenerator {
                 String urgencyBadge = urgencyBadgeClass(urgency);
                 String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                 sb.append("<tr").append(alt).append(">")
-                        .append("<td class=\"c\">").append(escapeHtml(ref.path("condition").asText("—"))).append("</td>")
-                        .append("<td class=\"c\">").append(escapeHtml(ref.path("specialist").asText("—"))).append("</td>")
-                        .append("<td class=\"c\" style=\"text-align:center\"><span class=\"urgency ").append(urgencyBadge).append("\">")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("condition").asText("—")))
+                        .append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("specialist").asText("—")))
+                        .append("</td>")
+                        .append("<td class=\"c\" style=\"text-align:center\"><span class=\"urgency ")
+                        .append(urgencyBadge).append("\">")
                         .append(escapeHtml(urgency)).append("</span></td>")
                         .append("</tr>");
             }
@@ -566,10 +612,12 @@ public class TravelPlanPdfGenerator {
         // Sexual Health
         JsonNode sexualHealth = root.path("sexualHealth");
         if (sexualHealth.isObject() && sexualHealthNonEmpty(sexualHealth)) {
-            appendTableStart(sb, "Sexual health &amp; risk behaviours", 1);
-            if (sexualHealth.path("riskLevel").isTextual() && StringUtils.hasText(sexualHealth.get("riskLevel").asText())) {
+            appendTableStart(sb, "Sexual health &amp; risk behaviours", 3);
+            if (sexualHealth.path("riskLevel").isTextual()
+                    && StringUtils.hasText(sexualHealth.get("riskLevel").asText())) {
                 String shl = sexualHealth.get("riskLevel").asText();
-                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
                         .append("<strong>Risk Level:</strong> ")
                         .append("<span class=\"").append(levelClass(shl)).append("\">")
                         .append(escapeHtml(shl.toUpperCase()))
@@ -577,11 +625,12 @@ public class TravelPlanPdfGenerator {
             }
             JsonNode prevention = sexualHealth.path("preventionAdvice");
             if (prevention.isArray() && prevention.size() > 0) {
-                sb.append("<tr><td class=\"cap-sub\">Prevention advice</td></tr>");
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Prevention advice</td></tr>");
                 for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
                     JsonNode line = pit.next();
                     if (line.isTextual()) {
-                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
                     }
                 }
             }
@@ -595,10 +644,12 @@ public class TravelPlanPdfGenerator {
         JsonNode pregnancy = root.path("pregnancyGuidance");
         if (pregnancy.isObject() && pregnancyNonEmpty(pregnancy)) {
             appendTableStart(sb, "Pregnancy &amp; reproductive health", 1);
-            if (pregnancy.path("trimesterSpecificAdvice").isTextual() && StringUtils.hasText(pregnancy.get("trimesterSpecificAdvice").asText())) {
+            if (pregnancy.path("trimesterSpecificAdvice").isTextual()
+                    && StringUtils.hasText(pregnancy.get("trimesterSpecificAdvice").asText())) {
                 appendKVRow(sb, "Trimester guidance", pregnancy.get("trimesterSpecificAdvice").asText(), 0, 1);
             }
-            if (pregnancy.path("antimalarialSafety").isTextual() && StringUtils.hasText(pregnancy.get("antimalarialSafety").asText())) {
+            if (pregnancy.path("antimalarialSafety").isTextual()
+                    && StringUtils.hasText(pregnancy.get("antimalarialSafety").asText())) {
                 appendKVRow(sb, "Antimalarial safety", pregnancy.get("antimalarialSafety").asText(), 0, 1);
             }
             JsonNode liveVaxCx = pregnancy.path("liveVaccineContraindications");
@@ -611,10 +662,12 @@ public class TravelPlanPdfGenerator {
                     }
                 }
             }
-            if (pregnancy.path("airlineRestrictions").isTextual() && StringUtils.hasText(pregnancy.get("airlineRestrictions").asText())) {
+            if (pregnancy.path("airlineRestrictions").isTextual()
+                    && StringUtils.hasText(pregnancy.get("airlineRestrictions").asText())) {
                 appendKVRow(sb, "Airline restrictions", pregnancy.get("airlineRestrictions").asText(), 0, 1);
             }
-            if (pregnancy.path("contraceptionCounselling").isTextual() && StringUtils.hasText(pregnancy.get("contraceptionCounselling").asText())) {
+            if (pregnancy.path("contraceptionCounselling").isTextual()
+                    && StringUtils.hasText(pregnancy.get("contraceptionCounselling").asText())) {
                 appendKVRow(sb, "Contraception counselling", pregnancy.get("contraceptionCounselling").asText(), 0, 1);
             }
             sb.append("</table>");
@@ -626,7 +679,8 @@ public class TravelPlanPdfGenerator {
             if (ar.path("redFlag").isTextual() && StringUtils.hasText(ar.get("redFlag").asText())) {
                 sb.append("<tr><td class=\"val\" style=\"border:none;padding:6px 12px 4px\">")
                         .append("<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
-                        .append("<div class=\"alert-b\">").append(escapeHtml(ar.get("redFlag").asText())).append("</div></div>")
+                        .append("<div class=\"alert-b\">").append(escapeHtml(ar.get("redFlag").asText()))
+                        .append("</div></div>")
                         .append("</td></tr>");
             }
             appendBulletSubTable(sb, ar.path("within1Week"), "Within 1 week");
@@ -673,7 +727,8 @@ public class TravelPlanPdfGenerator {
                     }
                     String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                     sb.append("<tr").append(alt).append(">")
-                            .append("<td class=\"c\" style=\"width:34%\"><strong>").append(escapeHtml(c.path("name").asText("—"))).append("</strong></td>")
+                            .append("<td class=\"c\" style=\"width:34%\"><strong>")
+                            .append(escapeHtml(c.path("name").asText("—"))).append("</strong></td>")
                             .append("<td class=\"c\">").append(escapeHtml(det.toString())).append("</td>")
                             .append("</tr>");
                 }
@@ -689,7 +744,8 @@ public class TravelPlanPdfGenerator {
                     JsonNode e = eit.next();
                     String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                     sb.append("<tr").append(alt).append(">")
-                            .append("<td class=\"c\"><strong>").append(escapeHtml(e.path("name").asText("—"))).append("</strong></td>")
+                            .append("<td class=\"c\"><strong>").append(escapeHtml(e.path("name").asText("—")))
+                            .append("</strong></td>")
                             .append("<td class=\"c\">").append(escapeHtml(e.path("details").asText(""))).append("</td>")
                             .append("</tr>");
                 }
@@ -698,7 +754,8 @@ public class TravelPlanPdfGenerator {
             JsonNode ec = mc.path("emergencyContacts");
             if (ec.isArray() && ec.size() > 0) {
                 sb.append("<tr><td class=\"cap-sub\">Emergency numbers</td></tr>");
-                sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none;width:100%\">");
+                sb.append(
+                        "<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none;width:100%\">");
                 sb.append("<tr><th class=\"h\">Label</th><th class=\"h\">Contact</th></tr>");
                 int rowIdx = 0;
                 for (Iterator<JsonNode> xit = ec.elements(); xit.hasNext(); rowIdx++) {
@@ -706,7 +763,8 @@ public class TravelPlanPdfGenerator {
                     String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
                     sb.append("<tr").append(alt).append(">")
                             .append("<td class=\"c\">").append(escapeHtml(x.path("label").asText(""))).append("</td>")
-                            .append("<td class=\"c\"><strong>").append(escapeHtml(x.path("value").asText(""))).append("</strong></td>")
+                            .append("<td class=\"c\"><strong>").append(escapeHtml(x.path("value").asText("")))
+                            .append("</strong></td>")
                             .append("</tr>");
                 }
                 sb.append("</table></td></tr>");
@@ -805,7 +863,8 @@ public class TravelPlanPdfGenerator {
         }
         sb.append("<table class=\"sec\" cellspacing=\"0\" cellpadding=\"0\">")
                 .append("<tr><td class=\"cap\">").append(title).append("</td></tr>")
-                .append("<tr><td class=\"val\" style=\"border:none\">").append(escapeHtml(raw.trim())).append("</td></tr>")
+                .append("<tr><td class=\"val\" style=\"border:none\">").append(escapeHtml(raw.trim()))
+                .append("</td></tr>")
                 .append("</table>");
     }
 
@@ -923,14 +982,17 @@ public class TravelPlanPdfGenerator {
         return (flight.path("vteRiskLevel").isTextual() && StringUtils.hasText(flight.get("vteRiskLevel").asText()))
                 || (flight.path("preventionMeasures").isArray() && flight.get("preventionMeasures").size() > 0)
                 || flight.path("medifClearanceRequired").asBoolean(false)
-                || (flight.path("medicationTimingGuidance").isTextual() && StringUtils.hasText(flight.get("medicationTimingGuidance").asText()));
+                || (flight.path("medicationTimingGuidance").isTextual()
+                        && StringUtils.hasText(flight.get("medicationTimingGuidance").asText()));
     }
 
     private static boolean malariaNonEmpty(JsonNode malaria) {
         return (malaria.path("riskLevel").isTextual() && StringUtils.hasText(malaria.get("riskLevel").asText()))
-                || (malaria.path("recommendedAgent").isTextual() && StringUtils.hasText(malaria.get("recommendedAgent").asText()))
+                || (malaria.path("recommendedAgent").isTextual()
+                        && StringUtils.hasText(malaria.get("recommendedAgent").asText()))
                 || (malaria.path("mosquitoProtection").isArray() && malaria.get("mosquitoProtection").size() > 0)
-                || (malaria.path("contraindications").isTextual() && StringUtils.hasText(malaria.get("contraindications").asText()));
+                || (malaria.path("contraindications").isTextual()
+                        && StringUtils.hasText(malaria.get("contraindications").asText()));
     }
 
     private static boolean medicationLogisticsNonEmpty(JsonNode medLog) {
@@ -942,10 +1004,14 @@ public class TravelPlanPdfGenerator {
 
     private static int countMedicationLogisticsRows(JsonNode medLog) {
         int n = 0;
-        if (StringUtils.hasText(textOrNull(medLog, "packaging"))) n++;
-        if (StringUtils.hasText(textOrNull(medLog, "supplyRule"))) n++;
-        if (medLog.path("destinationLegalityCheck").asBoolean(false)) n++;
-        if (medLog.path("coldChainRequired").asBoolean(false)) n++;
+        if (StringUtils.hasText(textOrNull(medLog, "packaging")))
+            n++;
+        if (StringUtils.hasText(textOrNull(medLog, "supplyRule")))
+            n++;
+        if (medLog.path("destinationLegalityCheck").asBoolean(false))
+            n++;
+        if (medLog.path("coldChainRequired").asBoolean(false))
+            n++;
         return n;
     }
 
@@ -956,11 +1022,16 @@ public class TravelPlanPdfGenerator {
     }
 
     private static boolean pregnancyNonEmpty(JsonNode pg) {
-        return (pg.path("trimesterSpecificAdvice").isTextual() && StringUtils.hasText(pg.get("trimesterSpecificAdvice").asText()))
-                || (pg.path("antimalarialSafety").isTextual() && StringUtils.hasText(pg.get("antimalarialSafety").asText()))
-                || (pg.path("liveVaccineContraindications").isArray() && pg.get("liveVaccineContraindications").size() > 0)
-                || (pg.path("airlineRestrictions").isTextual() && StringUtils.hasText(pg.get("airlineRestrictions").asText()))
-                || (pg.path("contraceptionCounselling").isTextual() && StringUtils.hasText(pg.get("contraceptionCounselling").asText()));
+        return (pg.path("trimesterSpecificAdvice").isTextual()
+                && StringUtils.hasText(pg.get("trimesterSpecificAdvice").asText()))
+                || (pg.path("antimalarialSafety").isTextual()
+                        && StringUtils.hasText(pg.get("antimalarialSafety").asText()))
+                || (pg.path("liveVaccineContraindications").isArray()
+                        && pg.get("liveVaccineContraindications").size() > 0)
+                || (pg.path("airlineRestrictions").isTextual()
+                        && StringUtils.hasText(pg.get("airlineRestrictions").asText()))
+                || (pg.path("contraceptionCounselling").isTextual()
+                        && StringUtils.hasText(pg.get("contraceptionCounselling").asText()));
     }
 
     private static String urgencyBadgeClass(String urgency) {

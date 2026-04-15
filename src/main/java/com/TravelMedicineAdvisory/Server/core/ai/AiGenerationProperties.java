@@ -63,7 +63,8 @@ public class AiGenerationProperties {
         private String location = "us-central1";
         private String model = "gemini-2.5-pro";
         /**
-         * Absolute or relative path to a service account JSON key. If empty, {@code GOOGLE_APPLICATION_CREDENTIALS}
+         * Absolute or relative path to a service account JSON key. If empty,
+         * {@code GOOGLE_APPLICATION_CREDENTIALS}
          * is tried, then Application Default Credentials.
          */
         private String credentialsPath = "";
@@ -133,7 +134,7 @@ public class AiGenerationProperties {
 
     public static class Anthropic {
         private String apiKey = "";
-        private String model = "claude-sonnet-4-0";
+        private String model = "claude-sonnet-4-6";
         private String baseUrl = "https://api.anthropic.com/v1";
 
         public String getApiKey() {

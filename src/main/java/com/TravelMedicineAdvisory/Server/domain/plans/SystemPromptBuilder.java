@@ -2,8 +2,6 @@ package com.TravelMedicineAdvisory.Server.domain.plans;
 
 import org.springframework.stereotype.Component;
 
-import java.util.stream.Collectors;
-
 /**
  * Builds the complete AI system prompt for travel health plan generation.
  *
@@ -14,7 +12,8 @@ import java.util.stream.Collectors;
  * 3. Input Format (questionnaire mapping from OnboardingQuestionSeeder)
  * 4. Processing Rules (execution order, cross-links, intensity modifier)
  * 5. Decision Trees Reference Library (all 14 trees with full clinical logic)
- * 6. Dynamic Pre-Computed Clinical Context (flags from ClinicalContextExtractor)
+ * 6. Dynamic Pre-Computed Clinical Context (flags from
+ * ClinicalContextExtractor)
  * 7. Hard Stop Conditions
  * 8. Output Format & JSON Schema
  * 9. Mandatory Coverage Requirements
@@ -22,13 +21,18 @@ import java.util.stream.Collectors;
  * 11. Mandatory Disclaimer
  *
  * Questionnaire data comes from:
- * - {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire}
- *   (responsesJson — per-trip questionnaire, JSON keyed by question keys)
- * - {@link com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding}
- *   (responsesJson — initial health onboarding, keyed by OnboardingQuestionCategory)
+ * -
+ * {@link com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire}
+ * (responsesJson — per-trip questionnaire, JSON keyed by question keys)
+ * -
+ * {@link com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding}
+ * (responsesJson — initial health onboarding, keyed by
+ * OnboardingQuestionCategory)
  *
- * The ClinicalContext pre-evaluates all 14 decision trees against questionnaire responses
- * so the AI receives both the full clinical reference library AND traveller-specific flags.
+ * The ClinicalContext pre-evaluates all 14 decision trees against questionnaire
+ * responses
+ * so the AI receives both the full clinical reference library AND
+ * traveller-specific flags.
  */
 @Component
 public class SystemPromptBuilder {
@@ -71,14 +75,19 @@ public class SystemPromptBuilder {
         prompt.append("Questionnaire structure (from OnboardingQuestionSeeder):\n");
         prompt.append("  • Sections 1–9 correspond to onboarding categories:\n");
         prompt.append("    Section 1: Personal Information (date_of_birth, gender, preferred_language)\n");
-        prompt.append("    Section 2: Travel Details (trip_itinerary, longest_flight_leg_hours, purpose_of_travel, travel_companions)\n");
+        prompt.append(
+                "    Section 2: Travel Details (trip_itinerary, longest_flight_leg_hours, purpose_of_travel, travel_companions)\n");
         prompt.append("    Section 3: Accommodation & Environment (main_accommodation, stay_environment)\n");
         prompt.append("    Section 4: Planned Activities (planned_activities, altitude_travel, activity_frequency)\n");
-        prompt.append("    Section 5: Medical History (chronic_medical_conditions, immunocompromised, current_medications, allergies, pregnancy_status, could_become_pregnant)\n");
-        prompt.append("    Section 6: Vaccination & Travel Health (travel_related_vaccines_received, routine_vaccinations_status, vaccine_reaction_history)\n");
-        prompt.append("    Section 7: Travel History (international_travel_last_12_months, travel_frequency, previous_trip_health_preparations, previous_trip_health_problems)\n");
+        prompt.append(
+                "    Section 5: Medical History (chronic_medical_conditions, immunocompromised, current_medications, allergies, pregnancy_status, could_become_pregnant)\n");
+        prompt.append(
+                "    Section 6: Vaccination & Travel Health (travel_related_vaccines_received, routine_vaccinations_status, vaccine_reaction_history)\n");
+        prompt.append(
+                "    Section 7: Travel History (international_travel_last_12_months, travel_frequency, previous_trip_health_preparations, previous_trip_health_problems)\n");
         prompt.append("    Section 8: Awareness & Preparation (has_primary_care_physician, travel_insurance)\n");
-        prompt.append("    Section 9: Personal Health & Risk Behaviours (anticipated_risk_behaviours, sexual_activity_protection, sti_history, substance_use_adherence_risk)\n\n");
+        prompt.append(
+                "    Section 9: Personal Health & Risk Behaviours (anticipated_risk_behaviours, sexual_activity_protection, sti_history, substance_use_adherence_risk)\n\n");
 
         // ================================================================
         // PART 4 — PROCESSING RULES
@@ -120,7 +129,8 @@ public class SystemPromptBuilder {
             prompt.append("DO NOT generate a standard advisory. Generate ONLY a hard stop response with:\n");
             prompt.append("1. Clear explanation of the triggered condition\n");
             prompt.append("2. Why this presents significant risk\n");
-            prompt.append("3. Statement: 'We strongly recommend you do not travel at this time without specialist clearance.'\n");
+            prompt.append(
+                    "3. Statement: 'We strongly recommend you do not travel at this time without specialist clearance.'\n");
             prompt.append("4. Specialist referral information\n");
             prompt.append("5. Mandatory disclaimer\n\n");
         } else {
@@ -393,7 +403,8 @@ public class SystemPromptBuilder {
                       • RETURN: include at least 4 actionable bullets for the return leg and immediate post-return period.
                       • ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is explicit return information.
 
-                12. medicalDisclaimer: Copy the exact disclaimer text from Part 11 above.
+                12. Remove all "-" hyphens and "_" underscore characters from the provided response.
+                13. medicalDisclaimer: Copy the exact disclaimer text from Part 11 above.
                 """;
     }
 }

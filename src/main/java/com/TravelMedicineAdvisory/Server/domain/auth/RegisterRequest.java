@@ -11,17 +11,19 @@ public class RegisterRequest {
     private String username;
     private String email;
     private String password;
+    private String planCode;
 
     public RegisterRequest() {
     }
 
     public RegisterRequest(String first_name, String last_name, String username, String email,
-            String password) {
+            String password, String planCode) {
         this.firstName = first_name;
         this.lastName = last_name;
         this.username = username;
         this.email = email;
         this.password = password;
+        this.planCode = planCode;
     }
 
     public String getFirstName() {
@@ -62,5 +64,13 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getPlanCode() {
+        return planCode;
+    }
+
+    public void setPlanCode(String planCode) {
+        this.planCode = planCode;
     }
 }

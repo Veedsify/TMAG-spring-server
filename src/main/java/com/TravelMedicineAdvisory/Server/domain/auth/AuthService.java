@@ -131,7 +131,7 @@ public class AuthService {
         user.setBillingCurrency(BillingCurrency.NGN);
         user.setRole(role);
         user.setLastLogin(LocalDateTime.now());
-        user.setCreditPlan(resolveDefaultCreditPlan());
+        user.setCreditPlan(resolveCreditPlan(request.getPlanCode()));
 
         User savedUser = userRepository.save(user);
 
@@ -208,7 +208,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse googleCallback(String code) {
+    public AuthResponse googleCallback(String code, String planCode) {
         if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null || googleClientSecret.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
         }
@@ -283,7 +283,7 @@ public class AuthService {
                 user.setBillingCurrency(BillingCurrency.NGN);
                 user.setRole(role);
                 user.setLastLogin(LocalDateTime.now());
-                user.setCreditPlan(resolveDefaultCreditPlan());
+                user.setCreditPlan(resolveCreditPlan(planCode));
                 if (pictureUrl != null) {
                     user.setAvatarUrl(pictureUrl);
                 }
@@ -470,6 +470,21 @@ public class AuthService {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    private CreditPlan resolveCreditPlan(String planCode) {
+        if (planCode != null && !planCode.isBlank()) {
+            try {
+                CreditPlanCode code = CreditPlanCode.valueOf(planCode);
+                CreditPlan requested = userCreditPlanRepository.findByCode(code).orElse(null);
+                if (requested != null) {
+                    return requested;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Invalid plan code, fall through to default
+            }
+        }
+        return resolveDefaultCreditPlan();
     }
 
     private CreditPlan resolveDefaultCreditPlan() {
