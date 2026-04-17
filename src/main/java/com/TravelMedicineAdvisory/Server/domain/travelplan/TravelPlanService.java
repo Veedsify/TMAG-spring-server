@@ -233,6 +233,42 @@ public class TravelPlanService {
         repository.deleteById(id);
     }
 
+    public TravelPlanResponse duplicateForTest(Long sourcePlanId) {
+        TravelPlan source = repository.findById(sourcePlanId)
+                .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
+
+        TravelPlan entity = new TravelPlan();
+        entity.setDestination(source.getDestination());
+        entity.setCountry(source.getCountry());
+        entity.setDuration(source.getDuration());
+        entity.setPurpose(source.getPurpose());
+        entity.setTripType(source.getTripType());
+        entity.setTripDetailsJson(source.getTripDetailsJson());
+        entity.setRiskScore(source.getRiskScore());
+        entity.setStatus("QUEUED");
+        entity.setCompany(source.getCompany());
+        entity.setEmployee(source.getEmployee());
+        entity.setUser(source.getUser());
+        TravelPlan saved = repository.save(entity);
+
+        travelPlanQuestionnaireRepository.findByTravelPlan_Id(sourcePlanId).ifPresent(sourceQ -> {
+            TravelPlanQuestionnaire questionnaire = new TravelPlanQuestionnaire();
+            questionnaire.setTravelPlan(saved);
+            questionnaire.setUser(saved.getUser());
+            questionnaire.setEmployee(saved.getEmployee());
+            questionnaire.setCompany(saved.getCompany());
+            questionnaire.setSource(sourceQ.getSource());
+            questionnaire.setResponsesJson(sourceQ.getResponsesJson());
+            travelPlanQuestionnaireRepository.save(questionnaire);
+        });
+
+        if (saved.getUser() != null) {
+            planGenerationService.enqueueGeneration(saved.getId(), saved.getUser().getId());
+        }
+
+        return toResponse(saved);
+    }
+
     private TravelPlanResponse toResponse(TravelPlan entity) {
         return toResponse(entity, null);
     }
