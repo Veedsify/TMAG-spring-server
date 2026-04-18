@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 
 @Service
 public class AdminAnalyticsService {
@@ -64,15 +63,24 @@ public class AdminAnalyticsService {
         Map<String, Double> rates = new HashMap<>();
         systemSettingRepository.findByKey("exchangeRateNGN")
                 .ifPresent(s -> {
-                    try { rates.put("NGN", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                    try {
+                        rates.put("NGN", Double.parseDouble(s.getValue()));
+                    } catch (NumberFormatException ignored) {
+                    }
                 });
         systemSettingRepository.findByKey("exchangeRateEUR")
                 .ifPresent(s -> {
-                    try { rates.put("EUR", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                    try {
+                        rates.put("EUR", Double.parseDouble(s.getValue()));
+                    } catch (NumberFormatException ignored) {
+                    }
                 });
         systemSettingRepository.findByKey("exchangeRateGBP")
                 .ifPresent(s -> {
-                    try { rates.put("GBP", Double.parseDouble(s.getValue())); } catch (NumberFormatException ignored) {}
+                    try {
+                        rates.put("GBP", Double.parseDouble(s.getValue()));
+                    } catch (NumberFormatException ignored) {
+                    }
                 });
         return rates;
     }
@@ -80,16 +88,22 @@ public class AdminAnalyticsService {
     /**
      * Converts an invoice amount into the configured reporting (base) currency.
      * Rates are "1 unit of foreign currency = X baseCurrency" (e.g. NGN→USD).
-     * Missing rates return 0 so NGN amounts are never summed as if they were USD (or vice versa).
+     * Missing rates return 0 so NGN amounts are never summed as if they were USD
+     * (or vice versa).
      */
-    private double convertToBase(java.math.BigDecimal amount, String currency, String baseCurrency, Map<String, Double> rates) {
-        if (amount == null) return 0;
-        if (currency == null || currency.isBlank()) return amount.doubleValue();
+    private double convertToBase(java.math.BigDecimal amount, String currency, String baseCurrency,
+            Map<String, Double> rates) {
+        if (amount == null)
+            return 0;
+        if (currency == null || currency.isBlank())
+            return amount.doubleValue();
         String upper = currency.toUpperCase();
         String base = baseCurrency != null ? baseCurrency.toUpperCase() : "USD";
-        if (upper.equals(base)) return amount.doubleValue();
+        if (upper.equals(base))
+            return amount.doubleValue();
         Double rate = rates.get(upper);
-        if (rate == null) return 0.0;
+        if (rate == null)
+            return 0.0;
         return amount.doubleValue() * rate;
     }
 
@@ -213,7 +227,8 @@ public class AdminAnalyticsService {
         corpVsInd.put("individual", userRepository.countByType("INDIVIDUAL"));
         analytics.setCorporateVsIndividual(corpVsInd);
 
-        // Peak usage times — aggregate AI request logs by hour of day (all 24 hours, 0-filled)
+        // Peak usage times — aggregate AI request logs by hour of day (all 24 hours,
+        // 0-filled)
         List<Map<String, Object>> peakTimes = new ArrayList<>();
         List<AiRequestLog> allAiLogs = aiRequestLogRepository.findAll();
         Map<Integer, Long> hourCounts = new HashMap<>();
@@ -252,7 +267,6 @@ public class AdminAnalyticsService {
         // Monthly requests & revenue — aggregate by month from AI logs and invoices
         List<Map<String, Object>> monthly = new ArrayList<>();
         Map<String, Long> monthlyRequestCounts = new HashMap<>();
-        Map<String, Double> monthlyRevenue = new HashMap<>();
         java.time.format.DateTimeFormatter monthFmt = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
         for (AiRequestLog log : allAiLogs) {
             if (log.getCreatedAt() != null) {
@@ -271,12 +285,14 @@ public class AdminAnalyticsService {
             try {
                 java.time.YearMonth ym = java.time.YearMonth.parse(e.getKey(), ymParser);
                 monthlyRequestsByYM.merge(ym, e.getValue(), Long::sum);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         for (Invoice inv : allInvoices) {
             if (inv.getPaidAt() != null && inv.getAmount() != null) {
                 java.time.YearMonth ym = java.time.YearMonth.from(inv.getPaidAt());
-                double converted = convertToBase(inv.getAmount(), inv.getCurrency(), analyticsBaseCurrency, currencyRates);
+                double converted = convertToBase(inv.getAmount(), inv.getCurrency(), analyticsBaseCurrency,
+                        currencyRates);
                 monthlyRevenueByYM.merge(ym, converted, Double::sum);
             }
         }
@@ -295,11 +311,21 @@ public class AdminAnalyticsService {
         // Risk distribution — count travel plans by risk score bucket
         List<Map<String, Object>> riskDist = new ArrayList<>();
         long lowCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() < 40).count();
-        long medCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 40 && p.getRiskScore() < 70).count();
+        long medCount = plans.stream()
+                .filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 40 && p.getRiskScore() < 70).count();
         long highCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 70).count();
-        Map<String, Object> lowEntry = new HashMap<>(); lowEntry.put("risk", "Low"); lowEntry.put("count", lowCount); riskDist.add(lowEntry);
-        Map<String, Object> medEntry = new HashMap<>(); medEntry.put("risk", "Medium"); medEntry.put("count", medCount); riskDist.add(medEntry);
-        Map<String, Object> highEntry = new HashMap<>(); highEntry.put("risk", "High"); highEntry.put("count", highCount); riskDist.add(highEntry);
+        Map<String, Object> lowEntry = new HashMap<>();
+        lowEntry.put("risk", "Low");
+        lowEntry.put("count", lowCount);
+        riskDist.add(lowEntry);
+        Map<String, Object> medEntry = new HashMap<>();
+        medEntry.put("risk", "Medium");
+        medEntry.put("count", medCount);
+        riskDist.add(medEntry);
+        Map<String, Object> highEntry = new HashMap<>();
+        highEntry.put("risk", "High");
+        highEntry.put("count", highCount);
+        riskDist.add(highEntry);
         analytics.setRiskDistribution(riskDist);
 
         // Daily active users — users who logged in each day of the past week
@@ -448,11 +474,16 @@ public class AdminAnalyticsService {
     @Transactional
     public AdminInvoiceResponse createInvoice(Map<String, Object> body) {
         Invoice invoice = new Invoice();
-        if (body.containsKey("description")) invoice.setDescription((String) body.get("description"));
-        if (body.containsKey("amount")) invoice.setAmount(new java.math.BigDecimal(body.get("amount").toString()));
-        if (body.containsKey("currency")) invoice.setCurrency((String) body.get("currency"));
-        if (body.containsKey("status")) invoice.setStatus((String) body.get("status"));
-        if (body.containsKey("paymentMethod")) invoice.setPaymentMethod((String) body.get("paymentMethod"));
+        if (body.containsKey("description"))
+            invoice.setDescription((String) body.get("description"));
+        if (body.containsKey("amount"))
+            invoice.setAmount(new java.math.BigDecimal(body.get("amount").toString()));
+        if (body.containsKey("currency"))
+            invoice.setCurrency((String) body.get("currency"));
+        if (body.containsKey("status"))
+            invoice.setStatus((String) body.get("status"));
+        if (body.containsKey("paymentMethod"))
+            invoice.setPaymentMethod((String) body.get("paymentMethod"));
         if (body.containsKey("companyId")) {
             Long companyId = ((Number) body.get("companyId")).longValue();
             companyRepository.findById(companyId).ifPresent(invoice::setCompany);
@@ -474,11 +505,16 @@ public class AdminAnalyticsService {
     public AdminInvoiceResponse updateInvoice(Long id, Map<String, Object> updates) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
-        if (updates.containsKey("description")) invoice.setDescription((String) updates.get("description"));
-        if (updates.containsKey("amount")) invoice.setAmount(new java.math.BigDecimal(updates.get("amount").toString()));
-        if (updates.containsKey("currency")) invoice.setCurrency((String) updates.get("currency"));
-        if (updates.containsKey("status")) invoice.setStatus((String) updates.get("status"));
-        if (updates.containsKey("paymentMethod")) invoice.setPaymentMethod((String) updates.get("paymentMethod"));
+        if (updates.containsKey("description"))
+            invoice.setDescription((String) updates.get("description"));
+        if (updates.containsKey("amount"))
+            invoice.setAmount(new java.math.BigDecimal(updates.get("amount").toString()));
+        if (updates.containsKey("currency"))
+            invoice.setCurrency((String) updates.get("currency"));
+        if (updates.containsKey("status"))
+            invoice.setStatus((String) updates.get("status"));
+        if (updates.containsKey("paymentMethod"))
+            invoice.setPaymentMethod((String) updates.get("paymentMethod"));
         invoice = invoiceRepository.save(invoice);
         return mapInvoiceToResponse(invoice);
     }
@@ -558,7 +594,8 @@ public class AdminAnalyticsService {
             return new ArrayList<>();
         }
         try {
-            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(json);
             com.fasterxml.jackson.databind.JsonNode array = root.path(arrayField);
             if (!array.isArray()) {
                 return new ArrayList<>();

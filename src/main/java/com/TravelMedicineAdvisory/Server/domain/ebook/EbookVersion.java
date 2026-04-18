@@ -3,14 +3,14 @@ package com.TravelMedicineAdvisory.Server.domain.ebook;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "ebook_versions")
 @SQLDelete(sql = "UPDATE ebook_versions SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class EbookVersion extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

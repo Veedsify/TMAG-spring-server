@@ -5,14 +5,14 @@ import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "credit_purchases")
 @SQLDelete(sql = "UPDATE credit_purchases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CreditPurchase extends BaseEntity {
 
     @Column(name = "tx_ref", nullable = false, unique = true)

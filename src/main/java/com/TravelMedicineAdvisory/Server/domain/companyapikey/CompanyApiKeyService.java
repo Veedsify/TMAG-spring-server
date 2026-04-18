@@ -3,7 +3,6 @@ package com.TravelMedicineAdvisory.Server.domain.companyapikey;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,6 @@ public class CompanyApiKeyService {
     private final CompanyApiKeyRepository repository;
     private final CompanyRepository companyRepository;
     private final CompanyUserRepository companyUserRepository;
-    private final UserRepository userRepository;
     private final QueueService queueService;
 
     public CompanyApiKeyService(CompanyApiKeyRepository repository, CompanyRepository companyRepository,
@@ -41,7 +39,6 @@ public class CompanyApiKeyService {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.companyUserRepository = companyUserRepository;
-        this.userRepository = userRepository;
         this.queueService = queueService;
     }
 

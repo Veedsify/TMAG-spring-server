@@ -5,12 +5,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 @Entity
 @Table(name = "faq_items")
 @SQLDelete(sql = "UPDATE faq_items SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class FaqItem extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "TEXT")

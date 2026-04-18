@@ -41,9 +41,9 @@ public class PaymentController {
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Payment provider not configured"));
         }
-        
+
         FlutterwavePaymentResponse response = flutterwaveService.initiatePayment(request);
-        
+
         if (response.success()) {
             return ResponseEntity.ok(response);
         } else {
@@ -54,7 +54,7 @@ public class PaymentController {
     @GetMapping("/verify/{transactionId}")
     public ResponseEntity<?> verifyTransaction(@PathVariable String transactionId) {
         FlutterwavePaymentResponse response = flutterwaveService.verifyTransaction(transactionId);
-        
+
         if (response.success()) {
             return ResponseEntity.ok(response);
         } else {
@@ -65,7 +65,7 @@ public class PaymentController {
     @GetMapping("/verify-by-reference/{txRef}")
     public ResponseEntity<?> verifyTransactionByReference(@PathVariable String txRef) {
         FlutterwavePaymentResponse response = flutterwaveService.verifyTransactionByReference(txRef);
-        
+
         if (response.success()) {
             return ResponseEntity.ok(response);
         } else {
@@ -141,7 +141,7 @@ public class PaymentController {
             } else {
                 logger.warn("No purchase or ebook order found for txRef: {}", txRef);
             }
-            var result = creditResult != null ? creditResult : ebookResult;
+            // var result = creditResult != null ? creditResult : ebookResult;
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Webhook processed"));
         } catch (Exception e) {
@@ -154,22 +154,18 @@ public class PaymentController {
     @GetMapping("/config")
     public ResponseEntity<?> getPaymentConfig() {
         return ResponseEntity.ok(Map.of(
-            "success", true,
-            "data", Map.of(
-                "provider", "flutterwave",
-                "publicKey", flutterwaveService.getPublicKey() != null ? "set" : "not_set",
-                "configured", flutterwaveService.isConfigured()
-            )
-        ));
+                "success", true,
+                "data", Map.of(
+                        "provider", "flutterwave",
+                        "publicKey", flutterwaveService.getPublicKey() != null ? "set" : "not_set",
+                        "configured", flutterwaveService.isConfigured())));
     }
 
     @GetMapping("/generate-reference")
     public ResponseEntity<?> generateReference() {
         return ResponseEntity.ok(Map.of(
-            "success", true,
-            "data", Map.of(
-                "txRef", flutterwaveService.generateTransactionReference()
-            )
-        ));
+                "success", true,
+                "data", Map.of(
+                        "txRef", flutterwaveService.generateTransactionReference())));
     }
 }

@@ -89,7 +89,8 @@ public class UserService {
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
                 entity.getCreditPlan() != null
-                        ? com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse.from(entity.getCreditPlan())
+                        ? com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse
+                                .from(entity.getCreditPlan())
                         : null);
     }
 

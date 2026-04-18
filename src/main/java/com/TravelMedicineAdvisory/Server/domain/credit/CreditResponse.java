@@ -1,6 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.credit;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 
 public record CreditResponse(

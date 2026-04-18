@@ -3,7 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.creditpurchase;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import jakarta.validation.constraints.*;
 
-import java.math.BigDecimal;
+
 
 public record CreditPurchaseRequest(
     @NotNull(message = "Credits is required")

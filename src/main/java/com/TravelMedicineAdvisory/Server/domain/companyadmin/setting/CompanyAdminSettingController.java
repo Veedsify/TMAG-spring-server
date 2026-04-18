@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingRequest;
-import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingResponse;
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingService;
 
 @Tag(name = "Company admin · Settings")
@@ -29,7 +28,8 @@ public class CompanyAdminSettingController {
 
     @PutMapping
     public ResponseEntity<SuccessResponse> update(@RequestBody CompanySettingRequest request) {
-        return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.upsert(request.companyId(), request)));
+        return ResponseEntity
+                .ok(new SuccessResponse("Updated successfully", service.upsert(request.companyId(), request)));
     }
 
     @PutMapping("/billing-currency")

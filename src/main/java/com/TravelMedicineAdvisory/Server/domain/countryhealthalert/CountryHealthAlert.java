@@ -3,14 +3,13 @@ package com.TravelMedicineAdvisory.Server.domain.countryhealthalert;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "country_health_alerts")
 @SQLDelete(sql = "UPDATE country_health_alerts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CountryHealthAlert extends BaseEntity {
 
     private String title;

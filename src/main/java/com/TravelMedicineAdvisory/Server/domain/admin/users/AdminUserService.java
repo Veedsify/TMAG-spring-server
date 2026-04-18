@@ -1,7 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.users;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,9 +62,12 @@ public class AdminUserService {
     @Transactional
     public AdminUserResponse create(Map<String, Object> body) {
         User user = new User();
-        if (body.containsKey("name")) user.setName((String) body.get("name"));
-        if (body.containsKey("email")) user.setEmail((String) body.get("email"));
-        if (body.containsKey("phone")) user.setPhone((String) body.get("phone"));
+        if (body.containsKey("name"))
+            user.setName((String) body.get("name"));
+        if (body.containsKey("email"))
+            user.setEmail((String) body.get("email"));
+        if (body.containsKey("phone"))
+            user.setPhone((String) body.get("phone"));
         if (body.containsKey("password")) {
             user.setPassword(passwordEncoder.encode((String) body.get("password")));
         }
@@ -119,7 +121,8 @@ public class AdminUserService {
 
     /**
      * Sets the user's remaining credit balance to {@code targetRemaining}.
-     * The admin UI sends the desired balance (not a delta); ledger entries are written via
+     * The admin UI sends the desired balance (not a delta); ledger entries are
+     * written via
      * {@link AdminCreditService#adjustCredits(Map)}.
      */
     @Transactional
@@ -239,7 +242,6 @@ public class AdminUserService {
                 user.getCreatedAt(),
                 user.getAvatarUrl(),
                 null,
-                null
-        );
+                null);
     }
 }

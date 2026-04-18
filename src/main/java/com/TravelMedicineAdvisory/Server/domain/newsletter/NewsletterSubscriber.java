@@ -3,12 +3,12 @@ package com.TravelMedicineAdvisory.Server.domain.newsletter;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 @Entity
 @Table(name = "newsletter_subscribers")
 @SQLDelete(sql = "UPDATE newsletter_subscribers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class NewsletterSubscriber extends BaseEntity {
 
     @Column(nullable = false, unique = true)

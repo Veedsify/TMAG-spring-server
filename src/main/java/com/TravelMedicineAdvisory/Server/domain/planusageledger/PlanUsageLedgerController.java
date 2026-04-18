@@ -15,8 +15,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @Tag(name = "Plan usage ledgers")
 @RestController
 @RequestMapping("/api/v1/plan-usage-ledgers")
@@ -37,9 +35,9 @@ public class PlanUsageLedgerController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+                page.getTotalPages());
+        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+                pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
@@ -53,9 +51,9 @@ public class PlanUsageLedgerController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+                page.getTotalPages());
+        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+                pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
@@ -68,9 +66,9 @@ public class PlanUsageLedgerController {
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
-                page.getTotalPages()
-        );
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+                page.getTotalPages());
+        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+                pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

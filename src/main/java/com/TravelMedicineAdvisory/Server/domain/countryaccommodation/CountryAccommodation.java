@@ -3,7 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.countryaccommodation;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "country_accommodations")
 @SQLDelete(sql = "UPDATE country_accommodations SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CountryAccommodation extends BaseEntity {
 
     private String city;

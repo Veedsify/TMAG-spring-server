@@ -42,7 +42,6 @@ public class CompanyAdminCreditPurchaseService {
     private final CompanySettingRepository settingRepository;
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
-    private final CreditPricingService pricingService;
     private final CreditPurchaseRepository purchaseRepository;
     private final FlutterwaveService flutterwaveService;
     private final InvoiceRepository invoiceRepository;
@@ -70,7 +69,6 @@ public class CompanyAdminCreditPurchaseService {
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
-        this.pricingService = pricingService;
         this.purchaseRepository = purchaseRepository;
         this.flutterwaveService = flutterwaveService;
         this.invoiceRepository = invoiceRepository;
@@ -93,8 +91,8 @@ public class CompanyAdminCreditPurchaseService {
             BigDecimal discountTier3Threshold,
             BigDecimal discountTier3Amount,
             Integer totalCredits,
-            Integer usedCredits
-    ) {}
+            Integer usedCredits) {
+    }
 
     public CompanyPricingResult getCompanyPricing(Long companyId) {
         Company company = companyRepository.findById(companyId)
@@ -121,8 +119,7 @@ public class CompanyAdminCreditPurchaseService {
                 null,
                 null,
                 company.getTotalCredits() != null ? company.getTotalCredits() : 0,
-                company.getUsedCredits() != null ? company.getUsedCredits() : 0
-        );
+                company.getUsedCredits() != null ? company.getUsedCredits() : 0);
     }
 
     public record PurchaseQuoteResult(
@@ -135,8 +132,8 @@ public class CompanyAdminCreditPurchaseService {
             BillingCurrency currency,
             String currencySymbol,
             BigDecimal pricePerCredit,
-            String appliedDiscountTier
-    ) {}
+            String appliedDiscountTier) {
+    }
 
     public PurchaseQuoteResult getQuote(Long companyId, Integer credits) {
         Company company = companyRepository.findById(companyId)
@@ -159,8 +156,7 @@ public class CompanyAdminCreditPurchaseService {
                 currency,
                 currencySymbol,
                 pricePerCredit,
-                null
-        );
+                null);
     }
 
     public record InitiatePurchaseResult(
@@ -170,14 +166,15 @@ public class CompanyAdminCreditPurchaseService {
             BigDecimal totalAmount,
             BillingCurrency currency,
             String currencySymbol,
-            Long purchaseId
-    ) {}
+            Long purchaseId) {
+    }
 
     public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits) {
         return initiatePurchase(userId, companyId, credits, false);
     }
 
-    public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits, boolean useHrCallback) {
+    public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits,
+            boolean useHrCallback) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
@@ -219,13 +216,13 @@ public class CompanyAdminCreditPurchaseService {
                 credits,
                 null,
                 userId.toString(),
-                companyId.toString()
-        );
+                companyId.toString());
 
         FlutterwavePaymentResponse paymentResponse = flutterwaveService.initiatePayment(paymentRequest);
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
-            logger.info("Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, hr={}",
+            logger.info(
+                    "Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, hr={}",
                     txRef, companyId, credits, totalAmount, useHrCallback);
 
             return new InitiatePurchaseResult(
@@ -235,8 +232,7 @@ public class CompanyAdminCreditPurchaseService {
                     totalAmount,
                     currency,
                     currencySymbol,
-                    purchase.getId()
-            );
+                    purchase.getId());
         } else {
             purchase.setStatus("failed");
             purchase.setFailedReason("Payment initiation failed: " + paymentResponse.message());
@@ -286,7 +282,8 @@ public class CompanyAdminCreditPurchaseService {
         purchaseRepository.save(purchase);
 
         if (creditRepository.existsByTypeAndReference("purchase", purchase.getTxRef())) {
-            logger.info("Credit entry already exists for txRef={}, skipping duplicate: txRef={}", purchase.getTxRef(), purchase.getTxRef());
+            logger.info("Credit entry already exists for txRef={}, skipping duplicate: txRef={}", purchase.getTxRef(),
+                    purchase.getTxRef());
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -311,7 +308,8 @@ public class CompanyAdminCreditPurchaseService {
             invoice.setAmount(purchase.getAmountPaid() != null ? purchase.getAmountPaid() : purchase.getAmount());
             invoice.setCurrency(purchase.getCurrency().name());
             invoice.setStatus("paid");
-            invoice.setDescription("Credit Purchase - " + purchase.getCreditsPurchased() + " credits for " + company.getName());
+            invoice.setDescription(
+                    "Credit Purchase - " + purchase.getCreditsPurchased() + " credits for " + company.getName());
             invoice.setIssuedAt(LocalDateTime.now());
             invoice.setPaidAt(LocalDateTime.now());
             invoice.setPaymentMethod("Flutterwave");

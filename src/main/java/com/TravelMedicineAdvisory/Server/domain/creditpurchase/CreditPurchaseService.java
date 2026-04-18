@@ -36,8 +36,6 @@ public class CreditPurchaseService {
     private static final Logger logger = LoggerFactory.getLogger(CreditPurchaseService.class);
 
     private final CreditPurchaseRepository purchaseRepository;
-    private final CreditPricingRepository pricingRepository;
-    private final CreditPricingService pricingService;
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
@@ -59,8 +57,6 @@ public class CreditPurchaseService {
             ExchangeRateService exchangeRateService,
             CreditPlanRepository userCreditPlanRepository) {
         this.purchaseRepository = purchaseRepository;
-        this.pricingRepository = pricingRepository;
-        this.pricingService = pricingService;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
@@ -79,15 +75,16 @@ public class CreditPurchaseService {
             BillingCurrency currency,
             String currencySymbol,
             BigDecimal pricePerCredit,
-            Long purchaseId
-    ) {}
+            Long purchaseId) {
+    }
 
     public PurchaseInitiationResult initiatePurchase(Long userId, CreditPurchaseRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         if ("COMPANY".equalsIgnoreCase(user.getType())) {
-            throw new IllegalStateException("Company users cannot purchase credits directly. Please contact your HR department.");
+            throw new IllegalStateException(
+                    "Company users cannot purchase credits directly. Please contact your HR department.");
         }
 
         // Resolve the user's credit plan; fall back to STANDARD if none assigned
@@ -119,44 +116,42 @@ public class CreditPurchaseService {
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
-        logger.info("Initiating Flutterwave payment for txRef={}, credits={}, amount={}", 
-            txRef, request.credits(), totalAmount);
+        logger.info("Initiating Flutterwave payment for txRef={}, credits={}, amount={}",
+                txRef, request.credits(), totalAmount);
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
-            totalAmount,
-            currencyCode,
-            user.getEmail(),
-            user.getName() != null ? user.getName() : user.getFirstName() + " " + user.getLastName(),
-            "TMAG Credit Purchase - " + request.credits() + " credits",
-            txRef,
-            user.getPhone(),
-            callbackUrl,
-            request.credits(),
-            null,
-            userId.toString(),
-            null
-        );
+                totalAmount,
+                currencyCode,
+                user.getEmail(),
+                user.getName() != null ? user.getName() : user.getFirstName() + " " + user.getLastName(),
+                "TMAG Credit Purchase - " + request.credits() + " credits",
+                txRef,
+                user.getPhone(),
+                callbackUrl,
+                request.credits(),
+                null,
+                userId.toString(),
+                null);
 
         FlutterwavePaymentResponse paymentResponse = flutterwaveService.initiatePayment(paymentRequest);
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
-            logger.info("Flutterwave payment initiated successfully. txRef={}, paymentLink={}", 
-                txRef, paymentResponse.paymentLink());
+            logger.info("Flutterwave payment initiated successfully. txRef={}, paymentLink={}",
+                    txRef, paymentResponse.paymentLink());
             return new PurchaseInitiationResult(
-                txRef,
-                paymentResponse.paymentLink(),
-                request.credits(),
-                totalAmount,
-                BigDecimal.ZERO,
-                totalAmount,
-                currency,
-                currencySymbol,
-                pricePerCredit,
-                purchase.getId()
-            );
+                    txRef,
+                    paymentResponse.paymentLink(),
+                    request.credits(),
+                    totalAmount,
+                    BigDecimal.ZERO,
+                    totalAmount,
+                    currency,
+                    currencySymbol,
+                    pricePerCredit,
+                    purchase.getId());
         } else {
-            logger.error("Flutterwave payment initiation failed. txRef={}, error={}", 
-                txRef, paymentResponse.message());
+            logger.error("Flutterwave payment initiation failed. txRef={}, error={}",
+                    txRef, paymentResponse.message());
             purchase.setStatus("failed");
             purchase.setFailedReason("Payment initiation failed: " + paymentResponse.message());
             purchase.setFailedAt(LocalDateTime.now());
@@ -174,13 +169,16 @@ public class CreditPurchaseService {
         }
 
         if (purchase.getCompanyId() != null) {
-            logger.info("Skipping company purchase in user verify handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            logger.info("Skipping company purchase in user verify handler: txRef={}, companyId={}", txRef,
+                    purchase.getCompanyId());
             return CreditPurchaseResponse.from(purchase);
         }
 
-        // Use the Flutterwave transaction ID for verification when available (preferred),
+        // Use the Flutterwave transaction ID for verification when available
+        // (preferred),
         // as GET /transactions/{id}/verify returns a single object.
-        // The tx_ref search endpoint returns an array which may be empty due to indexing delay.
+        // The tx_ref search endpoint returns an array which may be empty due to
+        // indexing delay.
         FlutterwavePaymentResponse verification;
         if (transactionId != null && !transactionId.isBlank()) {
             logger.info("Verifying payment by transaction ID: {}", transactionId);
@@ -191,8 +189,10 @@ public class CreditPurchaseService {
         }
 
         // Check both API-level success AND payment-level status.
-        // Flutterwave returns status:"success" at API level even for cancelled/failed payments —
-        // the actual payment outcome is in data.status ("successful", "failed", "cancelled").
+        // Flutterwave returns status:"success" at API level even for cancelled/failed
+        // payments —
+        // the actual payment outcome is in data.status ("successful", "failed",
+        // "cancelled").
         if (verification.success() && "successful".equalsIgnoreCase(verification.status())) {
             return completePurchase(purchase, verification);
         } else {
@@ -219,7 +219,8 @@ public class CreditPurchaseService {
         }
 
         if (purchase.getCompanyId() != null) {
-            logger.info("Skipping company purchase in user complete handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            logger.info("Skipping company purchase in user complete handler: txRef={}, companyId={}", txRef,
+                    purchase.getCompanyId());
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -253,13 +254,14 @@ public class CreditPurchaseService {
         creditEntry.setBalanceAfter(user.getCredits());
         creditRepository.save(creditEntry);
 
-        logger.info("Credit purchase completed: txRef={}, credits={}, userId={}", 
-            txRef, purchase.getCreditsPurchased(), user.getId());
+        logger.info("Credit purchase completed: txRef={}, credits={}, userId={}",
+                txRef, purchase.getCreditsPurchased(), user.getId());
 
         return CreditPurchaseResponse.from(purchase);
     }
 
-    public CreditPurchaseResponse completePurchaseFromWebhook(String txRef, String flwRef, String status, BigDecimal amount) {
+    public CreditPurchaseResponse completePurchaseFromWebhook(String txRef, String flwRef, String status,
+            BigDecimal amount) {
         CreditPurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElse(null);
 
@@ -273,15 +275,15 @@ public class CreditPurchaseService {
         }
 
         if (purchase.getCompanyId() != null) {
-            logger.info("Skipping company purchase in user webhook handler: txRef={}, companyId={}", txRef, purchase.getCompanyId());
+            logger.info("Skipping company purchase in user webhook handler: txRef={}, companyId={}", txRef,
+                    purchase.getCompanyId());
             return CreditPurchaseResponse.from(purchase);
         }
 
         if ("successful".equalsIgnoreCase(status)) {
             return completePurchase(purchase, new FlutterwavePaymentResponse(
-                true, "Payment successful", txRef, flwRef, status, null, amount,
-                purchase.getCurrency().name(), null, null, purchase.getId()
-            ));
+                    true, "Payment successful", txRef, flwRef, status, null, amount,
+                    purchase.getCurrency().name(), null, null, purchase.getId()));
         } else {
             purchase.setFlwRef(flwRef);
             purchase.setStatus("failed");
@@ -316,8 +318,8 @@ public class CreditPurchaseService {
         creditEntry.setBalanceAfter(user.getCredits());
         creditRepository.save(creditEntry);
 
-        logger.info("Credit purchase completed: txRef={}, credits={}, userId={}", 
-            purchase.getTxRef(), purchase.getCreditsPurchased(), user.getId());
+        logger.info("Credit purchase completed: txRef={}, credits={}, userId={}",
+                purchase.getTxRef(), purchase.getCreditsPurchased(), user.getId());
 
         String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
         queueService.dispatch(JobType.EMAIL_CREDIT_PURCHASE, Map.of(

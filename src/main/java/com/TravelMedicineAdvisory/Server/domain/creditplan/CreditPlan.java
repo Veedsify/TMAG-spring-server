@@ -7,14 +7,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "user_credit_plans")
 @SQLDelete(sql = "UPDATE user_credit_plans SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CreditPlan extends BaseEntity {
 
     @Enumerated(EnumType.STRING)

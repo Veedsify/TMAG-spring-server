@@ -3,7 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.ebook;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +11,7 @@ import java.util.List;
 @Entity
 @Table(name = "ebooks")
 @SQLDelete(sql = "UPDATE ebooks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class Ebook extends BaseEntity {
 
     @Column(nullable = false)

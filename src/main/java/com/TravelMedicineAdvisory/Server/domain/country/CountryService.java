@@ -3,7 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.country;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.TravelMedicineAdvisory.Server.core.cache.CacheConfig;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,11 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CountryService {
 
     private final CountryRepository repository;
-    private final CacheConfig cacheConfig;
 
     public CountryService(CountryRepository repository) {
-        this.repository = repository;
-        this.cacheConfig = new CacheConfig();
+        this.repository = repository;   
     }
 
     public Page<CountryResponse> findAll(Pageable pageable) {
@@ -75,8 +73,7 @@ public class CountryService {
                 entity.getEmergencyNumber(),
                 entity.getActive(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(CountryRequest request, Country entity) {

@@ -4,12 +4,12 @@ import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 @Entity
 @Table(name = "ebook_cart_items")
 @SQLDelete(sql = "UPDATE ebook_cart_items SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CartItem extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

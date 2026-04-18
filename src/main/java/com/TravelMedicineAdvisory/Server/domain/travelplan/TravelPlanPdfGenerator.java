@@ -868,36 +868,37 @@ public class TravelPlanPdfGenerator {
                 .append("</table>");
     }
 
-    private void appendGenerationFooter(StringBuilder sb, GeneratedPlan gp) {
-        if (gp == null || !"active".equalsIgnoreCase(gp.getStatus())) {
-            return;
-        }
-        StringBuilder line = new StringBuilder();
-        if (StringUtils.hasText(gp.getProvider())) {
-            line.append(gp.getProvider());
-        }
-        if (StringUtils.hasText(gp.getModelUsed())) {
-            if (!line.isEmpty()) {
-                line.append(" · ");
-            }
-            line.append(gp.getModelUsed());
-        }
-        if (gp.getTokensUsed() != null) {
-            if (!line.isEmpty()) {
-                line.append(" · ");
-            }
-            line.append("~").append(gp.getTokensUsed()).append(" tokens");
-        }
-        if (gp.getProcessingTimeMs() != null) {
-            if (!line.isEmpty()) {
-                line.append(" · ");
-            }
-            line.append(String.format("%.1fs", gp.getProcessingTimeMs() / 1000.0));
-        }
-        if (!line.isEmpty()) {
-            sb.append("<p class=\"gen-foot\">Generated with ").append(escapeHtml(line.toString())).append("</p>");
-        }
-    }
+    // private void appendGenerationFooter(StringBuilder sb, GeneratedPlan gp) {
+    // if (gp == null || !"active".equalsIgnoreCase(gp.getStatus())) {
+    // return;
+    // }
+    // StringBuilder line = new StringBuilder();
+    // if (StringUtils.hasText(gp.getProvider())) {
+    // line.append(gp.getProvider());
+    // }
+    // if (StringUtils.hasText(gp.getModelUsed())) {
+    // if (!line.isEmpty()) {
+    // line.append(" · ");
+    // }
+    // line.append(gp.getModelUsed());
+    // }
+    // if (gp.getTokensUsed() != null) {
+    // if (!line.isEmpty()) {
+    // line.append(" · ");
+    // }
+    // line.append("~").append(gp.getTokensUsed()).append(" tokens");
+    // }
+    // if (gp.getProcessingTimeMs() != null) {
+    // if (!line.isEmpty()) {
+    // line.append(" · ");
+    // }
+    // line.append(String.format("%.1fs", gp.getProcessingTimeMs() / 1000.0));
+    // }
+    // if (!line.isEmpty()) {
+    // sb.append("<p class=\"gen-foot\">Generated with
+    // ").append(escapeHtml(line.toString())).append("</p>");
+    // }
+    // }
 
     // ── Pure utility ──────────────────────────────────────────────────────────
     private JsonNode parseStructuredJson(GeneratedPlan gp) {

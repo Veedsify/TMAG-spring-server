@@ -4,14 +4,14 @@ import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "credit_pricing")
 @SQLDelete(sql = "UPDATE credit_pricing SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+
 public class CreditPricing extends BaseEntity {
 
     @Enumerated(EnumType.STRING)

@@ -4,7 +4,7 @@ import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -31,7 +31,6 @@ public class CartItemController {
     private final EbookOrderRepository orderRepository;
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
-    private final QueueService queueService;
     private final ExchangeRateService exchangeRateService;
 
     private static final String EBOOK_CALLBACK_URL_KEY = "${app.payment.flutterwave.ebook-callback-url:http://localhost:3000/shop/order-confirmation}";
@@ -51,7 +50,6 @@ public class CartItemController {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
-        this.queueService = queueService;
         this.exchangeRateService = exchangeRateService;
     }
 

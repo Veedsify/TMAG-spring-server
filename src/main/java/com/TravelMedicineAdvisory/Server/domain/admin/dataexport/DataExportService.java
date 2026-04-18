@@ -5,7 +5,6 @@ import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequest;
 import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequestRepository;
@@ -17,7 +16,7 @@ import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedger;
 import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedgerRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
+
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +25,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,11 +39,9 @@ public class DataExportService {
     private final TravelPlanRepository travelPlanRepository;
     private final CreditRequestRepository creditRequestRepository;
     private final InvoiceRepository invoiceRepository;
-    private final CompanyRepository companyRepository;
-    private final UserRepository userRepository;
-    private final CompanyUserRepository companyUserRepository;
     private final PlanUsageLedgerRepository planUsageLedgerRepository;
-    private final QueueService queueService;
+    private final CompanyRepository companyRepository;
+
     private final AdminNotificationService adminNotificationService;
 
     public DataExportService(EmployeeRepository employeeRepository,
@@ -63,10 +59,9 @@ public class DataExportService {
         this.creditRequestRepository = creditRequestRepository;
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
-        this.userRepository = userRepository;
-        this.companyUserRepository = companyUserRepository;
+
         this.planUsageLedgerRepository = planUsageLedgerRepository;
-        this.queueService = queueService;
+
         this.adminNotificationService = adminNotificationService;
     }
 
@@ -170,10 +165,11 @@ public class DataExportService {
 
     public void sendExportNotification(Long companyId, List<String> dataTypes) {
         Company company = companyRepository.findById(companyId).orElse(null);
-        if (company == null) return;
+        if (company == null)
+            return;
 
         String exportTypes = String.join(", ", dataTypes);
-        
+
         adminNotificationService.notifyCompanyAdmins(
                 companyId,
                 "Your data export is ready for " + company.getName(),
@@ -181,7 +177,7 @@ public class DataExportService {
                 Map.of(
                         "exportType", exportTypes,
                         "companyName", company.getName()));
-        
+
         logger.info("Data export notification sent to company {} for types: {}", companyId, exportTypes);
     }
 
@@ -240,12 +236,14 @@ public class DataExportService {
                 "ipAddress", entry.getIpAddress() != null ? entry.getIpAddress() : "",
                 "userId", entry.getUser() != null ? entry.getUser().getId() : 0,
                 "planDestination", entry.getTravelPlan() != null && entry.getTravelPlan().getDestination() != null
-                        ? entry.getTravelPlan().getDestination() : "",
+                        ? entry.getTravelPlan().getDestination()
+                        : "",
                 "createdAt", entry.getCreatedAt() != null ? entry.getCreatedAt().toString() : "");
     }
 
     private String escapeCsv(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value.replace("\"", "\"\"");
     }
 }
