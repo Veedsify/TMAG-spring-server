@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.core.queue;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -196,10 +197,15 @@ public class QueueWorker {
         String to = (String) data.get("to");
         String subject = (String) data.get("subject");
 
-        @SuppressWarnings("unchecked")
-        Map<String, String> vars = data.containsKey("variables")
-                ? (Map<String, String>) data.get("variables")
-                : Map.of();
+        Map<String, String> vars = Map.of();
+        Object rawVars = data.get("variables");
+        if (rawVars instanceof Map<?, ?> rawMap) {
+            vars = new HashMap<>();
+            for (Map.Entry<?, ?> e : rawMap.entrySet()) {
+                Object v = e.getValue();
+                vars.put(String.valueOf(e.getKey()), v != null ? String.valueOf(v) : "");
+            }
+        }
 
         String firstName = vars.getOrDefault("firstName", "there");
         String link = vars.getOrDefault("link", "#");

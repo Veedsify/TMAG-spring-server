@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseService;
 import com.TravelMedicineAdvisory.Server.domain.ebook.EbookService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,34 +101,32 @@ public class PaymentController {
         }
 
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> payloadMap = objectMapper.readValue(payload, Map.class);
+            JsonNode root = objectMapper.readTree(payload);
 
-            String event = (String) payloadMap.get("event");
+            String event = root.path("event").asText("");
             if (!"charge.completed".equals(event)) {
                 logger.info("Ignoring webhook event: {}", event);
                 return ResponseEntity.ok(Map.of("success", true, "message", "Event ignored"));
             }
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> data = (Map<String, Object>) payloadMap.get("data");
-            if (data == null) {
+            JsonNode data = root.get("data");
+            if (data == null || data.isNull() || data.isMissingNode()) {
                 logger.warn("Webhook payload missing 'data' field");
                 return ResponseEntity.ok(Map.of("success", true, "message", "No data"));
             }
 
-            String txRef = (String) data.get("tx_ref");
-            String flwRef = (String) data.get("flw_ref");
-            String status = (String) data.get("status");
+            String txRef = data.path("tx_ref").asText(null);
+            String flwRef = data.path("flw_ref").asText(null);
+            String status = data.path("status").asText(null);
 
-            Object amountObj = data.get("amount");
             BigDecimal amount = BigDecimal.ZERO;
-            if (amountObj instanceof BigDecimal bd) {
-                amount = bd;
-            } else if (amountObj instanceof Number n) {
-                amount = BigDecimal.valueOf(n.doubleValue());
-            } else if (amountObj instanceof String s) {
-                amount = new BigDecimal(s);
+            JsonNode amountNode = data.get("amount");
+            if (amountNode != null && !amountNode.isNull()) {
+                if (amountNode.isNumber()) {
+                    amount = BigDecimal.valueOf(amountNode.asDouble());
+                } else if (amountNode.isTextual()) {
+                    amount = new BigDecimal(amountNode.asText());
+                }
             }
 
             logger.info("Processing webhook: txRef={}, flwRef={}, status={}, amount={}", txRef, flwRef, status, amount);

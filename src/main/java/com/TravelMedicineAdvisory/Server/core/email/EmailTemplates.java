@@ -59,13 +59,10 @@ public class EmailTemplates {
                           <!-- Gradient accent bar: teal → deep teal → gold -->
                           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                             <tr>
-                              <td style="height:4px;background:linear-gradient(90deg,#2a7a6a 0%,#1a6a7a 55%,#c4953a 100%);border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</td>
-                            </tr>
-                            <tr>
                               <td style="padding:32px 40px 36px;text-align:center;">
                                 <a href="{frontendUrl}" style="text-decoration:none;">
                                   <span style="display:block;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:5px;color:#8a7968;text-transform:uppercase;margin-bottom:10px;">Travel Medicine</span>
-                                  <span style="display:block;font-family:'Fraunces',Georgia,serif;font-size:36px;font-weight:800;color:#f6f0e9;letter-spacing:4px;">TMAG</span>
+                                  <span style="display:block;font-family:'Fraunces',Georgia,serif;font-size:36px;font-weight:400;color:#f6f0e9;letter-spacing:4px;">TMAG</span>
                                   <span style="display:block;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:10px;font-weight:500;color:#c4953a;letter-spacing:4px;text-transform:uppercase;margin-top:10px;">Global Advisory</span>
                                 </a>
                               </td>

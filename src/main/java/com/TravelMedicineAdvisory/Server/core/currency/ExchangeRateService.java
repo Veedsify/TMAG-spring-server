@@ -39,26 +39,21 @@ public class ExchangeRateService {
     public void fetchRates() {
         try {
             RestClient restClient = RestClient.create();
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restClient.get()
+            OpenErApiLatestResponse response = restClient.get()
                     .uri(RATE_API_URL)
                     .retrieve()
-                    .body(Map.class);
+                    .body(OpenErApiLatestResponse.class);
 
-            if (response != null && "success".equals(response.get("result"))) {
-                @SuppressWarnings("unchecked")
-                Map<String, Number> rateMap = (Map<String, Number>) response.get("rates");
-                if (rateMap != null) {
-                    rates.clear();
-                    rateMap.forEach((currency, rate) ->
-                            rates.put(currency.toUpperCase(), BigDecimal.valueOf(rate.doubleValue())));
-                    lastFetched = LocalDateTime.now();
+            if (response != null && "success".equals(response.result()) && response.rates() != null) {
+                rates.clear();
+                response.rates().forEach((currency, rate) ->
+                        rates.put(currency.toUpperCase(), BigDecimal.valueOf(rate)));
+                lastFetched = LocalDateTime.now();
 
-                    // Override with admin-configured rates from DB
-                    applyAdminRates();
+                // Override with admin-configured rates from DB
+                applyAdminRates();
 
-                    logger.info("Exchange rates fetched successfully. {} currencies loaded.", rates.size());
-                }
+                logger.info("Exchange rates fetched successfully. {} currencies loaded.", rates.size());
             }
         } catch (Exception e) {
             logger.error("Failed to fetch exchange rates: {}", e.getMessage());

@@ -1,70 +1,84 @@
 package com.TravelMedicineAdvisory.Server.core.payment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
 
 public record FlutterwaveApiResponse(
-    @JsonProperty("status") String status,
-    @JsonProperty("message") String message,
-    @JsonProperty("data") Object data
+        @JsonProperty("status") String status,
+        @JsonProperty("message") String message,
+        @JsonProperty("data") JsonNode data
 ) {
     /**
-     * Returns the data as a Map. Handles both single-object responses and
-     * array responses (e.g., from /transactions?tx_ref=...) by extracting
-     * the first element from the array.
+     * Returns the primary data object. Handles both single-object responses and
+     * array responses (e.g., from /transactions?tx_ref=...) by using the first element.
      */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getDataMap() {
-        if (data instanceof Map) {
-            return (Map<String, Object>) data;
+    private JsonNode dataObjectOrFirstElement() {
+        if (data == null || data.isNull() || data.isMissingNode()) {
+            return null;
         }
-        if (data instanceof List<?> list && !list.isEmpty()) {
-            Object first = list.getFirst();
-            if (first instanceof Map) {
-                return (Map<String, Object>) first;
-            }
+        if (data.isObject()) {
+            return data;
+        }
+        if (data.isArray() && !data.isEmpty()) {
+            JsonNode first = data.get(0);
+            return first != null && first.isObject() ? first : null;
         }
         return null;
     }
 
     public String getTxRef() {
-        var map = getDataMap();
-        return map != null ? (String) map.get("tx_ref") : null;
+        return textAt(dataObjectOrFirstElement(), "tx_ref");
     }
 
     public String getFlwRef() {
-        var map = getDataMap();
-        return map != null ? (String) map.get("flw_ref") : null;
+        return textAt(dataObjectOrFirstElement(), "flw_ref");
     }
 
     public String getPaymentLink() {
-        var map = getDataMap();
-        return map != null ? (String) map.get("link") : null;
+        return textAt(dataObjectOrFirstElement(), "link");
     }
 
     public BigDecimal getAmount() {
-        var map = getDataMap();
-        if (map == null) return null;
-        Object amount = map.get("amount");
-        if (amount instanceof BigDecimal) return (BigDecimal) amount;
-        if (amount instanceof Number) return BigDecimal.valueOf(((Number) amount).doubleValue());
-        if (amount instanceof String) return new BigDecimal((String) amount);
+        JsonNode n = dataObjectOrFirstElement();
+        if (n == null || !n.has("amount")) {
+            return null;
+        }
+        JsonNode amount = n.get("amount");
+        if (amount == null || amount.isNull()) {
+            return null;
+        }
+        if (amount.isNumber()) {
+            return BigDecimal.valueOf(amount.asDouble());
+        }
+        if (amount.isTextual()) {
+            return new BigDecimal(amount.asText());
+        }
         return null;
     }
 
     public String getCurrency() {
-        var map = getDataMap();
-        return map != null ? (String) map.get("currency") : null;
+        return textAt(dataObjectOrFirstElement(), "currency");
     }
 
+    /** Charge/transaction status from nested {@code data}, not the top-level API {@code status}. */
     public String getStatus() {
-        var map = getDataMap();
-        return map != null ? (String) map.get("status") : null;
+        return textAt(dataObjectOrFirstElement(), "status");
     }
 
     public boolean isSuccessful() {
         return "success".equalsIgnoreCase(status);
+    }
+
+    private static String textAt(JsonNode node, String field) {
+        if (node == null || !node.has(field)) {
+            return null;
+        }
+        JsonNode v = node.get(field);
+        if (v == null || v.isNull() || v.isMissingNode()) {
+            return null;
+        }
+        return v.asText();
     }
 }
