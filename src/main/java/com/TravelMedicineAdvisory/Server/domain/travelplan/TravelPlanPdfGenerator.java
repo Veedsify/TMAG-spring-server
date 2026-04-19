@@ -134,7 +134,7 @@ public class TravelPlanPdfGenerator {
 
         // ── Hero ──────────────────────────────────────────────────────────────
         sb.append(".hero-wrap{background:").append(TEAL_DEEP).append("}");
-        sb.append(".brand-strip{padding:10px 16mm 8px;border-bottom:1px solid rgba(255,255,255,0.08)}");
+        sb.append(".brand-strip{padding:30px 16mm 5px;border-bottom:1px solid rgba(255,255,255,0.08)}");
         sb.append(
                 ".brand-name{font-size:6.5pt;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#ffffff}");
         sb.append(".brand-sub{font-size:6pt;color:#ffffff;letter-spacing:0.07em;margin-top:2px}");
