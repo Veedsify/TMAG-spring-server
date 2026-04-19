@@ -143,10 +143,10 @@ public class TravelPlanPdfGenerator {
         sb.append(".hero-left{padding:18px 0 18px 16mm;width:64%;vertical-align:top}");
         sb.append(".hero-right{padding:18px 16mm 18px 10px;width:36%;vertical-align:top;text-align:right}");
         sb.append(
-                ".doc-title{font-family:'Fraunces',Georgia,serif;font-size:22pt;color:#ffffff;font-weight:700;line-height:1.1;margin:0 0 9px}");
+                ".doc-title{font-family:'Fraunces',Georgia,serif;font-size:22pt;color:#ffffff;font-weight:300;line-height:1.1;margin:0 0 9px}");
         sb.append(".hero-meta{font-size:8.5pt;color:#ffffff;margin:0 0 3px;line-height:1.4}");
         sb.append(".hero-dates{font-size:8.5pt;color:#7dd3c4;font-weight:600;margin:0 0 3px}");
-        sb.append(".hero-traveller{font-size:8.5pt;color:#ffffff;margin-top:10px}");
+        sb.append(".hero-traveller{font-size:8.5pt;color:#ffffff}");
         sb.append(".hero-traveller strong{color:#ffffff;font-weight:700}");
 
         // Badges on dark hero bg
@@ -159,7 +159,7 @@ public class TravelPlanPdfGenerator {
         sb.append(".b-hi{background:").append(RED_SOFT).append(";color:").append(RED).append(";border:1px solid ")
                 .append(RED_BORDER).append("}");
         sb.append(
-                ".b-nu{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.2)}");
+                ".b-nu{background:rgb(255,255,255);color:rgba(0, 0, 0, 0.75)}");
 
         // Accent rule at foot of hero
         sb.append(".hero-rule{height:3px;background:").append(TEAL_MID).append("}");
