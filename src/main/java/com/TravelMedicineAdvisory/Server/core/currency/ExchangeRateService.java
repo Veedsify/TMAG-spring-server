@@ -1,9 +1,13 @@
 package com.TravelMedicineAdvisory.Server.core.currency;
 
+import org.springframework.cache.CacheManager;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -18,16 +22,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ExchangeRateService {
 
+    public record ExchangeRatesSnapshot(Map<String, BigDecimal> rates, LocalDateTime lastFetched) {}
+
     private static final Logger logger = LoggerFactory.getLogger(ExchangeRateService.class);
     private static final String BASE_CURRENCY = "USD";
     private static final String RATE_API_URL = "https://open.er-api.com/v6/latest/" + BASE_CURRENCY;
 
     private final SystemSettingRepository systemSettingRepository;
+    private final CacheManager cacheManager;
     private final Map<String, BigDecimal> rates = new ConcurrentHashMap<>();
     private LocalDateTime lastFetched;
 
-    public ExchangeRateService(SystemSettingRepository systemSettingRepository) {
+    public ExchangeRateService(SystemSettingRepository systemSettingRepository, CacheManager cacheManager) {
         this.systemSettingRepository = systemSettingRepository;
+        this.cacheManager = cacheManager;
         fetchRates();
     }
 
@@ -54,6 +62,7 @@ public class ExchangeRateService {
                 applyAdminRates();
 
                 logger.info("Exchange rates fetched successfully. {} currencies loaded.", rates.size());
+                evictExchangeRateCaches();
             }
         } catch (Exception e) {
             logger.error("Failed to fetch exchange rates: {}", e.getMessage());
@@ -70,6 +79,7 @@ public class ExchangeRateService {
                 rates.put("GHS", BigDecimal.valueOf(14.5));
                 applyAdminRates();
                 logger.info("Using fallback exchange rates.");
+                evictExchangeRateCaches();
             }
         }
     }
@@ -96,12 +106,29 @@ public class ExchangeRateService {
 
     public void refreshAdminRates() {
         applyAdminRates();
+        evictExchangeRateCaches();
+    }
+
+    private void evictExchangeRateCaches() {
+        var cache = cacheManager.getCache(CacheNames.EXCHANGE_RATES);
+        if (cache != null) {
+            cache.clear();
+        }
+    }
+
+    /**
+     * Cached view for public API; {@link #getRates()} / {@link #getLastFetched()} stay uncached for admin diagnostics.
+     */
+    @Cacheable(cacheNames = CacheNames.EXCHANGE_RATES)
+    public ExchangeRatesSnapshot getExchangeRatesSnapshot() {
+        return new ExchangeRatesSnapshot(Map.copyOf(rates), lastFetched);
     }
 
     public Map<String, BigDecimal> getRates() {
         return Map.copyOf(rates);
     }
 
+    @Cacheable(cacheNames = CacheNames.EXCHANGE_RATES)
     public BigDecimal convert(BigDecimal amount, String fromCurrency, String toCurrency) {
         if (amount == null) return BigDecimal.ZERO;
         if (fromCurrency == null || toCurrency == null) return amount;
@@ -152,5 +179,26 @@ public class ExchangeRateService {
 
     public LocalDateTime getLastFetched() {
         return lastFetched;
+    }
+
+    @Cacheable(cacheNames = CacheNames.CURRENCIES)
+    public List<Map<String, String>> getSupportedCurrencies() {
+        return List.of(
+                Map.of("code", "USD", "name", "US Dollar", "symbol", "$"),
+                Map.of("code", "EUR", "name", "Euro", "symbol", "€"),
+                Map.of("code", "GBP", "name", "British Pound", "symbol", "£"),
+                Map.of("code", "NGN", "name", "Nigerian Naira", "symbol", "₦"),
+                Map.of("code", "INR", "name", "Indian Rupee", "symbol", "₹"),
+                Map.of("code", "CAD", "name", "Canadian Dollar", "symbol", "C$"),
+                Map.of("code", "AUD", "name", "Australian Dollar", "symbol", "A$"),
+                Map.of("code", "KES", "name", "Kenyan Shilling", "symbol", "KSh"),
+                Map.of("code", "ZAR", "name", "South African Rand", "symbol", "R"),
+                Map.of("code", "GHS", "name", "Ghanaian Cedi", "symbol", "GH₵"),
+                Map.of("code", "JPY", "name", "Japanese Yen", "symbol", "¥"),
+                Map.of("code", "CNY", "name", "Chinese Yuan", "symbol", "¥"),
+                Map.of("code", "BRL", "name", "Brazilian Real", "symbol", "R$"),
+                Map.of("code", "AED", "name", "UAE Dirham", "symbol", "د.إ"),
+                Map.of("code", "SGD", "name", "Singapore Dollar", "symbol", "S$"),
+                Map.of("code", "CHF", "name", "Swiss Franc", "symbol", "CHF"));
     }
 }

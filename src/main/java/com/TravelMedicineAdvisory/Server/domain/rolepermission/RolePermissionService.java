@@ -1,14 +1,19 @@
 package com.TravelMedicineAdvisory.Server.domain.rolepermission;
 
-import com.TravelMedicineAdvisory.Server.domain.permission.Permission;
-import com.TravelMedicineAdvisory.Server.domain.permission.PermissionRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import java.util.NoSuchElementException;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
+import com.TravelMedicineAdvisory.Server.domain.permission.Permission;
+import com.TravelMedicineAdvisory.Server.domain.permission.PermissionRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 
 @Service
 @Transactional
@@ -24,17 +29,22 @@ public class RolePermissionService {
         this.permissionRepository = permissionRepository;
     }
 
+    @Cacheable(cacheNames = CacheNames.ROLE_PERMISSIONS)
+    @Transactional(readOnly = true)
     public Page<RolePermissionResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.ROLE_PERMISSIONS)
+    @Transactional(readOnly = true)
     public RolePermissionResponse findById(Long id) {
         RolePermission entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("RolePermission not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.ROLE_PERMISSIONS, allEntries = true)
     public RolePermissionResponse create(RolePermissionRequest request) {
         RolePermission entity = new RolePermission();
         mapRequestToEntity(request, entity);
@@ -42,6 +52,7 @@ public class RolePermissionService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.ROLE_PERMISSIONS, allEntries = true)
     public RolePermissionResponse update(Long id, RolePermissionRequest request) {
         RolePermission entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("RolePermission not found"));
@@ -50,6 +61,7 @@ public class RolePermissionService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.ROLE_PERMISSIONS, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("RolePermission not found");

@@ -1,10 +1,15 @@
 package com.TravelMedicineAdvisory.Server.domain.role;
 
 import java.util.NoSuchElementException;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 
 @Service
 @Transactional
@@ -16,17 +21,22 @@ public class RoleService {
         this.repository = repository;
     }
 
+    @Cacheable(cacheNames = CacheNames.ROLES)
+    @Transactional(readOnly = true)
     public Page<RoleResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.ROLES)
+    @Transactional(readOnly = true)
     public RoleResponse findById(Long id) {
         Role entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Role not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = { CacheNames.ROLES, CacheNames.ADMIN_ROLES }, allEntries = true)
     public RoleResponse create(RoleRequest request) {
         Role entity = new Role();
         mapRequestToEntity(request, entity);
@@ -34,6 +44,7 @@ public class RoleService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = { CacheNames.ROLES, CacheNames.ADMIN_ROLES }, allEntries = true)
     public RoleResponse update(Long id, RoleRequest request) {
         Role entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Role not found"));
@@ -42,6 +53,7 @@ public class RoleService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = { CacheNames.ROLES, CacheNames.ADMIN_ROLES }, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Role not found");

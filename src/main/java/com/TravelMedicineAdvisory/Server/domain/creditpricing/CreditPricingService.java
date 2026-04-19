@@ -1,12 +1,18 @@
 package com.TravelMedicineAdvisory.Server.domain.creditpricing;
 
-import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.NoSuchElementException;
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 
 @Service
 @Transactional
@@ -18,6 +24,8 @@ public class CreditPricingService {
         this.repository = repository;
     }
 
+    @Cacheable(cacheNames = CacheNames.CREDIT_PRICING)
+    @Transactional(readOnly = true)
     public List<CreditPricingResponse> findAllActive() {
         return repository.findByIsActiveTrueOrderByDisplayOrderAsc()
                 .stream()
@@ -25,6 +33,8 @@ public class CreditPricingService {
                 .toList();
     }
 
+    @Cacheable(cacheNames = CacheNames.CREDIT_PRICING)
+    @Transactional(readOnly = true)
     public List<CreditPricingResponse> findAll() {
         return repository.findAll()
                 .stream()
@@ -32,18 +42,55 @@ public class CreditPricingService {
                 .toList();
     }
 
+    @Cacheable(cacheNames = CacheNames.CREDIT_PRICING)
+    @Transactional(readOnly = true)
     public CreditPricingResponse findById(Long id) {
         CreditPricing entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Credit pricing not found"));
         return CreditPricingResponse.from(entity);
     }
 
+    @Cacheable(cacheNames = CacheNames.CREDIT_PRICING)
+    @Transactional(readOnly = true)
     public CreditPricingResponse findByCurrency(BillingCurrency currency) {
         CreditPricing entity = repository.findByCurrency(currency)
                 .orElseThrow(() -> new NoSuchElementException("Credit pricing not found for currency: " + currency));
         return CreditPricingResponse.from(entity);
     }
 
+    /**
+     * Single cached entry for {@code GET /credit-pricing/calculate}.
+     */
+    @Cacheable(cacheNames = CacheNames.CREDIT_PRICING)
+    @Transactional(readOnly = true)
+    public Map<String, Object> buildCalculatePriceResponse(BillingCurrency currency, int credits) {
+        PriceCalculationResult result = calculatePriceWithDiscount(currency, credits);
+        CreditPricingResponse pricing = findByCurrencyFromRepository(currency);
+        Map<String, Object> response = new HashMap<>();
+        response.put("currency", currency);
+        response.put("currencySymbol", result.currencySymbol());
+        response.put("credits", credits);
+        response.put("pricePerCredit", pricing.pricePerCredit());
+        response.put("basePrice", result.basePrice());
+        response.put("discountAmount", result.discountAmount());
+        response.put("totalPrice", result.totalPrice());
+        response.put("appliedDiscountTier", result.appliedDiscountTier() != null ? result.appliedDiscountTier() : "NONE");
+        response.put("discountTier1Threshold", pricing.discountTier1Threshold());
+        response.put("discountTier1Amount", pricing.discountTier1Amount());
+        response.put("discountTier2Threshold", pricing.discountTier2Threshold());
+        response.put("discountTier2Amount", pricing.discountTier2Amount());
+        response.put("discountTier3Threshold", pricing.discountTier3Threshold());
+        response.put("discountTier3Amount", pricing.discountTier3Amount());
+        return response;
+    }
+
+    private CreditPricingResponse findByCurrencyFromRepository(BillingCurrency currency) {
+        CreditPricing entity = repository.findByCurrency(currency)
+                .orElseThrow(() -> new NoSuchElementException("Credit pricing not found for currency: " + currency));
+        return CreditPricingResponse.from(entity);
+    }
+
+    @CacheEvict(cacheNames = CacheNames.CREDIT_PRICING, allEntries = true)
     public CreditPricingResponse create(CreditPricingRequest request) {
         if (repository.existsByCurrency(request.currency())) {
             throw new IllegalStateException("Pricing already exists for currency: " + request.currency());
@@ -55,6 +102,7 @@ public class CreditPricingService {
         return CreditPricingResponse.from(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.CREDIT_PRICING, allEntries = true)
     public CreditPricingResponse update(Long id, CreditPricingRequest request) {
         CreditPricing entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Credit pricing not found"));
@@ -68,6 +116,7 @@ public class CreditPricingService {
         return CreditPricingResponse.from(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.CREDIT_PRICING, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Credit pricing not found");

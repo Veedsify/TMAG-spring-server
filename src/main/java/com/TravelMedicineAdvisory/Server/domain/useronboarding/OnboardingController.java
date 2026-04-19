@@ -3,12 +3,10 @@ package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,7 +39,7 @@ public class OnboardingController {
     private final CompanyRepository companyRepository;
     private final CompanyUserRepository companyUserRepository;
     private final EmployeeRepository employeeRepository;
-    private final OnboardingQuestionCategoryRepository questionCategoryRepository;
+    private final OnboardingQuestionnaireService onboardingQuestionnaireService;
     private final QuestionnaireProgressService progressService;
     private final ObjectMapper objectMapper;
 
@@ -51,7 +49,7 @@ public class OnboardingController {
             CompanyRepository companyRepository,
             CompanyUserRepository companyUserRepository,
             EmployeeRepository employeeRepository,
-            OnboardingQuestionCategoryRepository questionCategoryRepository,
+            OnboardingQuestionnaireService onboardingQuestionnaireService,
             QuestionnaireProgressService progressService,
             ObjectMapper objectMapper) {
         this.onboardingRepository = onboardingRepository;
@@ -59,7 +57,7 @@ public class OnboardingController {
         this.companyRepository = companyRepository;
         this.companyUserRepository = companyUserRepository;
         this.employeeRepository = employeeRepository;
-        this.questionCategoryRepository = questionCategoryRepository;
+        this.onboardingQuestionnaireService = onboardingQuestionnaireService;
         this.progressService = progressService;
         this.objectMapper = objectMapper;
     }
@@ -146,21 +144,7 @@ public class OnboardingController {
 
     @GetMapping("/questions")
     public ResponseEntity<?> getQuestions() {
-        List<OnboardingQuestionCategory> categories = questionCategoryRepository.findAllByOrderByDisplayOrderAsc();
-
-        List<Map<String, Object>> result = categories.stream().map(cat -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", cat.getId());
-            m.put("category_key", cat.getCategoryKey());
-            m.put("category_name", cat.getCategoryName());
-            m.put("category_icon", cat.getCategoryIcon());
-            m.put("category_description", cat.getCategoryDescription());
-            m.put("display_order", cat.getDisplayOrder());
-            m.put("is_optional", cat.getIsOptional());
-            m.put("questions", cat.getQuestions());
-            return m;
-        }).collect(Collectors.toList());
-
+        List<Map<String, Object>> result = onboardingQuestionnaireService.loadQuestionnaireStructure();
         return ResponseEntity.ok(Map.of("success", true, "data", result));
     }
 

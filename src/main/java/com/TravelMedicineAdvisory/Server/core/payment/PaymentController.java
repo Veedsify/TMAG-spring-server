@@ -23,16 +23,19 @@ public class PaymentController {
     private final FlutterwaveService flutterwaveService;
     private final CreditPurchaseService creditPurchaseService;
     private final EbookService ebookService;
+    private final PaymentConfigService paymentConfigService;
     private final ObjectMapper objectMapper;
 
     public PaymentController(
             FlutterwaveService flutterwaveService,
             CreditPurchaseService creditPurchaseService,
             EbookService ebookService,
+            PaymentConfigService paymentConfigService,
             ObjectMapper objectMapper) {
         this.flutterwaveService = flutterwaveService;
         this.creditPurchaseService = creditPurchaseService;
         this.ebookService = ebookService;
+        this.paymentConfigService = paymentConfigService;
         this.objectMapper = objectMapper;
     }
 
@@ -154,10 +157,7 @@ public class PaymentController {
     public ResponseEntity<?> getPaymentConfig() {
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", Map.of(
-                        "provider", "flutterwave",
-                        "publicKey", flutterwaveService.getPublicKey() != null ? "set" : "not_set",
-                        "configured", flutterwaveService.isConfigured())));
+                "data", paymentConfigService.getPaymentConfigData()));
     }
 
     @GetMapping("/generate-reference")

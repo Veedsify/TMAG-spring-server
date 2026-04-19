@@ -5,9 +5,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
@@ -32,6 +35,8 @@ public class CompanySettingService {
         this.adminNotificationService = adminNotificationService;
     }
 
+    @Cacheable(cacheNames = CacheNames.COMPANY_SETTINGS, key = "#companyId")
+    @Transactional(readOnly = true)
     public CompanySettingResponse getByCompany(Long companyId) {
         if (!companyRepository.existsById(companyId)) {
             throw new NoSuchElementException("Company not found");
@@ -44,6 +49,7 @@ public class CompanySettingService {
         return new CompanySettingResponse(companyId, map);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COMPANY_SETTINGS, key = "#companyId")
     public CompanySettingResponse upsert(Long companyId, CompanySettingRequest request) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
@@ -85,6 +91,7 @@ public class CompanySettingService {
                 Map.of());
     }
 
+    @CacheEvict(cacheNames = CacheNames.COMPANY_SETTINGS, key = "#companyId")
     public void updateBillingCurrency(Long companyId, BillingCurrency currency) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));

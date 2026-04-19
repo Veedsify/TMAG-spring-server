@@ -1,8 +1,11 @@
 package com.TravelMedicineAdvisory.Server.domain.blogpost;
 
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import java.util.NoSuchElementException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,17 +23,22 @@ public class BlogPostService {
         this.userRepository = userRepository;
     }
 
+    @Cacheable(cacheNames = CacheNames.BLOG_POSTS)
+    @Transactional(readOnly = true)
     public Page<BlogPostResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.BLOG_POSTS)
+    @Transactional(readOnly = true)
     public BlogPostResponse findById(Long id) {
         BlogPost entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("BlogPost not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.BLOG_POSTS, allEntries = true)
     public BlogPostResponse create(BlogPostRequest request) {
         BlogPost entity = new BlogPost();
         mapRequestToEntity(request, entity);
@@ -38,6 +46,7 @@ public class BlogPostService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.BLOG_POSTS, allEntries = true)
     public BlogPostResponse update(Long id, BlogPostRequest request) {
         BlogPost entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("BlogPost not found"));
@@ -46,6 +55,7 @@ public class BlogPostService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.BLOG_POSTS, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("BlogPost not found");

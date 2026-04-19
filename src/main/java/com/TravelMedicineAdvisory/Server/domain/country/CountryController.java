@@ -36,7 +36,7 @@ public class CountryController {
 
     @GetMapping("/all")
     public ResponseEntity<SuccessResponse> getAll() {
-        return ResponseEntity.ok(new SuccessResponse("message", service.findAll()));
+        return ResponseEntity.ok(new SuccessResponse("message", service.findAllList()));
     }
 
     @GetMapping("/{id}")

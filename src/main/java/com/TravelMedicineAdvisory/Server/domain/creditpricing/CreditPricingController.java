@@ -47,23 +47,7 @@ public class CreditPricingController {
             @RequestParam BillingCurrency currency,
             @RequestParam int credits) {
         try {
-            var result = service.calculatePriceWithDiscount(currency, credits);
-            CreditPricingResponse pricing = service.findByCurrency(currency);
-            java.util.Map<String, Object> response = new java.util.HashMap<>();
-            response.put("currency", currency);
-            response.put("currencySymbol", result.currencySymbol());
-            response.put("credits", credits);
-            response.put("pricePerCredit", pricing.pricePerCredit());
-            response.put("basePrice", result.basePrice());
-            response.put("discountAmount", result.discountAmount());
-            response.put("totalPrice", result.totalPrice());
-            response.put("appliedDiscountTier", result.appliedDiscountTier() != null ? result.appliedDiscountTier() : "NONE");
-            response.put("discountTier1Threshold", pricing.discountTier1Threshold());
-            response.put("discountTier1Amount", pricing.discountTier1Amount());
-            response.put("discountTier2Threshold", pricing.discountTier2Threshold());
-            response.put("discountTier2Amount", pricing.discountTier2Amount());
-            response.put("discountTier3Threshold", pricing.discountTier3Threshold());
-            response.put("discountTier3Amount", pricing.discountTier3Amount());
+            java.util.Map<String, Object> response = service.buildCalculatePriceResponse(currency, credits);
             return ResponseEntity.ok(new SuccessResponse("Calculated successfully", response));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));

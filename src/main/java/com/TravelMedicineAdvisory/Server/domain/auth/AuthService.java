@@ -188,6 +188,7 @@ public class AuthService {
                         "timestamp", timestamp)));
     }
 
+    /** Not cached: each call embeds a fresh OAuth {@code state} token for CSRF protection. */
     public String googleAuthUrl() {
         if (googleClientId == null || googleClientId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");

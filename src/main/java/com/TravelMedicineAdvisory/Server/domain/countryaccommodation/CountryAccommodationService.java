@@ -1,12 +1,17 @@
 package com.TravelMedicineAdvisory.Server.domain.countryaccommodation;
 
-import com.TravelMedicineAdvisory.Server.domain.country.Country;
-import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import java.util.NoSuchElementException;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
+import com.TravelMedicineAdvisory.Server.domain.country.Country;
+import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 
 @Service
 @Transactional
@@ -20,17 +25,22 @@ public class CountryAccommodationService {
         this.countryRepository = countryRepository;
     }
 
+    @Cacheable(cacheNames = CacheNames.COUNTRY_ACCOMMODATIONS)
+    @Transactional(readOnly = true)
     public Page<CountryAccommodationResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.COUNTRY_ACCOMMODATIONS)
+    @Transactional(readOnly = true)
     public CountryAccommodationResponse findById(Long id) {
         CountryAccommodation entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CountryAccommodation not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_ACCOMMODATIONS, allEntries = true)
     public CountryAccommodationResponse create(CountryAccommodationRequest request) {
         CountryAccommodation entity = new CountryAccommodation();
         mapRequestToEntity(request, entity);
@@ -38,6 +48,7 @@ public class CountryAccommodationService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_ACCOMMODATIONS, allEntries = true)
     public CountryAccommodationResponse update(Long id, CountryAccommodationRequest request) {
         CountryAccommodation entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CountryAccommodation not found"));
@@ -46,6 +57,7 @@ public class CountryAccommodationService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_ACCOMMODATIONS, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("CountryAccommodation not found");

@@ -2,11 +2,15 @@ package com.TravelMedicineAdvisory.Server.domain.company;
 
 import java.util.NoSuchElementException;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
@@ -43,6 +47,7 @@ public class CompanyService {
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COMPANY_CODE_VALIDATION, allEntries = true)
     public CompanyResponse create(CompanyRequest request) {
         Company entity = new Company();
         mapRequestToEntity(request, entity);
@@ -57,6 +62,10 @@ public class CompanyService {
         return toResponse(saved);
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.COMPANY_CODE_VALIDATION, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.COMPANY_ADMIN_CREDITS_PRICING, key = "#id")
+    })
     public CompanyResponse update(Long id, CompanyRequest request) {
         if (id == null) {
             throw new IllegalArgumentException("Company ID cannot be null");
@@ -73,10 +82,15 @@ public class CompanyService {
         throw new IllegalArgumentException("Invalid company entity");
     }
 
+    @Cacheable(cacheNames = CacheNames.COMPANY_CODE_VALIDATION, key = "#code")
     public boolean validateCompanyCode(String code) {
         return repository.findByCompanyCode(code).isPresent();
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.COMPANY_CODE_VALIDATION, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.COMPANY_ADMIN_CREDITS_PRICING, key = "#id")
+    })
     public CompanyResponse purchaseCredits(Long id, Integer amount, String reference) {
         if (id == null) {
             throw new IllegalArgumentException("Company ID cannot be null");
@@ -98,6 +112,10 @@ public class CompanyService {
         return toResponse(company);
     }
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.COMPANY_CODE_VALIDATION, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.COMPANY_ADMIN_CREDITS_PRICING, key = "#id")
+    })
     public void delete(Long id) {
         if (id == null) {
             throw new IllegalArgumentException("Company ID cannot be null");

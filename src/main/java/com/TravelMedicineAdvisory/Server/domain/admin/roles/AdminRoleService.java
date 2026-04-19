@@ -1,12 +1,16 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.roles;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,11 +30,15 @@ public class AdminRoleService {
         this.objectMapper = objectMapper;
     }
 
+    @Cacheable(cacheNames = CacheNames.ADMIN_ROLES)
+    @Transactional(readOnly = true)
     public List<AdminRoleResponse> findAll() {
         List<Role> roles = roleRepository.findAll();
         return roles.stream().map(this::mapToResponse).toList();
     }
 
+    @Cacheable(cacheNames = CacheNames.ADMIN_ROLES)
+    @Transactional(readOnly = true)
     public AdminRoleResponse findById(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
@@ -38,6 +46,7 @@ public class AdminRoleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_ROLES, CacheNames.ROLES }, allEntries = true)
     public AdminRoleResponse create(Map<String, Object> body) {
         Role role = new Role();
 
@@ -63,6 +72,7 @@ public class AdminRoleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_ROLES, CacheNames.ROLES }, allEntries = true)
     public AdminRoleResponse update(Long id, Map<String, Object> updates) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
@@ -89,6 +99,7 @@ public class AdminRoleService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = { CacheNames.ADMIN_ROLES, CacheNames.ROLES }, allEntries = true)
     public void delete(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Role not found"));

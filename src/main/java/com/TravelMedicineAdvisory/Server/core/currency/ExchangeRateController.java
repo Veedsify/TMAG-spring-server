@@ -20,10 +20,11 @@ public class ExchangeRateController {
 
     @GetMapping
     public ResponseEntity<SuccessResponse> getRates() {
+        var snap = exchangeRateService.getExchangeRatesSnapshot();
         return ResponseEntity.ok(new SuccessResponse("Exchange rates retrieved", Map.of(
                 "base", "USD",
-                "rates", exchangeRateService.getRates(),
-                "lastFetched", exchangeRateService.getLastFetched()
+                "rates", snap.rates(),
+                "lastFetched", snap.lastFetched()
         )));
     }
 
@@ -44,24 +45,7 @@ public class ExchangeRateController {
 
     @GetMapping("/currencies")
     public ResponseEntity<SuccessResponse> getSupportedCurrencies() {
-        List<Map<String, String>> currencies = List.of(
-                Map.of("code", "USD", "name", "US Dollar", "symbol", "$"),
-                Map.of("code", "EUR", "name", "Euro", "symbol", "€"),
-                Map.of("code", "GBP", "name", "British Pound", "symbol", "£"),
-                Map.of("code", "NGN", "name", "Nigerian Naira", "symbol", "₦"),
-                Map.of("code", "INR", "name", "Indian Rupee", "symbol", "₹"),
-                Map.of("code", "CAD", "name", "Canadian Dollar", "symbol", "C$"),
-                Map.of("code", "AUD", "name", "Australian Dollar", "symbol", "A$"),
-                Map.of("code", "KES", "name", "Kenyan Shilling", "symbol", "KSh"),
-                Map.of("code", "ZAR", "name", "South African Rand", "symbol", "R"),
-                Map.of("code", "GHS", "name", "Ghanaian Cedi", "symbol", "GH₵"),
-                Map.of("code", "JPY", "name", "Japanese Yen", "symbol", "¥"),
-                Map.of("code", "CNY", "name", "Chinese Yuan", "symbol", "¥"),
-                Map.of("code", "BRL", "name", "Brazilian Real", "symbol", "R$"),
-                Map.of("code", "AED", "name", "UAE Dirham", "symbol", "د.إ"),
-                Map.of("code", "SGD", "name", "Singapore Dollar", "symbol", "S$"),
-                Map.of("code", "CHF", "name", "Swiss Franc", "symbol", "CHF")
-        );
+        List<Map<String, String>> currencies = exchangeRateService.getSupportedCurrencies();
         return ResponseEntity.ok(new SuccessResponse("Supported currencies", currencies));
     }
 }

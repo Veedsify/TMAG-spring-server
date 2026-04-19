@@ -1,12 +1,17 @@
 package com.TravelMedicineAdvisory.Server.domain.countryhealthalert;
 
-import com.TravelMedicineAdvisory.Server.domain.country.Country;
-import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import java.util.NoSuchElementException;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
+import com.TravelMedicineAdvisory.Server.domain.country.Country;
+import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 
 @Service
 @Transactional
@@ -20,17 +25,22 @@ public class CountryHealthAlertService {
         this.countryRepository = countryRepository;
     }
 
+    @Cacheable(cacheNames = CacheNames.COUNTRY_HEALTH_ALERTS)
+    @Transactional(readOnly = true)
     public Page<CountryHealthAlertResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.COUNTRY_HEALTH_ALERTS)
+    @Transactional(readOnly = true)
     public CountryHealthAlertResponse findById(Long id) {
         CountryHealthAlert entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CountryHealthAlert not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_HEALTH_ALERTS, allEntries = true)
     public CountryHealthAlertResponse create(CountryHealthAlertRequest request) {
         CountryHealthAlert entity = new CountryHealthAlert();
         mapRequestToEntity(request, entity);
@@ -38,6 +48,7 @@ public class CountryHealthAlertService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_HEALTH_ALERTS, allEntries = true)
     public CountryHealthAlertResponse update(Long id, CountryHealthAlertRequest request) {
         CountryHealthAlert entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("CountryHealthAlert not found"));
@@ -46,6 +57,7 @@ public class CountryHealthAlertService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.COUNTRY_HEALTH_ALERTS, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("CountryHealthAlert not found");

@@ -21,11 +21,16 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -47,6 +52,7 @@ public class CompanyAdminCreditPurchaseService {
     private final InvoiceRepository invoiceRepository;
     private final ExchangeRateService exchangeRateService;
     private final CreditPlanRepository userCreditPlanRepository;
+    private final CacheManager cacheManager;
 
     @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
     private String callbackUrl;
@@ -64,7 +70,8 @@ public class CompanyAdminCreditPurchaseService {
             FlutterwaveService flutterwaveService,
             InvoiceRepository invoiceRepository,
             ExchangeRateService exchangeRateService,
-            CreditPlanRepository userCreditPlanRepository) {
+            CreditPlanRepository userCreditPlanRepository,
+            CacheManager cacheManager) {
         this.companyRepository = companyRepository;
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
@@ -74,6 +81,7 @@ public class CompanyAdminCreditPurchaseService {
         this.invoiceRepository = invoiceRepository;
         this.exchangeRateService = exchangeRateService;
         this.userCreditPlanRepository = userCreditPlanRepository;
+        this.cacheManager = cacheManager;
     }
 
     public record CompanyPricingResult(
@@ -94,6 +102,8 @@ public class CompanyAdminCreditPurchaseService {
             Integer usedCredits) {
     }
 
+    @Cacheable(cacheNames = CacheNames.COMPANY_ADMIN_CREDITS_PRICING, key = "#companyId")
+    @Transactional(readOnly = true)
     public CompanyPricingResult getCompanyPricing(Long companyId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
@@ -295,6 +305,7 @@ public class CompanyAdminCreditPurchaseService {
             int balanceAfter = currentTotal + purchase.getCreditsPurchased();
             company.setTotalCredits(balanceAfter);
             companyRepository.save(company);
+            evictCompanyPricingCache(purchase.getCompanyId());
 
             Credit creditEntry = new Credit();
             creditEntry.setCompany(company);
@@ -367,6 +378,16 @@ public class CompanyAdminCreditPurchaseService {
         CreditPurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found"));
         return CreditPurchaseResponse.from(purchase);
+    }
+
+    private void evictCompanyPricingCache(Long companyId) {
+        if (companyId == null) {
+            return;
+        }
+        var cache = cacheManager.getCache(CacheNames.COMPANY_ADMIN_CREDITS_PRICING);
+        if (cache != null) {
+            cache.evict(companyId);
+        }
     }
 
     private CreditPlan resolveCompanyCreditPlan(Company company) {

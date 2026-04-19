@@ -2,10 +2,14 @@ package com.TravelMedicineAdvisory.Server.domain.permission;
 
 import java.util.NoSuchElementException;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 
 @Service
 @Transactional
@@ -17,17 +21,22 @@ public class PermissionService {
         this.repository = repository;
     }
 
+    @Cacheable(cacheNames = CacheNames.PERMISSIONS)
+    @Transactional(readOnly = true)
     public Page<PermissionResponse> findAll(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(this::toResponse);
     }
 
+    @Cacheable(cacheNames = CacheNames.PERMISSIONS)
+    @Transactional(readOnly = true)
     public PermissionResponse findById(Long id) {
         Permission entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Permission not found"));
         return toResponse(entity);
     }
 
+    @CacheEvict(cacheNames = CacheNames.PERMISSIONS, allEntries = true)
     public PermissionResponse create(PermissionRequest request) {
         Permission entity = new Permission();
         mapRequestToEntity(request, entity);
@@ -35,6 +44,7 @@ public class PermissionService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.PERMISSIONS, allEntries = true)
     public PermissionResponse update(Long id, PermissionRequest request) {
         Permission entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Permission not found"));
@@ -43,6 +53,7 @@ public class PermissionService {
         return toResponse(saved);
     }
 
+    @CacheEvict(cacheNames = CacheNames.PERMISSIONS, allEntries = true)
     public void delete(Long id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Permission not found");

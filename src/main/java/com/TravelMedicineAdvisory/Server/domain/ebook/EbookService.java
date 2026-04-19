@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.ebook;
 
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
@@ -10,6 +11,8 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +54,8 @@ public class EbookService {
 
     // ─── Public: Ebook listing ────────────────────────────────────────────────
 
+    @Cacheable(cacheNames = CacheNames.EBOOKS)
+    @Transactional(readOnly = true)
     public List<EbookDto.EbookResponse> listActiveEbooks() {
         return ebookRepository.findAllByIsActiveTrueOrderBySortOrderAsc().stream()
                 .map(e -> EbookDto.EbookResponse.from(e,
@@ -58,6 +63,8 @@ public class EbookService {
                 .toList();
     }
 
+    @Cacheable(cacheNames = CacheNames.EBOOKS, key = "#slug")
+    @Transactional(readOnly = true)
     public EbookDto.EbookResponse getEbookBySlug(String slug) {
         Ebook ebook = ebookRepository.findBySlug(slug)
                 .orElseThrow(() -> new NoSuchElementException("Ebook not found"));
@@ -299,6 +306,7 @@ public class EbookService {
                 .toList();
     }
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public EbookDto.AdminEbookResponse createEbook(EbookDto.CreateEbookRequest req) {
         if (ebookRepository.existsBySlug(req.slug())) {
             throw new IllegalArgumentException("Slug already in use");
@@ -313,6 +321,7 @@ public class EbookService {
         return EbookDto.AdminEbookResponse.from(ebook, List.of());
     }
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public EbookDto.AdminEbookResponse updateEbook(Long id, EbookDto.UpdateEbookRequest req) {
         Ebook ebook = ebookRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Ebook not found"));
@@ -326,6 +335,7 @@ public class EbookService {
                 versionRepository.findByEbookIdOrderBySortOrderAsc(id));
     }
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public void deleteEbook(Long id) {
         Ebook ebook = ebookRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Ebook not found"));
@@ -334,6 +344,7 @@ public class EbookService {
 
     // ─── Admin: Version CRUD ──────────────────────────────────────────────────
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public EbookDto.AdminEbookVersionResponse addVersion(Long ebookId, EbookDto.CreateVersionRequest req) {
         Ebook ebook = ebookRepository.findById(ebookId)
                 .orElseThrow(() -> new NoSuchElementException("Ebook not found"));
@@ -347,6 +358,7 @@ public class EbookService {
         return EbookDto.AdminEbookVersionResponse.from(version);
     }
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public EbookDto.AdminEbookVersionResponse updateVersion(Long ebookId, Long versionId, EbookDto.UpdateVersionRequest req) {
         EbookVersion version = versionRepository.findById(versionId)
                 .orElseThrow(() -> new NoSuchElementException("Version not found"));
@@ -362,6 +374,7 @@ public class EbookService {
         return EbookDto.AdminEbookVersionResponse.from(version);
     }
 
+    @CacheEvict(cacheNames = CacheNames.EBOOKS, allEntries = true)
     public void deleteVersion(Long ebookId, Long versionId) {
         EbookVersion version = versionRepository.findById(versionId)
                 .orElseThrow(() -> new NoSuchElementException("Version not found"));
