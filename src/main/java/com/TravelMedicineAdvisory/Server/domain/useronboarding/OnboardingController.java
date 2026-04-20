@@ -120,6 +120,11 @@ public class OnboardingController {
             companyUserRepository.save(companyUser);
         }
 
+        if (Boolean.TRUE.equals(request.complete())) {
+            entity.setQuestionnaireCompleted(true);
+            entity.setCompletedAt(LocalDateTime.now());
+        }
+
         entity.setUser(user);
         UserOnboarding saved = onboardingRepository.save(entity);
         return ResponseEntity.ok(Map.of("success", true, "data", toResponse(saved)));

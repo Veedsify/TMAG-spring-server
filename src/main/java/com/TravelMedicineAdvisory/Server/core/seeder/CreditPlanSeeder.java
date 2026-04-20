@@ -41,12 +41,12 @@ public class CreditPlanSeeder implements CommandLineRunner {
                 createPlan(CreditPlanCode.ESSENTIAL, "Essential",
                         BigDecimal.ZERO, BigDecimal.ZERO,
                         "Generic travel health education report for your destination. No personalisation.",
-                        false, false, null, null),
+                        true, false, null, null),
 
                 createPlan(CreditPlanCode.STANDARD, "Standard",
                         new BigDecimal("50.00"), new BigDecimal("50000.00"),
                         "Fully personalised travel health report using all questionnaire inputs across 14 decision trees.",
-                        true, false, null, null),
+                        false, false, null, null),
 
                 createPlan(CreditPlanCode.PREMIUM, "Premium",
                         new BigDecimal("100.00"), new BigDecimal("100000.00"),

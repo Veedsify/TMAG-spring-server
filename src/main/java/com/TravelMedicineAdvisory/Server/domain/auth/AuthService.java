@@ -15,6 +15,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import com.TravelMedicineAdvisory.Server.security.JwtService;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -528,6 +529,10 @@ public class AuthService {
         response.setExp(System.currentTimeMillis() + jwtService.getJwtExpiration());
         response.setBillingCurrency(user.getBillingCurrency());
         response.setMustChangePassword(user.getMustChangePassword() != null ? user.getMustChangePassword() : false);
+
+        if (user.getCreditPlan() != null) {
+            response.setUserCreditPlan(CreditPlanResponse.from(user.getCreditPlan()));
+        }
 
         return response;
     }

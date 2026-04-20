@@ -24,10 +24,25 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 @EnableCaching
 public class CacheConfig {
 
+    /**
+     * ObjectMapper used exclusively by the Redis cache serializer.
+     * Must have DefaultTyping enabled so GenericJackson2JsonRedisSerializer can
+     * round-trip polymorphic types (Map, List, Long, etc.) stored in Redis.
+     * This mapper is NOT exposed as a Spring bean, so it never affects HTTP serialization.
+     */
     private static ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Use the same DefaultTyping config as GenericJackson2JsonRedisSerializer's own default
+        // mapper, so the on-disk format in Redis is identical to what the default constructor
+        // would have produced. The default validator (LaissezFaireSubTypeValidator) permits all
+        // types; EVERYTHING ensures collections and wrappers also carry @class.
+        mapper.activateDefaultTypingAsProperty(
+                mapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.EVERYTHING,
+                "@class"
+        );
         return mapper;
     }
 

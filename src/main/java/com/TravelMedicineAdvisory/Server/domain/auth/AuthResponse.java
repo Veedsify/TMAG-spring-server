@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AuthResponse {
@@ -46,6 +47,9 @@ public class AuthResponse {
     @JsonProperty("billing_currency")
     private BillingCurrency billingCurrency;
 
+    @JsonProperty("user_credit_plan")
+    private CreditPlanResponse userCreditPlan;
+
     public AuthResponse() {}
 
     public Long getId() { return id; }
@@ -82,4 +86,6 @@ public class AuthResponse {
     public void setBillingCurrency(BillingCurrency billingCurrency) { this.billingCurrency = billingCurrency; }
     public Boolean getMustChangePassword() { return mustChangePassword; }
     public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+    public CreditPlanResponse getUserCreditPlan() { return userCreditPlan; }
+    public void setUserCreditPlan(CreditPlanResponse userCreditPlan) { this.userCreditPlan = userCreditPlan; }
 }

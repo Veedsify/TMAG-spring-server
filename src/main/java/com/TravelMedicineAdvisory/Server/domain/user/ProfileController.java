@@ -3,7 +3,11 @@ package com.TravelMedicineAdvisory.Server.domain.user;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserService;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
+import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -50,9 +54,9 @@ public class ProfileController {
     }
 
     @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email)
+    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request,
+            @AuthenticationPrincipal AppUserDetails authUser) {
+        User user = userRepository.findByEmail(authUser.getEmail())
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         if (request.firstName() != null)
             user.setFirstName(request.firstName());
@@ -125,6 +129,7 @@ public class ProfileController {
                 user.getCredits(),
                 user.getVerified(),
                 user.getRole() != null ? user.getRole().getId() : null,
-                user.getBillingCurrency());
+                user.getBillingCurrency(),
+                user.getCreditPlan() != null ? CreditPlanResponse.from(user.getCreditPlan()) : null);
     }
 }

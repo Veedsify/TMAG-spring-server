@@ -19,7 +19,7 @@ public class CountryService {
     private final CountryRepository repository;
 
     public CountryService(CountryRepository repository) {
-        this.repository = repository;   
+        this.repository = repository;
     }
 
     @Cacheable(cacheNames = CacheNames.COUNTRIES)
@@ -62,7 +62,6 @@ public class CountryService {
         repository.deleteById(id);
     }
 
-    @Cacheable(cacheNames = CacheNames.COUNTRIES)
     @Transactional(readOnly = true)
     public List<CountryResponse> findAllList() {
         return repository.findAll().stream().map(this::toResponse).toList();
