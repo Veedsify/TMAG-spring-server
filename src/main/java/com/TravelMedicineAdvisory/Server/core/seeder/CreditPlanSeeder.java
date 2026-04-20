@@ -37,27 +37,54 @@ public class CreditPlanSeeder implements CommandLineRunner {
         logger.info("Seeding user credit plans...");
 
         List<CreditPlan> plans = List.of(
-                createPlan(
-                        CreditPlanCode.ESSENTIAL,
-                        "Essential",
-                        BigDecimal.ZERO,
+                // Individual plans
+                createPlan(CreditPlanCode.ESSENTIAL, "Essential",
+                        BigDecimal.ZERO, BigDecimal.ZERO,
                         "Generic travel health education report for your destination. No personalisation.",
-                        false
-                ),
-                createPlan(
-                        CreditPlanCode.STANDARD,
-                        "Standard",
-                        new BigDecimal("50.00"),
+                        false, false, null, null),
+
+                createPlan(CreditPlanCode.STANDARD, "Standard",
+                        new BigDecimal("50.00"), new BigDecimal("50000.00"),
                         "Fully personalised travel health report using all questionnaire inputs across 14 decision trees.",
-                        true
-                ),
-                createPlan(
-                        CreditPlanCode.PREMIUM,
-                        "Premium",
-                        new BigDecimal("100.00"),
+                        true, false, null, null),
+
+                createPlan(CreditPlanCode.PREMIUM, "Premium",
+                        new BigDecimal("100.00"), new BigDecimal("100000.00"),
                         "Everything in Standard plus a Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter.",
-                        false
-                )
+                        false, false, null, null),
+
+                // Enterprise company plans — 0-100 signups
+                createPlan(CreditPlanCode.ENTERPRISE_SILVER, "Enterprise Silver",
+                        new BigDecimal("50.00"), new BigDecimal("50000.00"),
+                        "Fully personalised travel health report across 14 clinical decision trees. Ideal for teams of up to 100.",
+                        false, true, "0-100", "STANDARD"),
+
+                createPlan(CreditPlanCode.ENTERPRISE_PLUS, "Enterprise Plus",
+                        new BigDecimal("100.00"), new BigDecimal("100000.00"),
+                        "Everything in Standard plus Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter. For teams up to 100.",
+                        false, true, "0-100", "PREMIUM"),
+
+                // Enterprise company plans — 100-500 signups
+                createPlan(CreditPlanCode.ENTERPRISE_GOLD, "Enterprise Gold",
+                        new BigDecimal("50.00"), new BigDecimal("50000.00"),
+                        "Fully personalised travel health report across 14 clinical decision trees. Built for mid-size teams of 100–500.",
+                        false, true, "100-500", "STANDARD"),
+
+                createPlan(CreditPlanCode.ENTERPRISE_ELITE, "Enterprise Elite",
+                        new BigDecimal("100.00"), new BigDecimal("100000.00"),
+                        "Everything in Standard plus Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter. For teams of 100–500.",
+                        false, true, "100-500", "PREMIUM"),
+
+                // Enterprise company plans — 500+ signups
+                createPlan(CreditPlanCode.ENTERPRISE_PLATINUM, "Enterprise Platinum",
+                        new BigDecimal("50.00"), new BigDecimal("50000.00"),
+                        "Fully personalised travel health report across 14 clinical decision trees. Designed for large organisations with 500+ members.",
+                        false, true, ">500", "STANDARD"),
+
+                createPlan(CreditPlanCode.ENTERPRISE_SIGNATURE, "Enterprise Signature",
+                        new BigDecimal("100.00"), new BigDecimal("100000.00"),
+                        "Everything in Standard plus Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter. For 500+ member organisations.",
+                        false, true, ">500", "PREMIUM")
         );
 
         repository.saveAll(plans);
@@ -65,14 +92,20 @@ public class CreditPlanSeeder implements CommandLineRunner {
     }
 
     private CreditPlan createPlan(CreditPlanCode code, String displayName,
-                                      BigDecimal basePriceUsd, String description,
-                                      boolean isDefault) {
+                                  BigDecimal basePriceUsd, BigDecimal basePriceNgn,
+                                  String description, boolean isDefault,
+                                  boolean isCompanyPlan, String signupRangeLabel,
+                                  String serviceLevel) {
         CreditPlan plan = new CreditPlan();
         plan.setCode(code);
         plan.setDisplayName(displayName);
         plan.setBasePriceUsd(basePriceUsd);
+        plan.setBasePriceNgn(basePriceNgn);
         plan.setDescription(description);
         plan.setIsDefault(isDefault);
+        plan.setIsCompanyPlan(isCompanyPlan);
+        plan.setSignupRangeLabel(signupRangeLabel);
+        plan.setServiceLevel(serviceLevel);
         return plan;
     }
 }
