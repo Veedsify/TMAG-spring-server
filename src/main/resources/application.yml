@@ -19,4 +19,4 @@ spring:
     flyway:
         enabled: ${SPRING_FLYWAY_ENABLED:true}
         locations: classpath:db/migration
-        baseline-on-migrate: true # important for existing DBs
+        baseline-on-migrate: true
