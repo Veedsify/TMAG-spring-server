@@ -129,7 +129,7 @@ public class AuthService {
         user.setVerified(false);
         user.setType("INDIVIDUAL");
         user.setCredits(1);
-        user.setBillingCurrency(BillingCurrency.NGN);
+        user.setBillingCurrency(request.getBillingCurrency() != null ? request.getBillingCurrency() : BillingCurrency.NGN);
         user.setRole(role);
         user.setLastLogin(LocalDateTime.now());
         user.setCreditPlan(resolveCreditPlan(request.getPlanCode()));
