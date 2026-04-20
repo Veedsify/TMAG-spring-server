@@ -43,30 +43,75 @@ public class CreditPlan extends BaseEntity {
     @Column(name = "service_level", length = 20)
     private String serviceLevel;
 
-    public CreditPlanCode getCode() { return code; }
-    public void setCode(CreditPlanCode code) { this.code = code; }
+    public CreditPlanCode getCode() {
+        return code;
+    }
 
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
+    public void setCode(CreditPlanCode code) {
+        this.code = code;
+    }
 
-    public BigDecimal getBasePriceUsd() { return basePriceUsd; }
-    public void setBasePriceUsd(BigDecimal basePriceUsd) { this.basePriceUsd = basePriceUsd; }
+    public String getDisplayName() {
+        return displayName;
+    }
 
-    public BigDecimal getBasePriceNgn() { return basePriceNgn; }
-    public void setBasePriceNgn(BigDecimal basePriceNgn) { this.basePriceNgn = basePriceNgn; }
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public BigDecimal getBasePriceUsd() {
+        return basePriceUsd;
+    }
 
-    public Boolean getIsDefault() { return isDefault; }
-    public void setIsDefault(Boolean isDefault) { this.isDefault = isDefault; }
+    public void setBasePriceUsd(BigDecimal basePriceUsd) {
+        this.basePriceUsd = basePriceUsd;
+    }
 
-    public Boolean getIsCompanyPlan() { return isCompanyPlan; }
-    public void setIsCompanyPlan(Boolean isCompanyPlan) { this.isCompanyPlan = isCompanyPlan; }
+    public BigDecimal getBasePriceNgn() {
+        return basePriceNgn;
+    }
 
-    public String getSignupRangeLabel() { return signupRangeLabel; }
-    public void setSignupRangeLabel(String signupRangeLabel) { this.signupRangeLabel = signupRangeLabel; }
+    public void setBasePriceNgn(BigDecimal basePriceNgn) {
+        this.basePriceNgn = basePriceNgn;
+    }
 
-    public String getServiceLevel() { return serviceLevel; }
-    public void setServiceLevel(String serviceLevel) { this.serviceLevel = serviceLevel; }
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Boolean getIsDefault() {
+        return isDefault;
+    }
+
+    public void setIsDefault(Boolean isDefault) {
+        this.isDefault = isDefault;
+    }
+
+    public Boolean getIsCompanyPlan() {
+        return isCompanyPlan;
+    }
+
+    public void setIsCompanyPlan(Boolean isCompanyPlan) {
+        this.isCompanyPlan = isCompanyPlan;
+    }
+
+    public String getSignupRangeLabel() {
+        return signupRangeLabel;
+    }
+
+    public void setSignupRangeLabel(String signupRangeLabel) {
+        this.signupRangeLabel = signupRangeLabel;
+    }
+
+    public String getServiceLevel() {
+        return serviceLevel;
+    }
+
+    public void setServiceLevel(String serviceLevel) {
+        this.serviceLevel = serviceLevel;
+    }
 }

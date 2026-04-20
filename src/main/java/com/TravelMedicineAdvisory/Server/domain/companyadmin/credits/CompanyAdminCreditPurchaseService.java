@@ -10,7 +10,6 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companysetting.CompanySettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingService;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseResponse;
@@ -19,7 +18,6 @@ import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 
 import org.slf4j.Logger;
@@ -43,6 +41,14 @@ public class CompanyAdminCreditPurchaseService {
 
     private static final Logger logger = LoggerFactory.getLogger(CompanyAdminCreditPurchaseService.class);
 
+    private static final int TIER_1_MAX = 49;
+    private static final int TIER_2_MAX = 99;
+    private static final int TIER_3_MAX = 499;
+
+    private static final BigDecimal TIER_1_MULTIPLIER = BigDecimal.ONE;
+    private static final BigDecimal TIER_2_MULTIPLIER = new BigDecimal("0.90");
+    private static final BigDecimal TIER_3_MULTIPLIER = new BigDecimal("0.80");
+
     private final CompanyRepository companyRepository;
     private final CompanySettingRepository settingRepository;
     private final CreditRepository creditRepository;
@@ -65,7 +71,6 @@ public class CompanyAdminCreditPurchaseService {
             CompanySettingRepository settingRepository,
             CreditRepository creditRepository,
             UserRepository userRepository,
-            CreditPricingService pricingService,
             CreditPurchaseRepository purchaseRepository,
             FlutterwaveService flutterwaveService,
             InvoiceRepository invoiceRepository,
@@ -90,16 +95,16 @@ public class CompanyAdminCreditPurchaseService {
             BillingCurrency currency,
             String currencySymbol,
             BigDecimal pricePerCredit,
-            Integer minCredits,
-            Integer maxCredits,
-            BigDecimal discountTier1Threshold,
-            BigDecimal discountTier1Amount,
-            BigDecimal discountTier2Threshold,
-            BigDecimal discountTier2Amount,
-            BigDecimal discountTier3Threshold,
-            BigDecimal discountTier3Amount,
-            Integer totalCredits,
-            Integer usedCredits) {
+            String appliedTier,
+            boolean qualifiesForContactSales,
+            Integer historicalCreditsPurchased,
+            BigDecimal basePricePerCreditUsd,
+            BigDecimal pricePerCreditTier1,
+            BigDecimal pricePerCreditTier2,
+            BigDecimal pricePerCreditTier3,
+            Integer tier1MaxCredits,
+            Integer tier2MaxCredits,
+            Integer tier3MaxCredits) {
     }
 
     @Cacheable(cacheNames = CacheNames.COMPANY_ADMIN_CREDITS_PRICING, key = "#companyId")
@@ -109,27 +114,30 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
-        CreditPlan plan = resolveCompanyCreditPlan(company);
-        String currencyCode = currency.name();
-        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
-        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
+        CreditPlan plan = resolveCreditPlan(company);
+        int historicalPurchased = company.getHistoricalCreditsPurchased();
+
+        BigDecimal baseUsd = plan.getBasePriceUsd();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
+
+        TierPricing tier = computeTierPricing(historicalPurchased, baseUsd, currency, currencySymbol);
 
         return new CompanyPricingResult(
                 company.getId(),
                 company.getName(),
                 currency,
                 currencySymbol,
-                pricePerCredit,
-                1,
-                10000,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                company.getTotalCredits() != null ? company.getTotalCredits() : 0,
-                company.getUsedCredits() != null ? company.getUsedCredits() : 0);
+                tier.pricePerCredit(),
+                tier.appliedTier(),
+                tier.qualifiesForContactSales(),
+                historicalPurchased,
+                baseUsd,
+                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_1_MULTIPLIER), currency.name()),
+                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_2_MULTIPLIER), currency.name()),
+                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_3_MULTIPLIER), currency.name()),
+                TIER_1_MAX,
+                TIER_2_MAX,
+                TIER_3_MAX);
     }
 
     public record PurchaseQuoteResult(
@@ -137,12 +145,12 @@ public class CompanyAdminCreditPurchaseService {
             String companyName,
             Integer credits,
             BigDecimal basePrice,
-            BigDecimal discountAmount,
             BigDecimal totalAmount,
             BillingCurrency currency,
             String currencySymbol,
             BigDecimal pricePerCredit,
-            String appliedDiscountTier) {
+            String appliedTier,
+            boolean qualifiesForContactSales) {
     }
 
     public PurchaseQuoteResult getQuote(Long companyId, Integer credits) {
@@ -150,23 +158,39 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
-        CreditPlan plan = resolveCompanyCreditPlan(company);
-        String currencyCode = currency.name();
-        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
-        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
-        BigDecimal basePrice = pricePerCredit.multiply(BigDecimal.valueOf(credits));
+        CreditPlan plan = resolveCreditPlan(company);
+        int historicalPurchased = company.getHistoricalCreditsPurchased();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
+
+        TierPricing tier = computeTierPricing(historicalPurchased, plan.getBasePriceUsd(), currency, currencySymbol);
+
+        if (tier.qualifiesForContactSales()) {
+            return new PurchaseQuoteResult(
+                    companyId,
+                    company.getName(),
+                    credits,
+                    tier.pricePerCredit().multiply(BigDecimal.valueOf(credits)),
+                    tier.pricePerCredit().multiply(BigDecimal.valueOf(credits)),
+                    currency,
+                    currencySymbol,
+                    tier.pricePerCredit(),
+                    tier.appliedTier(),
+                    true);
+        }
+
+        BigDecimal basePrice = tier.pricePerCredit().multiply(BigDecimal.valueOf(credits));
 
         return new PurchaseQuoteResult(
                 companyId,
                 company.getName(),
                 credits,
                 basePrice,
-                BigDecimal.ZERO,
                 basePrice,
                 currency,
                 currencySymbol,
-                pricePerCredit,
-                null);
+                tier.pricePerCredit(),
+                tier.appliedTier(),
+                false);
     }
 
     public record InitiatePurchaseResult(
@@ -192,10 +216,17 @@ public class CompanyAdminCreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Company not found"));
 
         BillingCurrency currency = resolveBillingCurrency(company);
-        CreditPlan plan = resolveCompanyCreditPlan(company);
-        String currencyCode = currency.name();
-        String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
-        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
+        CreditPlan plan = resolveCreditPlan(company);
+        int historicalPurchased = company.getHistoricalCreditsPurchased();
+        String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
+
+        TierPricing tier = computeTierPricing(historicalPurchased, plan.getBasePriceUsd(), currency, currencySymbol);
+
+        if (tier.qualifiesForContactSales()) {
+            throw new IllegalStateException("Companies with 500+ historical credits must contact sales for custom pricing.");
+        }
+
+        BigDecimal pricePerCredit = tier.pricePerCredit();
         BigDecimal totalAmount = pricePerCredit.multiply(BigDecimal.valueOf(credits));
 
         String txRef = flutterwaveService.generateTransactionReference();
@@ -216,7 +247,7 @@ public class CompanyAdminCreditPurchaseService {
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 totalAmount,
-                currencyCode,
+                currency.name(),
                 user.getEmail(),
                 user.getName() != null ? user.getName() : user.getEmail(),
                 "TMAG Company Credit Purchase - " + company.getName() + " - " + credits + " credits",
@@ -304,6 +335,10 @@ public class CompanyAdminCreditPurchaseService {
             int currentTotal = company.getTotalCredits() != null ? company.getTotalCredits() : 0;
             int balanceAfter = currentTotal + purchase.getCreditsPurchased();
             company.setTotalCredits(balanceAfter);
+
+            int currentPurchased = company.getTotalCreditsPurchased() != null ? company.getTotalCreditsPurchased() : 0;
+            company.setTotalCreditsPurchased(currentPurchased + purchase.getCreditsPurchased());
+
             companyRepository.save(company);
             evictCompanyPricingCache(purchase.getCompanyId());
 
@@ -380,6 +415,54 @@ public class CompanyAdminCreditPurchaseService {
         return CreditPurchaseResponse.from(purchase);
     }
 
+    private record TierPricing(
+            BigDecimal pricePerCredit,
+            String appliedTier,
+            boolean qualifiesForContactSales
+    ) {}
+
+    private TierPricing computeTierPricing(int historicalCredits, BigDecimal basePriceUsd,
+            BillingCurrency currency, String currencySymbol) {
+        BigDecimal priceInCurrency;
+        String tier;
+        boolean contactSales;
+
+        if (historicalCredits >= 500) {
+            tier = "TIER_3";
+            contactSales = true;
+        } else if (historicalCredits >= 100) {
+            tier = "TIER_3";
+            contactSales = false;
+        } else if (historicalCredits >= 50) {
+            tier = "TIER_2";
+            contactSales = false;
+        } else {
+            tier = "TIER_1";
+            contactSales = false;
+        }
+
+        BigDecimal multiplier = switch (tier) {
+            case "TIER_3" -> TIER_3_MULTIPLIER;
+            case "TIER_2" -> TIER_2_MULTIPLIER;
+            default -> TIER_1_MULTIPLIER;
+        };
+
+        BigDecimal tierBaseUsd = basePriceUsd.multiply(multiplier);
+        priceInCurrency = exchangeRateService.convertFromUsd(tierBaseUsd, currency.name());
+
+        return new TierPricing(priceInCurrency, tier, contactSales);
+    }
+
+    private CreditPlan resolveCreditPlan(Company company) {
+        if (company.getCreditPlan() != null) {
+            return company.getCreditPlan();
+        }
+        return userCreditPlanRepository.findByIsDefaultTrue()
+                .orElseGet(() -> userCreditPlanRepository.findAll().stream()
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException("No credit plan configured")));
+    }
+
     private void evictCompanyPricingCache(Long companyId) {
         if (companyId == null) {
             return;
@@ -388,15 +471,6 @@ public class CompanyAdminCreditPurchaseService {
         if (cache != null) {
             cache.evict(companyId);
         }
-    }
-
-    private CreditPlan resolveCompanyCreditPlan(Company company) {
-        if (company.getCreditPlan() != null) {
-            return company.getCreditPlan();
-        }
-        return userCreditPlanRepository.findByIsDefaultTrue()
-                .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD)
-                        .orElseThrow(() -> new IllegalStateException("No credit pricing plan configured")));
     }
 
     private BillingCurrency resolveBillingCurrency(Company company) {

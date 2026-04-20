@@ -6,7 +6,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
 
-
 import java.math.BigDecimal;
 
 @Entity
@@ -33,6 +32,7 @@ public class CreditPurchase extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+
     private BillingCurrency currency;
 
     @Column(name = "currency_symbol")

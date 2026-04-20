@@ -17,7 +17,7 @@ import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -125,10 +125,7 @@ public class CompanyApiKeyService {
     }
 
     private void ensureApiAccess(Company company) {
-        String resolvedPlanCode = company.getCreditPlan() != null && company.getCreditPlan().getCode() != null
-                ? company.getCreditPlan().getCode().name()
-                : company.getPlan();
-        if (!CreditPlanCode.PREMIUM.name().equalsIgnoreCase(resolvedPlanCode)) {
+        if (!Boolean.TRUE.equals(company.getHasApiAccess())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "API keys are available for Premium plan companies only");
         }

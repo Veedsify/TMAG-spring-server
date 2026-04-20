@@ -32,6 +32,10 @@ public class Company extends BaseEntity {
     private Integer totalCredits;
     @Column(name = "used_credits")
     private Integer usedCredits;
+    @Column(name = "total_credits_purchased")
+    private Integer totalCreditsPurchased = 0;
+    @Column(name = "has_api_access")
+    private Boolean hasApiAccess = false;
     @Column(name = "employee_count")
     private Integer employeeCount;
     private String plan;
@@ -101,6 +105,27 @@ public class Company extends BaseEntity {
 
     public void setUsedCredits(Integer usedCredits) {
         this.usedCredits = usedCredits;
+    }
+
+    public Integer getTotalCreditsPurchased() {
+        return totalCreditsPurchased;
+    }
+
+    public void setTotalCreditsPurchased(Integer totalCreditsPurchased) {
+        this.totalCreditsPurchased = totalCreditsPurchased;
+    }
+
+    @Transient
+    public int getHistoricalCreditsPurchased() {
+        return totalCreditsPurchased != null ? totalCreditsPurchased : 0;
+    }
+
+    public Boolean getHasApiAccess() {
+        return hasApiAccess;
+    }
+
+    public void setHasApiAccess(Boolean hasApiAccess) {
+        this.hasApiAccess = hasApiAccess;
     }
 
     public Integer getEmployeeCount() {

@@ -9,8 +9,6 @@ import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditpricing.CreditPricingService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
@@ -48,8 +46,6 @@ public class CreditPurchaseService {
 
     public CreditPurchaseService(
             CreditPurchaseRepository purchaseRepository,
-            CreditPricingRepository pricingRepository,
-            CreditPricingService pricingService,
             CreditRepository creditRepository,
             UserRepository userRepository,
             FlutterwaveService flutterwaveService,
@@ -100,7 +96,14 @@ public class CreditPurchaseService {
         BillingCurrency currency = user.getBillingCurrency() != null ? user.getBillingCurrency() : BillingCurrency.USD;
         String currencyCode = currency.name();
         String currencySymbol = exchangeRateService.getCurrencySymbol(currencyCode);
-        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(creditPlan.getBasePriceUsd(), currencyCode);
+        BigDecimal pricePerCredit = BigDecimal.ZERO;
+
+        if (currencyCode.equals("NGN") && creditPlan.getBasePriceNgn() != null) {
+            pricePerCredit = creditPlan.getBasePriceNgn();
+        } else {
+            pricePerCredit = creditPlan.getBasePriceUsd();
+        }
+
         BigDecimal totalAmount = pricePerCredit.multiply(BigDecimal.valueOf(request.credits()));
 
         String txRef = flutterwaveService.generateTransactionReference();

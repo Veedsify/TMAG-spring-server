@@ -32,4 +32,7 @@ public interface CreditPurchaseRepository extends JpaRepository<CreditPurchase, 
     long countCompletedByUserId(@Param("userId") Long userId);
 
     List<CreditPurchase> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
+
+    @Query("SELECT COALESCE(SUM(cp.creditsPurchased), 0) FROM CreditPurchase cp WHERE cp.companyId = :companyId AND cp.status = 'completed'")
+    Integer sumCompletedCreditsByCompanyId(@Param("companyId") Long companyId);
 }

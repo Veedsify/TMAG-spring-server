@@ -16,7 +16,6 @@ public final class CacheNames {
     public static final String COUNTRIES = "countries";
     public static final String COUNTRY_ACCOMMODATIONS = "countryAccommodations";
     public static final String COUNTRY_HEALTH_ALERTS = "countryHealthAlerts";
-    public static final String CREDIT_PRICING = "creditPricing";
     public static final String CURRENCIES = "currencies";
     public static final String EBOOKS = "ebooks";
     public static final String EXCHANGE_RATES = "exchangeRates";
@@ -42,7 +41,6 @@ public final class CacheNames {
             COUNTRIES,
             COUNTRY_ACCOMMODATIONS,
             COUNTRY_HEALTH_ALERTS,
-            CREDIT_PRICING,
             CURRENCIES,
             EBOOKS,
             EXCHANGE_RATES,

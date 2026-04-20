@@ -30,10 +30,10 @@ public class CreditPurchaseController {
 
     @PostMapping("/initiate")
     public ResponseEntity<SuccessResponse> initiatePurchase(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal AppUserDetails userDetails,
             @Valid @RequestBody CreditPurchaseRequest request) {
         try {
-            Long userId = getUserIdFromUserDetails(userDetails);
+            Long userId = userDetails.getUserId();
             var result = service.initiatePurchase(userId, request);
             Map<String, Object> responseData = new java.util.HashMap<>();
             responseData.put("success", true);
