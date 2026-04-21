@@ -56,7 +56,8 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         personal.setCategoryDescription("Please confirm your personal details below.");
         personal.setDisplayOrder(1);
         personal.setIsOptional(false);
-        personal.setQuestions(removeDuplicateQuestionKeys(PERSONAL_INFORMATION_QUESTIONS, seenQuestionKeys, "personal_information"));
+        personal.setQuestions(
+                removeDuplicateQuestionKeys(PERSONAL_INFORMATION_QUESTIONS, seenQuestionKeys, "personal_information"));
         categories.add(personal);
 
         OnboardingQuestionCategory travel = new OnboardingQuestionCategory();
@@ -76,7 +77,8 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         accommodation.setCategoryDescription("Where you will stay, your environment, and the purpose of your trip.");
         accommodation.setDisplayOrder(3);
         accommodation.setIsOptional(false);
-        accommodation.setQuestions(removeDuplicateQuestionKeys(ACCOMMODATION_AND_PURPOSE_QUESTIONS, seenQuestionKeys, "accommodation_environment"));
+        accommodation.setQuestions(removeDuplicateQuestionKeys(ACCOMMODATION_AND_PURPOSE_QUESTIONS, seenQuestionKeys,
+                "accommodation_environment"));
         categories.add(accommodation);
 
         OnboardingQuestionCategory activities = new OnboardingQuestionCategory();
@@ -86,7 +88,8 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         activities.setCategoryDescription("Activities that may affect travel health risks.");
         activities.setDisplayOrder(4);
         activities.setIsOptional(false);
-        activities.setQuestions(removeDuplicateQuestionKeys(PLANNED_ACTIVITIES_QUESTIONS, seenQuestionKeys, "planned_activities"));
+        activities.setQuestions(
+                removeDuplicateQuestionKeys(PLANNED_ACTIVITIES_QUESTIONS, seenQuestionKeys, "planned_activities"));
         categories.add(activities);
 
         OnboardingQuestionCategory medical = new OnboardingQuestionCategory();
@@ -106,27 +109,32 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
         vaccines.setCategoryDescription("Your vaccine history and prior international travel health experiences.");
         vaccines.setDisplayOrder(6);
         vaccines.setIsOptional(false);
-        vaccines.setQuestions(removeDuplicateQuestionKeys(VACCINE_AND_TRAVEL_HISTORY_QUESTIONS, seenQuestionKeys, "vaccination_history"));
+        vaccines.setQuestions(removeDuplicateQuestionKeys(VACCINE_AND_TRAVEL_HISTORY_QUESTIONS, seenQuestionKeys,
+                "vaccination_history"));
         categories.add(vaccines);
 
         OnboardingQuestionCategory awareness = new OnboardingQuestionCategory();
         awareness.setCategoryKey("awareness_preparation");
         awareness.setCategoryName("Awareness & Preparation");
         awareness.setCategoryIcon("shield-check");
-        awareness.setCategoryDescription("Let us know about your travel insurance and access to healthcare before your trip.");
+        awareness.setCategoryDescription(
+                "Let us know about your travel insurance and access to healthcare before your trip.");
         awareness.setDisplayOrder(7);
         awareness.setIsOptional(false);
-        awareness.setQuestions(removeDuplicateQuestionKeys(AWARENESS_QUESTIONS, seenQuestionKeys, "awareness_preparation"));
+        awareness.setQuestions(
+                removeDuplicateQuestionKeys(AWARENESS_QUESTIONS, seenQuestionKeys, "awareness_preparation"));
         categories.add(awareness);
 
         OnboardingQuestionCategory risk = new OnboardingQuestionCategory();
         risk.setCategoryKey("personal_health_risk_behaviours");
         risk.setCategoryName("Personal Health & Risk Behaviours");
         risk.setCategoryIcon("bug");
-        risk.setCategoryDescription("Optional but important. Responses are confidential and used only to provide accurate health advice.");
+        risk.setCategoryDescription(
+                "Optional but important. Responses are confidential and used only to provide accurate health advice.");
         risk.setDisplayOrder(8);
         risk.setIsOptional(true);
-        risk.setQuestions(removeDuplicateQuestionKeys(RISK_BEHAVIOUR_QUESTIONS, seenQuestionKeys, "personal_health_risk_behaviours"));
+        risk.setQuestions(removeDuplicateQuestionKeys(RISK_BEHAVIOUR_QUESTIONS, seenQuestionKeys,
+                "personal_health_risk_behaviours"));
         categories.add(risk);
 
         // Collect the set of desired category keys for cleanup
@@ -166,7 +174,8 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
             }
         }
 
-        logger.info("Onboarding question categories synced. Created: {}, Updated: {}, Deleted: {}", createdCount, updatedCount, deletedCount);
+        logger.info("Onboarding question categories synced. Created: {}, Updated: {}, Deleted: {}", createdCount,
+                updatedCount, deletedCount);
     }
 
     private String removeDuplicateQuestionKeys(String questionsJson, Set<String> seenKeys, String categoryKey) {
@@ -192,7 +201,8 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
             }
             return objectMapper.writeValueAsString(filtered);
         } catch (Exception ex) {
-            logger.warn("Failed to deduplicate onboarding questions for category '{}': {}", categoryKey, ex.getMessage());
+            logger.warn("Failed to deduplicate onboarding questions for category '{}': {}", categoryKey,
+                    ex.getMessage());
             return questionsJson;
         }
     }
@@ -213,12 +223,11 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     private static final String TRAVEL_QUESTIONS = """
             [
               {"key":"trip_itinerary","text":"Trip type and itinerary","description":"Start by selecting Single trip, Round trip, or Multi-stop.","type":"trip_itinerary","required":true},
-              {"key":"flight_details","text":"Flight & Travel Journey Details","description":"Please describe all legs of your complete itinerary (outbound, any internal flights, and return if known).","type":"textarea","required":false,"placeholder":"e.g. London → Lagos (direct), then Lagos → Abuja (domestic)"},
-              {"key":"longest_flight_leg_hours","text":"Longest single flight leg (hours):","type":"text","required":false,"placeholder":"e.g. 6"},
-              {"key":"total_flying_hours","text":"Total approximate flying time excluding layovers (hours):","type":"text","required":false,"placeholder":"e.g. 10"},
-              {"key":"number_of_flight_legs","text":"Number of flight legs (e.g., 2 = outbound + return):","type":"text","required":false,"placeholder":"e.g. 2"},
-              {"key":"airline_flight_numbers","text":"Airline(s) and flight number(s) (if known):","type":"text","required":false,"placeholder":"e.g. BA 206, AF 1234"},
-              {"key":"short_domestic_flights","text":"Are any legs domestic or short regional flights (<4 hours)?","type":"radio","required":false,"options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},
+              {"key":"flight_details","text":"Flight & Travel Journey Details","description":"Please describe all legs of your complete itinerary (outbound, any internal flights, and return if known). (optional)","type":"textarea","required":false,"placeholder":"e.g. London → Lagos (direct), then Lagos → Abuja (domestic)"},
+              {"key":"longest_flight_leg_hours","text":"Longest single flight leg (hours)  (optional):","type":"text","required":false,"placeholder":"e.g. 6"},
+              {"key":"total_flying_hours","text":"Total approximate flying time excluding layovers (hours) (optional):","type":"text","required":false,"placeholder":"e.g. 10"},
+              {"key":"number_of_flight_legs","text":"Number of flight legs (e.g., 2 = outbound + return) (optional):","type":"text","required":false,"placeholder":"e.g. 2"},
+              {"key":"short_domestic_flights","text":"Are any legs domestic or short regional flights (<4 hours)? (optional)","type":"radio","required":false,"options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},
               {"key":"travel_companions","text":"Who will you be travelling with?","type":"radio","required":true,"options":[{"value":"alone","label":"Alone"},{"value":"family","label":"Family (note children's ages below)"},{"value":"friends","label":"Friends"},{"value":"colleagues","label":"Colleagues"}]},
               {"key":"travel_companions_children_ages","text":"If travelling with children, please note their ages:","type":"text","required":false,"placeholder":"e.g. 3, 7, 10","conditionalOn":{"travel_companions":"family"}}
             ]
