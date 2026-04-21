@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.view.RedirectView;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
@@ -31,12 +34,15 @@ public class CompanyAdminCreditPurchaseController {
 
     private final CompanyAdminCreditPurchaseService service;
     private final UserRepository userRepository;
+    private final CallbackRegistry callbackRegistry;
 
     public CompanyAdminCreditPurchaseController(
             CompanyAdminCreditPurchaseService service,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            CallbackRegistry callbackRegistry) {
         this.service = service;
         this.userRepository = userRepository;
+        this.callbackRegistry = callbackRegistry;
     }
 
     @GetMapping("/pricing")
@@ -77,7 +83,7 @@ public class CompanyAdminCreditPurchaseController {
             Long companyId = ((Number) body.get("companyId")).longValue();
             Integer credits = ((Number) body.get("credits")).intValue();
 
-            var result = service.initiatePurchase(userId, companyId, credits);
+            var result = service.initiatePurchase(userId, companyId, credits, "ADMIN_CREDITS");
 
             return ResponseEntity.ok(new SuccessResponse("Payment initiated", Map.of(
                     "txRef", result.txRef(),
@@ -115,7 +121,7 @@ public class CompanyAdminCreditPurchaseController {
             Long companyId = ((Number) body.get("companyId")).longValue();
             Integer credits = ((Number) body.get("credits")).intValue();
 
-            var result = service.initiatePurchase(userId, companyId, credits, true);
+            var result = service.initiatePurchase(userId, companyId, credits, "HR_BILLING");
 
             return ResponseEntity.ok(new SuccessResponse("Payment initiated", Map.of(
                     "txRef", result.txRef(),
@@ -136,6 +142,39 @@ public class CompanyAdminCreditPurchaseController {
         } catch (Exception e) {
             logger.error("Unexpected error during HR payment initiation: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/callback")
+    public RedirectView paymentCallback(
+            @RequestParam(required = false) String tx_ref,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String transaction_id,
+            @RequestParam(required = false, defaultValue = "HR_BILLING") String type) {
+        String frontendUrl = callbackRegistry.getFrontendRedirectUrl(type);
+
+        if (tx_ref == null) {
+            return new RedirectView(frontendUrl + "?error=Missing%20transaction%20reference");
+        }
+
+        try {
+            var result = service.verifyAndCompletePurchase(tx_ref, transaction_id);
+
+            if ("completed".equals(result.status())) {
+                return new RedirectView(
+                    frontendUrl +
+                    "?success=true" +
+                    "&credits=" + result.creditsPurchased() +
+                    "&tx_ref=" + tx_ref
+                );
+            } else {
+                String errorMsg = result.status() != null ? "Payment%20" + result.status() : "Payment%20not%20completed";
+                return new RedirectView(frontendUrl + "?success=false&error=" + errorMsg);
+            }
+        } catch (NoSuchElementException e) {
+            return new RedirectView(frontendUrl + "?error=Transaction%20not%20found");
+        } catch (Exception e) {
+            return new RedirectView(frontendUrl + "?error=Payment%20verification%20failed");
         }
     }
 

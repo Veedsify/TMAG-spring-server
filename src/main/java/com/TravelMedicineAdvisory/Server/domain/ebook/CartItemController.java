@@ -1,11 +1,10 @@
 package com.TravelMedicineAdvisory.Server.domain.ebook;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
-
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
@@ -32,25 +31,22 @@ public class CartItemController {
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
     private final ExchangeRateService exchangeRateService;
-
-    private static final String EBOOK_CALLBACK_URL_KEY = "${app.payment.flutterwave.ebook-callback-url:http://localhost:3000/shop/order-confirmation}";
-
-    @org.springframework.beans.factory.annotation.Value(EBOOK_CALLBACK_URL_KEY)
-    private String ebookCallbackUrl;
+    private final CallbackRegistry callbackRegistry;
 
     public CartItemController(CartItemService cartItemService,
                               EbookVersionRepository versionRepository,
                               EbookOrderRepository orderRepository,
                               UserRepository userRepository,
                               FlutterwaveService flutterwaveService,
-                              QueueService queueService,
-                              ExchangeRateService exchangeRateService) {
+                              ExchangeRateService exchangeRateService,
+                              CallbackRegistry callbackRegistry) {
         this.cartItemService = cartItemService;
         this.versionRepository = versionRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
         this.exchangeRateService = exchangeRateService;
+        this.callbackRegistry = callbackRegistry;
     }
 
     @GetMapping("/cart")
@@ -202,7 +198,7 @@ public class CartItemController {
                     ? "TMAG Ebook: " + itemLabels.get(0)
                     : "TMAG Ebooks (" + orderIds.size() + " items)";
 
-            String callbackWithRef = ebookCallbackUrl + "?txRef=" + txRef;
+            String callbackWithRef = callbackRegistry.getBackendCallbackUrl("EBOOK_PURCHASE") + "?txRef=" + txRef;
 
             FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                     totalAmount,

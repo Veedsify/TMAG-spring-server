@@ -2,7 +2,9 @@ package com.TravelMedicineAdvisory.Server.domain.creditpurchase;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 import jakarta.validation.Valid;
@@ -10,10 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Tag(name = "Credit purchases")
 @RestController
@@ -22,10 +25,12 @@ public class CreditPurchaseController {
 
     private final CreditPurchaseService service;
     private final UserRepository userRepository;
+    private final CallbackRegistry callbackRegistry;
 
-    public CreditPurchaseController(CreditPurchaseService service, UserRepository userRepository) {
+    public CreditPurchaseController(CreditPurchaseService service, UserRepository userRepository, CallbackRegistry callbackRegistry) {
         this.service = service;
         this.userRepository = userRepository;
+        this.callbackRegistry = callbackRegistry;
     }
 
     @PostMapping("/initiate")
@@ -74,19 +79,54 @@ public class CreditPurchaseController {
     }
 
     @GetMapping("/callback")
-    public ResponseEntity<SuccessResponse> paymentCallback(
+    public RedirectView paymentCallback(
             @RequestParam(required = false) String tx_ref,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String transaction_id) {
+        String frontendUrl = callbackRegistry.getFrontendRedirectUrl("CREDIT_PURCHASE");
+
         if (tx_ref == null) {
-            return ResponseEntity.badRequest().body(new SuccessResponse("Missing transaction reference", null));
+            return new RedirectView(frontendUrl + "?error=Missing%20transaction%20reference");
         }
 
         try {
             var result = service.verifyAndCompletePurchase(tx_ref, transaction_id);
-            return ResponseEntity.ok(new SuccessResponse("Callback processed", Map.of("success", "completed".equals(result.status()), "purchase", result)));
+
+            if ("completed".equals(result.status())) {
+                // Determine redirect destination based on user's onboarding status
+                Optional<User> user = userRepository.findById(result.userId());
+                String redirectTo = "onboarding"; // default
+
+                if (user.isPresent()) {
+                    User u = user.get();
+                    boolean isOnboarded = Boolean.TRUE.equals(u.getOnboarded());
+                    redirectTo = isOnboarded ? "settings" : "onboarding";
+
+                    // If not yet onboarded, advance stage to 5 and mark as onboarded
+                    if (!isOnboarded) {
+                        u.setOnboardingStage(5);
+                        u.setOnboarded(true);
+                        userRepository.save(u);
+                    }
+                }
+
+                return new RedirectView(
+                    frontendUrl +
+                    "?success=true" +
+                    "&credits=" + result.creditsPurchased() +
+                    "&tx_ref=" + tx_ref +
+                    "&redirect=" + redirectTo
+                );
+            } else {
+                String errorMsg = result.status() != null ? "Payment%20" + result.status() : "Payment%20not%20completed";
+                Optional<User> user = userRepository.findById(result.userId());
+                String redirectTo = user.map(u -> Boolean.TRUE.equals(u.getOnboarded()) ? "settings" : "onboarding").orElse("onboarding");
+                return new RedirectView(frontendUrl + "?success=false&error=" + errorMsg + "&redirect=" + redirectTo);
+            }
         } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
+            return new RedirectView(frontendUrl + "?error=Transaction%20not%20found&redirect=onboarding");
+        } catch (Exception e) {
+            return new RedirectView(frontendUrl + "?error=Payment%20verification%20failed&redirect=onboarding");
         }
     }
 

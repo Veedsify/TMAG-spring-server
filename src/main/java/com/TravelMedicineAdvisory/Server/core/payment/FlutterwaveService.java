@@ -34,9 +34,6 @@ public class FlutterwaveService {
     @Value("${app.payment.flutterwave.webhook-secret-hash:}")
     private String webhookSecretHash;
 
-    @Value("${app.payment.flutterwave.callback-url}")
-    private String callbackUrl;
-
     @Value("${app.payment.flutterwave.timeout:30s}")
     private Duration timeout;
 
@@ -172,7 +169,10 @@ public class FlutterwaveService {
         payload.put("currency", request.currency());
         payload.put("tx_ref", request.txRef());
         payload.put("payment_options", "card,ussd,account,transfer,mobilemoney");
-        payload.put("redirect_url", request.redirectUrl() != null ? request.redirectUrl() : callbackUrl);
+        if (request.redirectUrl() == null || request.redirectUrl().isBlank()) {
+            throw new IllegalArgumentException("redirectUrl is required for Flutterwave payment initiation");
+        }
+        payload.put("redirect_url", request.redirectUrl());
 
         Map<String, Object> customer = new HashMap<>();
         customer.put("email", request.customerEmail());

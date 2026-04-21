@@ -87,6 +87,8 @@ public class SecurityConfig {
                                 "/api/v1/company-admin/auth/login",
                                 "/api/v1/company-admin/auth/logout",
                                 "/api/v1/payments/webhook/**",
+                                "/api/v1/credit-purchases/callback",
+                                "/api/v1/company-admin/credits/callback",
                                 "/ws/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserService;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
 import org.springframework.http.ResponseEntity;
@@ -30,12 +33,14 @@ public class ProfileController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CompanyUserService companyUserService;
+    private final CreditPlanRepository creditPlanRepository;
 
     public ProfileController(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            CompanyUserService companyUserService) {
+            CompanyUserService companyUserService, CreditPlanRepository creditPlanRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.companyUserService = companyUserService;
+        this.creditPlanRepository = creditPlanRepository;
     }
 
     @GetMapping("/companies")
@@ -105,6 +110,52 @@ public class ProfileController {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("success", true, "message", "Password updated successfully"));
+    }
+
+    @PutMapping("/upgrade-plan")
+    public ResponseEntity<?> upgradePlan(@RequestBody UpgradePlanRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        try {
+            CreditPlanCode planCode = CreditPlanCode.valueOf(request.planCode().toUpperCase());
+
+            // Only allow STANDARD and PREMIUM for individual users
+            if (!planCode.equals(CreditPlanCode.STANDARD) && !planCode.equals(CreditPlanCode.PREMIUM)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Only STANDARD and PREMIUM plans are available for individual users"));
+            }
+
+            CreditPlan newPlan = creditPlanRepository.findByCode(planCode)
+                    .orElseThrow(() -> new NoSuchElementException("Plan not found: " + planCode));
+
+            // Prevent downgrade
+            CreditPlan currentPlan = user.getCreditPlan();
+            if (currentPlan != null && isPlanDowngrade(currentPlan.getCode(), planCode)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Cannot downgrade from " + currentPlan.getCode() + " to " + planCode));
+            }
+
+            user.setCreditPlan(newPlan);
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("success", true, "data", toResponse(user)));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Invalid plan code: " + request.planCode()));
+        }
+    }
+
+    private boolean isPlanDowngrade(CreditPlanCode currentPlan, CreditPlanCode newPlan) {
+        // PREMIUM > STANDARD > ESSENTIAL
+        if (currentPlan.equals(CreditPlanCode.PREMIUM)) {
+            return newPlan.equals(CreditPlanCode.STANDARD) || newPlan.equals(CreditPlanCode.ESSENTIAL);
+        }
+        if (currentPlan.equals(CreditPlanCode.STANDARD)) {
+            return newPlan.equals(CreditPlanCode.ESSENTIAL);
+        }
+        return false;
     }
 
     private ProfileResponse toResponse(User user) {

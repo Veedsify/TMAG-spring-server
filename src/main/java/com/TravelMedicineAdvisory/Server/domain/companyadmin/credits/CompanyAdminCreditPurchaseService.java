@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyadmin.credits;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
@@ -22,13 +24,10 @@ import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -59,12 +58,7 @@ public class CompanyAdminCreditPurchaseService {
     private final ExchangeRateService exchangeRateService;
     private final CreditPlanRepository userCreditPlanRepository;
     private final CacheManager cacheManager;
-
-    @Value("${app.payment.flutterwave.admin-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3002/admin/credits/callback}}")
-    private String callbackUrl;
-
-    @Value("${app.payment.flutterwave.hr-callback-url:${app.payment.flutterwave.callback-url:http://localhost:3000/hr/billing/callback}}")
-    private String hrCallbackUrl;
+    private final CallbackRegistry callbackRegistry;
 
     public CompanyAdminCreditPurchaseService(
             CompanyRepository companyRepository,
@@ -76,7 +70,8 @@ public class CompanyAdminCreditPurchaseService {
             InvoiceRepository invoiceRepository,
             ExchangeRateService exchangeRateService,
             CreditPlanRepository userCreditPlanRepository,
-            CacheManager cacheManager) {
+            CacheManager cacheManager,
+            CallbackRegistry callbackRegistry) {
         this.companyRepository = companyRepository;
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
@@ -87,6 +82,7 @@ public class CompanyAdminCreditPurchaseService {
         this.exchangeRateService = exchangeRateService;
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.cacheManager = cacheManager;
+        this.callbackRegistry = callbackRegistry;
     }
 
     public record CompanyPricingResult(
@@ -204,11 +200,11 @@ public class CompanyAdminCreditPurchaseService {
     }
 
     public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits) {
-        return initiatePurchase(userId, companyId, credits, false);
+        return initiatePurchase(userId, companyId, credits, "ADMIN_CREDITS");
     }
 
     public InitiatePurchaseResult initiatePurchase(Long userId, Long companyId, Integer credits,
-            boolean useHrCallback) {
+            String callbackType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
@@ -243,7 +239,7 @@ public class CompanyAdminCreditPurchaseService {
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
-        String redirectUrl = (useHrCallback ? hrCallbackUrl : callbackUrl) + "?tx_ref=" + txRef;
+        String redirectUrl = callbackRegistry.getBackendCallbackUrl(callbackType);
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 totalAmount,
@@ -263,8 +259,8 @@ public class CompanyAdminCreditPurchaseService {
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
             logger.info(
-                    "Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, hr={}",
-                    txRef, companyId, credits, totalAmount, useHrCallback);
+                    "Flutterwave payment initiated for company purchase: txRef={}, companyId={}, credits={}, amount={}, callbackType={}",
+                    txRef, companyId, credits, totalAmount, callbackType);
 
             return new InitiatePurchaseResult(
                     txRef,

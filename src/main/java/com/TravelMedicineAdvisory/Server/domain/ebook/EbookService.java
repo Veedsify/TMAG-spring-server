@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.ebook;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
@@ -10,7 +11,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -34,22 +34,22 @@ public class EbookService {
     private final UserRepository userRepository;
     private final FlutterwaveService flutterwaveService;
     private final QueueService queueService;
-
-    @Value("${app.payment.flutterwave.ebook-callback-url:http://localhost:3000/shop/order-confirmation}")
-    private String ebookCallbackUrl;
+    private final CallbackRegistry callbackRegistry;
 
     public EbookService(EbookRepository ebookRepository,
                         EbookVersionRepository versionRepository,
                         EbookOrderRepository orderRepository,
                         UserRepository userRepository,
                         FlutterwaveService flutterwaveService,
-                        QueueService queueService) {
+                        QueueService queueService,
+                        CallbackRegistry callbackRegistry) {
         this.ebookRepository = ebookRepository;
         this.versionRepository = versionRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
         this.queueService = queueService;
+        this.callbackRegistry = callbackRegistry;
     }
 
     // ─── Public: Ebook listing ────────────────────────────────────────────────
@@ -133,7 +133,7 @@ public class EbookService {
 
         orderRepository.save(order);
 
-        String callbackWithRef = ebookCallbackUrl + "?txRef=" + txRef;
+        String callbackWithRef = callbackRegistry.getBackendCallbackUrl("EBOOK_PURCHASE") + "?txRef=" + txRef;
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 version.getPrice(),

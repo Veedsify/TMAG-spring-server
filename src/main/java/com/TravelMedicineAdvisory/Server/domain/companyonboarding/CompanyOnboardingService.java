@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.companyonboarding;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
@@ -69,15 +70,13 @@ public class CompanyOnboardingService {
     private final RandomNumberGenerator randomNumberGenerator;
     private final ObjectMapper objectMapper;
     private final ExchangeRateService exchangeRateService;
+    private final CallbackRegistry callbackRegistry;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
     @Value("${app.admin.superadmin-email:hello@tmag.health}")
     private String superadminEmail;
-
-    @Value("${app.payment.flutterwave.onboarding-callback-url:#{null}}")
-    private String onboardingCallbackUrl;
 
     public CompanyOnboardingService(
             CompanyOnboardingRepository onboardingRepository,
@@ -94,7 +93,8 @@ public class CompanyOnboardingService {
             QueueService queueService,
             RandomNumberGenerator randomNumberGenerator,
             ObjectMapper objectMapper,
-            ExchangeRateService exchangeRateService) {
+            ExchangeRateService exchangeRateService,
+            CallbackRegistry callbackRegistry) {
         this.onboardingRepository = onboardingRepository;
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
@@ -110,6 +110,7 @@ public class CompanyOnboardingService {
         this.randomNumberGenerator = randomNumberGenerator;
         this.objectMapper = objectMapper;
         this.exchangeRateService = exchangeRateService;
+        this.callbackRegistry = callbackRegistry;
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req) {
@@ -205,10 +206,6 @@ public class CompanyOnboardingService {
         entity.setPaymentAmount(price);
         entity.setPaymentCurrency(currencyCode);
 
-        String callbackUrl = onboardingCallbackUrl != null
-                ? onboardingCallbackUrl
-                : frontendUrl + "/company-onboarding/callback";
-
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 price,
                 currencyCode,
@@ -217,7 +214,7 @@ public class CompanyOnboardingService {
                 "TMAG " + plan.getDisplayName() + " Plan - " + creditCount + " credits for " + entity.getCompanyName(),
                 entity.getTxRef(),
                 entity.getContactPhone(),
-                callbackUrl,
+                callbackRegistry.getBackendCallbackUrl("COMPANY_ONBOARDING"),
                 creditCount,
                 planCode.name(),
                 null,

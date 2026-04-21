@@ -11,12 +11,12 @@ import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,9 +40,7 @@ public class CreditPurchaseService {
     private final QueueService queueService;
     private final ExchangeRateService exchangeRateService;
     private final CreditPlanRepository userCreditPlanRepository;
-
-    @Value("${app.payment.flutterwave.callback-url:http://localhost:3000/payment/callback}")
-    private String callbackUrl;
+    private final CallbackRegistry callbackRegistry;
 
     public CreditPurchaseService(
             CreditPurchaseRepository purchaseRepository,
@@ -51,7 +49,8 @@ public class CreditPurchaseService {
             FlutterwaveService flutterwaveService,
             QueueService queueService,
             ExchangeRateService exchangeRateService,
-            CreditPlanRepository userCreditPlanRepository) {
+            CreditPlanRepository userCreditPlanRepository,
+            CallbackRegistry callbackRegistry) {
         this.purchaseRepository = purchaseRepository;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
@@ -59,6 +58,7 @@ public class CreditPurchaseService {
         this.queueService = queueService;
         this.exchangeRateService = exchangeRateService;
         this.userCreditPlanRepository = userCreditPlanRepository;
+        this.callbackRegistry = callbackRegistry;
     }
 
     public record PurchaseInitiationResult(
@@ -130,7 +130,7 @@ public class CreditPurchaseService {
                 "TMAG Credit Purchase - " + request.credits() + " credits",
                 txRef,
                 user.getPhone(),
-                callbackUrl,
+                callbackRegistry.getBackendCallbackUrl("CREDIT_PURCHASE"),
                 request.credits(),
                 null,
                 userId.toString(),
