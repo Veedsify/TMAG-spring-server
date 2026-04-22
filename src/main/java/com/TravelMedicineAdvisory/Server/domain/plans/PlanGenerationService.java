@@ -96,6 +96,7 @@ public class PlanGenerationService {
                 "userId", userId));
     }
 
+    @Transactional(noRollbackFor = PlanGenerationException.class)
     public void processQueuedGeneration(Long travelPlanId) {
         TravelPlan travelPlan = travelPlanRepository.findById(travelPlanId)
                 .orElseThrow(() -> new NoSuchElementException("Travel plan not found"));
@@ -222,7 +223,7 @@ public class PlanGenerationService {
             aiLog.setProcessingTimeMs(elapsedMs);
             aiRequestLogRepository.save(aiLog);
 
-            throw new RuntimeException("Travel plan generation failed", ex);
+            throw new PlanGenerationException("Travel plan generation failed", ex);
         }
     }
 
