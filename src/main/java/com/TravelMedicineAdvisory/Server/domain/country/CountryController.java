@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.TravelMedicineAdvisory.Server.core.types.PaginatedResponse;
 import com.TravelMedicineAdvisory.Server.core.types.Pagination;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ public class CountryController {
     }
 
     @GetMapping
+    @Cacheable(value = "countries", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
         Page<CountryResponse> page = service.findAll(pageable);
         Pagination pagination = new Pagination(
