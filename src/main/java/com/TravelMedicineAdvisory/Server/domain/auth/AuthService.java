@@ -44,6 +44,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -78,7 +79,7 @@ public class AuthService {
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder, JwtService jwtService,
             AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
-            QueueService queueService, CreditRepository creditRepository, 
+            QueueService queueService, CreditRepository creditRepository,
             CompanyUserRepository companyUserRepository,
             AdminNotificationService adminNotificationService,
             CreditPlanRepository userCreditPlanRepository) {
@@ -93,6 +94,7 @@ public class AuthService {
         this.companyUserRepository = companyUserRepository;
         this.adminNotificationService = adminNotificationService;
         this.userCreditPlanRepository = userCreditPlanRepository;
+
     }
 
     @Transactional
@@ -117,6 +119,11 @@ public class AuthService {
         Role role = determineUserRole();
 
         Credit newAssignedCredits = new Credit();
+        Optional<CreditPlan> userCreditPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
+
+        if (userCreditPlan.isEmpty()) {
+            throw new IllegalArgumentException("Plan Does'nt Exist")
+        }
 
         User user = new User();
         user.setFirstName(request.getFirstName());
@@ -129,7 +136,9 @@ public class AuthService {
         user.setVerified(false);
         user.setType("INDIVIDUAL");
         user.setCredits(1);
-        user.setBillingCurrency(request.getBillingCurrency() != null ? request.getBillingCurrency() : BillingCurrency.NGN);
+        user.setCreditPlan(userCreditPlan.get());
+        user.setBillingCurrency(
+                request.getBillingCurrency() != null ? request.getBillingCurrency() : BillingCurrency.NGN);
         user.setRole(role);
         user.setLastLogin(LocalDateTime.now());
         user.setCreditPlan(resolveCreditPlan(request.getPlanCode()));
@@ -178,7 +187,7 @@ public class AuthService {
     private void sendLoginAlertEmail(User user) {
         String firstName = user.getFirstName() != null ? user.getFirstName() : "there";
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss"));
-        
+
         queueService.dispatch(JobType.EMAIL_LOGIN_ALERT, Map.of(
                 "to", user.getEmail(),
                 "subject", "New login to your TMAG account",
@@ -189,7 +198,10 @@ public class AuthService {
                         "timestamp", timestamp)));
     }
 
-    /** Not cached: each call embeds a fresh OAuth {@code state} token for CSRF protection. */
+    /**
+     * Not cached: each call embeds a fresh OAuth {@code state} token for CSRF
+     * protection.
+     */
     public String googleAuthUrl() {
         if (googleClientId == null || googleClientId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
@@ -211,7 +223,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse googleCallback(String code, String planCode) {
-        if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null || googleClientSecret.isBlank()) {
+        if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null
+                || googleClientSecret.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
         }
 
@@ -319,7 +332,8 @@ public class AuthService {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google authentication failed: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Google authentication failed: " + e.getMessage());
         }
     }
 
@@ -428,7 +442,7 @@ public class AuthService {
 
     private void sendInvitationAcceptedEmail(User user) {
         var companyUserLinks = companyUserRepository.findAllByUser(user);
-        
+
         for (CompanyUser link : companyUserLinks) {
             if (link.getCompany() != null) {
                 String userName = user.getName() != null ? user.getName() : user.getEmail();
