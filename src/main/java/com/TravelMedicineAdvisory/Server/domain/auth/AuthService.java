@@ -122,7 +122,7 @@ public class AuthService {
         Optional<CreditPlan> userCreditPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
 
         if (userCreditPlan.isEmpty()) {
-            throw new IllegalArgumentException("Plan Does'nt Exist")
+            throw new IllegalArgumentException("Plan Does'nt Exist");
         }
 
         User user = new User();
