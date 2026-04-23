@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.view.RedirectView;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,9 +30,11 @@ public class CompanyOnboardingController {
     private static final Logger logger = LoggerFactory.getLogger(CompanyOnboardingController.class);
 
     private final CompanyOnboardingService service;
+    private final CallbackRegistry callbackRegistry;
 
-    public CompanyOnboardingController(CompanyOnboardingService service) {
+    public CompanyOnboardingController(CompanyOnboardingService service, CallbackRegistry callbackRegistry) {
         this.service = service;
+        this.callbackRegistry = callbackRegistry;
     }
 
     // ============ PUBLIC ENDPOINTS ============
@@ -83,6 +87,42 @@ public class CompanyOnboardingController {
             return ResponseEntity.ok(new SuccessResponse("Fetched successfully", response));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/public/company-onboarding/callback")
+    public RedirectView onboardingPaymentCallback(
+            @RequestParam(required = false) String tx_ref,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String transaction_id) {
+        String frontendUrl = callbackRegistry.getFrontendRedirectUrl("COMPANY_ONBOARDING");
+
+        if (tx_ref == null) {
+            return new RedirectView(frontendUrl + "?error=Missing%20transaction%20reference");
+        }
+
+        try {
+            service.verifyPayment(tx_ref, transaction_id);
+            return new RedirectView(
+                frontendUrl +
+                "?tx_ref=" + tx_ref +
+                "&transaction_id=" + (transaction_id != null ? transaction_id : "") +
+                "&status=successful"
+            );
+        } catch (NoSuchElementException e) {
+            return new RedirectView(
+                frontendUrl +
+                "?tx_ref=" + tx_ref +
+                "&status=failed" +
+                "&error=Transaction%20not%20found"
+            );
+        } catch (Exception e) {
+            return new RedirectView(
+                frontendUrl +
+                "?tx_ref=" + tx_ref +
+                "&status=failed" +
+                "&error=Payment%20verification%20failed"
+            );
         }
     }
 

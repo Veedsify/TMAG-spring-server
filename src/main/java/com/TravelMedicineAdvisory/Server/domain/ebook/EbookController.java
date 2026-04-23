@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.ebook;
 
+import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
@@ -9,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,11 +25,13 @@ public class EbookController {
     private final EbookService ebookService;
     private final UserRepository userRepository;
     private final StorageService storageService;
+    private final CallbackRegistry callbackRegistry;
 
-    public EbookController(EbookService ebookService, UserRepository userRepository, StorageService storageService) {
+    public EbookController(EbookService ebookService, UserRepository userRepository, StorageService storageService, CallbackRegistry callbackRegistry) {
         this.ebookService = ebookService;
         this.userRepository = userRepository;
         this.storageService = storageService;
+        this.callbackRegistry = callbackRegistry;
     }
 
     // ─── Public: Shop ───────────────────────────────────────────────────────
@@ -77,6 +81,42 @@ public class EbookController {
             return ResponseEntity.ok(new SuccessResponse("Order verified", response));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/ebooks/callback")
+    public RedirectView ebookPaymentCallback(
+            @RequestParam(required = false) String tx_ref,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String transaction_id) {
+        String frontendUrl = callbackRegistry.getFrontendRedirectUrl("EBOOK_PURCHASE");
+
+        if (tx_ref == null) {
+            return new RedirectView(frontendUrl + "?error=Missing%20transaction%20reference");
+        }
+
+        try {
+            ebookService.verifyOrder(tx_ref, transaction_id);
+            return new RedirectView(
+                frontendUrl +
+                "?txRef=" + tx_ref +
+                "&transaction_id=" + (transaction_id != null ? transaction_id : "") +
+                "&status=successful"
+            );
+        } catch (NoSuchElementException e) {
+            return new RedirectView(
+                frontendUrl +
+                "?txRef=" + tx_ref +
+                "&status=failed" +
+                "&error=Transaction%20not%20found"
+            );
+        } catch (Exception e) {
+            return new RedirectView(
+                frontendUrl +
+                "?txRef=" + tx_ref +
+                "&status=failed" +
+                "&error=Payment%20verification%20failed"
+            );
         }
     }
 
