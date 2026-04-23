@@ -1,23 +1,24 @@
 package com.TravelMedicineAdvisory.Server.core.currency;
 
-import org.springframework.cache.CacheManager;
-
-import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
-import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
-import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
+import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
+import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 
 @Service
 public class ExchangeRateService {
@@ -28,14 +29,14 @@ public class ExchangeRateService {
     private static final String BASE_CURRENCY = "USD";
     private static final String RATE_API_URL = "https://open.er-api.com/v6/latest/" + BASE_CURRENCY;
 
-    private final SystemSettingRepository systemSettingRepository;
-    private final CacheManager cacheManager;
+    @Autowired
+    private SystemSettingRepository systemSettingRepository;
+    @Autowired
+    private CacheManager cacheManager;
     private final Map<String, BigDecimal> rates = new ConcurrentHashMap<>();
     private LocalDateTime lastFetched;
 
-    public ExchangeRateService(SystemSettingRepository systemSettingRepository, CacheManager cacheManager) {
-        this.systemSettingRepository = systemSettingRepository;
-        this.cacheManager = cacheManager;
+    public ExchangeRateService() {
         fetchRates();
     }
 
