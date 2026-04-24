@@ -51,6 +51,12 @@ public class GeneratedPlan extends BaseEntity {
     @Column(name = "plan_json", columnDefinition = "TEXT")
     private String planJson;
 
+    @Column(name = "signed_pdf_url")
+    private String signedPdfUrl;
+
+    @Column(name = "is_signed")
+    private Boolean isSigned = false;
+
     public TravelPlan getTravelPlan() {
         return travelPlan;
     }
@@ -161,5 +167,21 @@ public class GeneratedPlan extends BaseEntity {
 
     public void setPlanJson(String planJson) {
         this.planJson = planJson;
+    }
+
+    public String getSignedPdfUrl() {
+        return signedPdfUrl;
+    }
+
+    public void setSignedPdfUrl(String signedPdfUrl) {
+        this.signedPdfUrl = signedPdfUrl;
+    }
+
+    public Boolean getIsSigned() {
+        return isSigned;
+    }
+
+    public void setIsSigned(Boolean isSigned) {
+        this.isSigned = isSigned;
     }
 }

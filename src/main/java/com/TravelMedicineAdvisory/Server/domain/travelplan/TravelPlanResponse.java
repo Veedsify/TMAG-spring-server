@@ -24,5 +24,11 @@ public record TravelPlanResponse(
     Long userId,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
-    GeneratedPlanPayload generatedPlan
+    GeneratedPlanPayload generatedPlan,
+    String planTier,
+    String doctorValidationStatus,
+    String validatedByName,
+    LocalDateTime validatedAt,
+    String rejectionReason,
+    String signedPdfUrl
 ) {}

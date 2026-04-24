@@ -48,4 +48,22 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     @Query("SELECT tp FROM TravelPlan tp WHERE tp.deletedAt IS NULL AND (LOWER(tp.destination) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<TravelPlan> searchPlans(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT tp FROM TravelPlan tp WHERE tp.status = 'COMPLETED' AND tp.doctorValidationStatus = 'PENDING' AND tp.deletedAt IS NULL ORDER BY tp.createdAt DESC")
+    List<TravelPlan> findPendingDoctorValidation();
+
+    @Query("SELECT tp FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'APPROVED' AND tp.deletedAt IS NULL ORDER BY tp.validatedAt DESC")
+    List<TravelPlan> findApprovedByDoctor(@Param("doctorId") Long doctorId);
+
+    @Query("SELECT tp FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'REJECTED' AND tp.deletedAt IS NULL ORDER BY tp.validatedAt DESC")
+    List<TravelPlan> findRejectedByDoctor(@Param("doctorId") Long doctorId);
+
+    @Query("SELECT tp FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus IN ('APPROVED', 'REJECTED') AND tp.deletedAt IS NULL ORDER BY tp.validatedAt DESC")
+    List<TravelPlan> findValidatedByDoctor(@Param("doctorId") Long doctorId);
+
+    @Query("SELECT COUNT(tp) FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'APPROVED' AND tp.deletedAt IS NULL AND FUNCTION('DATE', tp.validatedAt) = CURRENT_DATE")
+    long countApprovedByDoctorToday(@Param("doctorId") Long doctorId);
+
+    @Query("SELECT COUNT(tp) FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus IN ('APPROVED', 'REJECTED') AND tp.deletedAt IS NULL")
+    long countValidatedByDoctor(@Param("doctorId") Long doctorId);
 }

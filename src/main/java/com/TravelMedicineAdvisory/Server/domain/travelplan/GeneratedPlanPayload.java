@@ -11,5 +11,7 @@ public record GeneratedPlanPayload(
         String modelUsed,
         Integer tokensUsed,
         Long processingTimeMs,
-        String errorMessage
+        String errorMessage,
+        String signedPdfUrl,
+        Boolean isSigned
 ) {}

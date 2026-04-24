@@ -72,4 +72,34 @@ public class EmailService {
             throw new RuntimeException("Failed to send email", e);
         }
     }
+
+    public void sendEmailWithAttachment(String to, String subject, String htmlBody,
+                                         byte[] attachment, String attachmentName, String attachmentContentType) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            if (to == null || to.isEmpty()) {
+                logger.warn("Attempted to send email with empty recipient. Subject: {}", subject);
+                return;
+            }
+
+            if (fromEmail == null || fromEmail.isBlank()) {
+                logger.warn("Attempted to send email with empty sender address. Recipient: {}, Subject: {}", to, subject);
+                return;
+            }
+
+            helper.setTo(to);
+            helper.setSubject(subject != null ? subject : "");
+            helper.setText(htmlBody, true);
+            helper.setFrom(fromEmail);
+            helper.addAttachment(attachmentName, new org.springframework.core.io.ByteArrayResource(attachment), attachmentContentType);
+
+            mailSender.send(message);
+            logger.info("Email with attachment sent to {}", to);
+        } catch (MessagingException e) {
+            logger.error("Failed to send email with attachment to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Failed to send email with attachment", e);
+        }
+    }
 }

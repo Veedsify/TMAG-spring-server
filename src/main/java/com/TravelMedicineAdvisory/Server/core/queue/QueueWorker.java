@@ -152,6 +152,16 @@ public class QueueWorker {
                     handleEmailJob(msg, "ebook_delivery");
                 case EMAIL_EBOOK_ORDER_CONFIRMATION ->
                     handleEmailJob(msg, "ebook_order_confirmation");
+                case EMAIL_DOCTOR_PLAN_READY ->
+                    handleEmailJob(msg, "doctor_plan_ready");
+                case EMAIL_PLAN_APPROVED ->
+                    handleEmailJob(msg, "plan_approved");
+                case EMAIL_PLAN_REJECTED ->
+                    handleEmailJob(msg, "plan_rejected");
+                case EMAIL_DOCTOR_APPLICATION_APPROVED ->
+                    handleEmailJob(msg, "doctor_application_approved");
+                case EMAIL_DOCTOR_INVITATION ->
+                    handleEmailJob(msg, "doctor_invitation");
             }
             if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
                 logger.info("GENERATE_TRAVEL_PLAN finished successfully: queueJobId={}", msg.getId());
@@ -301,6 +311,19 @@ public class QueueWorker {
                         vars.getOrDefault("currencySymbol", "$"),
                         vars.getOrDefault("amount", ""),
                         vars.getOrDefault("txRef", ""));
+            case "doctor_plan_ready" ->
+                emailTemplates.doctorPlanReadyEmail(
+                        firstName,
+                        vars.getOrDefault("destination", ""),
+                        vars.getOrDefault("planId", ""));
+            case "plan_approved" ->
+                emailTemplates.planApprovedEmail(firstName, vars.getOrDefault("destination", ""));
+            case "plan_rejected" ->
+                emailTemplates.planRejectedEmail(firstName, vars.getOrDefault("destination", ""), vars.getOrDefault("reason", ""));
+            case "doctor_application_approved" ->
+                emailTemplates.doctorApplicationApprovedEmail(firstName, vars.getOrDefault("onboardingLink", "#"));
+            case "doctor_invitation" ->
+                emailTemplates.doctorInvitationEmail(firstName, vars.getOrDefault("onboardingLink", "#"));
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

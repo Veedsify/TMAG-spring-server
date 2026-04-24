@@ -655,4 +655,71 @@ public class EmailTemplates {
                 fine("Questions? Contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
         return wrap("Order Confirmed — TMAG Ebook", content);
     }
+
+    // ─── Doctor-related emails ────────────────────────────────────────────────
+
+    public String doctorPlanReadyEmail(String firstName, String destination, String planId) {
+        String reviewLink = frontendUrl + "/doctor/plans/" + planId;
+        String content =
+                badge("Review Required") +
+                heading("New travel plan pending review") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">A new travel health plan for <strong>" + esc(destination) + "</strong> has been generated and is awaiting your professional review and approval.</p>" +
+                infoBox("Destination: <strong>" + esc(destination) + "</strong><br/>Plan ID: " + esc(planId)) +
+                tealButton("Review Plan", reviewLink) +
+                divider() +
+                fine("Please log in to the doctor dashboard to review, approve, or reject this plan.");
+        return wrap("New Travel Plan Pending Review — TMAG", content);
+    }
+
+    public String planApprovedEmail(String firstName, String destination) {
+        String content =
+                badge("Plan Approved") +
+                heading("Your travel health plan has been approved") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Great news! Your travel health plan for <strong>" + esc(destination) + "</strong> has been reviewed and approved by a TMAG doctor.</p>" +
+                "<p style=\"" + P_STYLE + "\">Your signed and verified plan is attached to this email. You can also download it anytime from your dashboard.</p>" +
+                divider() +
+                fine("Safe travels! If you have any questions, contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
+        return wrap("Travel Plan Approved — TMAG", content);
+    }
+
+    public String planRejectedEmail(String firstName, String destination, String reason) {
+        String content =
+                badge("Plan Requires Attention") +
+                heading("Your travel health plan needs review") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your travel health plan for <strong>" + esc(destination) + "</strong> has been reviewed by a TMAG doctor and could not be approved at this time.</p>" +
+                infoBox("Reason:<br/>" + esc(reason)) +
+                "<p style=\"" + P_STYLE + "\">Please log in to your dashboard to review the feedback and take the recommended next steps.</p>" +
+                divider() +
+                fine("If you have questions, contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
+        return wrap("Travel Plan Update — TMAG", content);
+    }
+
+    public String doctorApplicationApprovedEmail(String firstName, String onboardingLink) {
+        String content =
+                badge("Application Approved") +
+                heading("Welcome to the TMAG Doctor Network") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Congratulations! Your application to join the TMAG Doctor Network has been approved.</p>" +
+                "<p style=\"" + P_STYLE + "\">Complete your onboarding below to start reviewing and signing travel health plans.</p>" +
+                tealButton("Complete Onboarding", onboardingLink) +
+                divider() +
+                fine("We&rsquo;re excited to have you on board.");
+        return wrap("Doctor Application Approved — TMAG", content);
+    }
+
+    public String doctorInvitationEmail(String firstName, String onboardingLink) {
+        String content =
+                badge("You&rsquo;re Invited") +
+                heading("Join the TMAG Doctor Network") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">You have been personally invited to join the TMAG Doctor Network as a verified travel medicine physician.</p>" +
+                "<p style=\"" + P_STYLE + "\">Click below to set up your profile and start reviewing travel health plans.</p>" +
+                tealButton("Get Started", onboardingLink) +
+                divider() +
+                fine("If you have any questions, contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
+        return wrap("Doctor Invitation — TMAG", content);
+    }
 }

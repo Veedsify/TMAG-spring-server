@@ -108,6 +108,16 @@ public class User extends BaseEntity {
     @JoinColumn(name = "user_credit_plan_id")
     private CreditPlan userCreditPlan;
 
+    @Column(name = "medical_license_number")
+    private String medicalLicenseNumber;
+
+    @Column(name = "signature_url")
+    private String signatureUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "doctor_application_status")
+    private com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus doctorApplicationStatus = com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus.NONE;
+
     public String getFirstName() {
         return firstName;
     }
@@ -330,5 +340,29 @@ public class User extends BaseEntity {
 
     public void setCreditPlan(CreditPlan userCreditPlan) {
         this.userCreditPlan = userCreditPlan;
+    }
+
+    public String getMedicalLicenseNumber() {
+        return medicalLicenseNumber;
+    }
+
+    public void setMedicalLicenseNumber(String medicalLicenseNumber) {
+        this.medicalLicenseNumber = medicalLicenseNumber;
+    }
+
+    public String getSignatureUrl() {
+        return signatureUrl;
+    }
+
+    public void setSignatureUrl(String signatureUrl) {
+        this.signatureUrl = signatureUrl;
+    }
+
+    public com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus getDoctorApplicationStatus() {
+        return doctorApplicationStatus;
+    }
+
+    public void setDoctorApplicationStatus(com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus doctorApplicationStatus) {
+        this.doctorApplicationStatus = doctorApplicationStatus;
     }
 }

@@ -19,5 +19,6 @@ public record TravelPlanRequest(
     String questionnaireResponses,
     Long companyId,
     Long employeeId,
-    Long userId
+    Long userId,
+    String planTier
 ) {}

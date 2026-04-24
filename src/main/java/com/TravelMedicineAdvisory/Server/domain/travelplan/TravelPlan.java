@@ -4,11 +4,15 @@ import org.hibernate.annotations.SQLDelete;
 
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
+import com.TravelMedicineAdvisory.Server.domain.plans.PlanTier;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -54,6 +58,24 @@ public class TravelPlan extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan_tier")
+    private PlanTier planTier = PlanTier.FREE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "doctor_validation_status")
+    private DoctorValidationStatus doctorValidationStatus = DoctorValidationStatus.NOT_REQUIRED;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "validated_by_id")
+    private User validatedBy;
+
+    @Column(name = "validated_at")
+    private java.time.LocalDateTime validatedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
 
     public String getDestination() {
         return destination;
@@ -197,5 +219,45 @@ public class TravelPlan extends BaseEntity {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public PlanTier getPlanTier() {
+        return planTier;
+    }
+
+    public void setPlanTier(PlanTier planTier) {
+        this.planTier = planTier;
+    }
+
+    public DoctorValidationStatus getDoctorValidationStatus() {
+        return doctorValidationStatus;
+    }
+
+    public void setDoctorValidationStatus(DoctorValidationStatus doctorValidationStatus) {
+        this.doctorValidationStatus = doctorValidationStatus;
+    }
+
+    public User getValidatedBy() {
+        return validatedBy;
+    }
+
+    public void setValidatedBy(User validatedBy) {
+        this.validatedBy = validatedBy;
+    }
+
+    public java.time.LocalDateTime getValidatedAt() {
+        return validatedAt;
+    }
+
+    public void setValidatedAt(java.time.LocalDateTime validatedAt) {
+        this.validatedAt = validatedAt;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

@@ -46,6 +46,31 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
+    public String storeBytes(byte[] content, String customPath, String filename, String contentType) {
+        try {
+            Path uploadPath = Paths.get(basePath, customPath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            Path filePath = uploadPath.resolve(filename);
+            Files.write(filePath, content);
+            return Paths.get(customPath, filename).toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store file bytes", e);
+        }
+    }
+
+    @Override
+    public byte[] readBytes(String customPath) {
+        try {
+            Path filePath = Paths.get(basePath, customPath);
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read file bytes", e);
+        }
+    }
+
+    @Override
     public void delete(String customPath) {
         try {
             Path filePath = Paths.get(basePath, customPath);

@@ -4,15 +4,19 @@ import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -60,6 +64,8 @@ public class PlanGenerationService {
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
     private final QueueService queueService;
+    private final DoctorWebSocketService doctorWebSocketService;
+    private final UserRepository userRepository;
     private final ClinicalContextExtractor clinicalContextExtractor;
     private final SystemPromptBuilder systemPromptBuilder;
 
@@ -73,6 +79,8 @@ public class PlanGenerationService {
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
             QueueService queueService,
+            DoctorWebSocketService doctorWebSocketService,
+            UserRepository userRepository,
             ClinicalContextExtractor clinicalContextExtractor,
             SystemPromptBuilder systemPromptBuilder) {
         this.travelPlanRepository = travelPlanRepository;
@@ -84,6 +92,8 @@ public class PlanGenerationService {
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
         this.queueService = queueService;
+        this.doctorWebSocketService = doctorWebSocketService;
+        this.userRepository = userRepository;
         this.clinicalContextExtractor = clinicalContextExtractor;
         this.systemPromptBuilder = systemPromptBuilder;
     }
@@ -197,7 +207,7 @@ public class PlanGenerationService {
                     result.estimatedTokens(),
                     elapsedMs);
 
-            sendReadyEmail(travelPlan);
+            handlePostGeneration(travelPlan);
         } catch (Exception ex) {
             long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
 
@@ -236,6 +246,34 @@ public class PlanGenerationService {
         log.setCompany(travelPlan.getCompany());
         log.setUser(travelPlan.getUser());
         return log;
+    }
+
+    private void handlePostGeneration(TravelPlan travelPlan) {
+        if (travelPlan.getPlanTier() == PlanTier.FREE) {
+            travelPlan.setDoctorValidationStatus(DoctorValidationStatus.NOT_REQUIRED);
+            travelPlanRepository.save(travelPlan);
+            sendReadyEmail(travelPlan);
+            return;
+        }
+
+        // STANDARD or PREMIUM: notify doctors
+        travelPlan.setDoctorValidationStatus(DoctorValidationStatus.PENDING);
+        travelPlanRepository.save(travelPlan);
+
+        doctorWebSocketService.broadcastNewPlanPending(travelPlan.getId(), travelPlan.getDestination());
+
+        List<User> doctors = userRepository.findByRoleName(Roles.Doctor.name());
+        for (User doctor : doctors) {
+            if (doctor.getEmail() == null) continue;
+            String docFirstName = doctor.getFirstName() != null ? doctor.getFirstName() : "there";
+            queueService.dispatch(JobType.EMAIL_DOCTOR_PLAN_READY, Map.of(
+                    "to", doctor.getEmail(),
+                    "subject", "New travel plan pending review: " + travelPlan.getDestination(),
+                    "variables", Map.of(
+                            "firstName", docFirstName,
+                            "destination", travelPlan.getDestination(),
+                            "planId", String.valueOf(travelPlan.getId()))));
+        }
     }
 
     private void sendReadyEmail(TravelPlan travelPlan) {

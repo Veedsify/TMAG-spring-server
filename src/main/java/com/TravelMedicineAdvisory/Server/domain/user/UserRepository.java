@@ -13,9 +13,13 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+
     Optional<User> findByUsername(String username);
+
     Optional<User> findByVerificationToken(String verificationToken);
+
     Optional<User> findByInvitationToken(String invitationToken);
+
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
 
     List<User> findByType(String type);
@@ -42,4 +46,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> searchUsers(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE u.doctorApplicationStatus = :status AND u.deletedAt IS NULL")
+    List<User> findByDoctorApplicationStatus(
+            @Param("status") com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus status);
+
+    List<User> findByRoleId(Long roleId);
+
+    @Query("SELECT u FROM User u WHERE u.role.name = :roleName AND u.deletedAt IS NULL")
+    List<User> findByRoleName(@Param("roleName") String roleName);
+
+    @Query("SELECT u FROM User u WHERE u.role.id = :role AND u.deletedAt IS NULL")
+    List<User> findByRole(@Param("role") Long role);
 }

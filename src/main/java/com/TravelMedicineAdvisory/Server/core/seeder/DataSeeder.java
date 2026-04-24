@@ -118,6 +118,7 @@ public class DataSeeder implements CommandLineRunner {
         seedSystemSettings();
         seedFaqItems();
         seedInvoices();
+        seedDoctorUser();
 
         logger.info("Database Seeding Completed.");
     }
@@ -126,12 +127,14 @@ public class DataSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedRoles() {
-        if (roleRepository.count() > 0) {
+        if (roleRepository.count() == 6) {
             return;
         }
         // logger.info("Seeding roles...");
 
-        List<String> roleNames = List.of("SuperAdmin", "Administrator", "HR", "CustomerSupport", "Individual");
+        List<String> roleNames = List.of("SuperAdmin", "Administrator", "HR", "CustomerSupport", "Individual",
+                "Doctor");
+
         List<Role> roles = new ArrayList<>();
         for (String name : roleNames) {
             Role role = new Role();
@@ -247,6 +250,16 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, individual, permMap, "faq_item", "read");
         addPermissions(assignments, individual, permMap, "pricing_plan", "read");
         addPermissions(assignments, individual, permMap, "notification", "read");
+
+        // Doctor
+        Role doctor = roleMap.get("Doctor");
+        addPermissions(assignments, doctor, permMap, "profile", "read", "update");
+        addPermissions(assignments, doctor, permMap, "travel_plan", "read", "update", "list");
+        addPermissions(assignments, doctor, permMap, "health_profile", "read");
+        addPermissions(assignments, doctor, permMap, "country", "read");
+        addPermissions(assignments, doctor, permMap, "blog_post", "read");
+        addPermissions(assignments, doctor, permMap, "faq_item", "read");
+        addPermissions(assignments, doctor, permMap, "notification", "read");
 
         rolePermissionRepository.saveAll(assignments);
         // logger.info("Seeded {} role-permission assignments.", assignments.size());
@@ -449,6 +462,36 @@ public class DataSeeder implements CommandLineRunner {
         individualUser.setOnboarded(true);
         individualUser.setCredits(1);
         userRepository.save(individualUser);
+
+    }
+
+    @Transactional
+    protected void seedDoctorUser() {
+        if (userRepository.findByEmail("doctor@tmag.com").isPresent()) {
+            return;
+        }
+
+        Role doctorRole = roleRepository.findByName("Doctor").orElse(null);
+        if (doctorRole == null) {
+            logger.warn("Doctor role not found. Skipping doctor user seeding.");
+            return;
+        }
+
+        User doctorUser = new User();
+        doctorUser.setFirstName("John");
+        doctorUser.setLastName("Smith");
+        doctorUser.setEmail("doctor@tmag.com");
+        doctorUser.setUsername("doctor-john");
+        doctorUser.setRole(doctorRole);
+        doctorUser.setType("INDIVIDUAL");
+        doctorUser.setPassword(passwordEncoder.encode("password"));
+        doctorUser.setVerified(true);
+        doctorUser.setOnboardingStage(5);
+        doctorUser.setOnboarded(true);
+        doctorUser.setCredits(0);
+        doctorUser.setMedicalLicenseNumber("TMAG-DOC-001");
+        userRepository.save(doctorUser);
+        logger.info("Seeded doctor user: doctor@tmag.com");
     }
 
     // ======================== COUNTRIES ========================

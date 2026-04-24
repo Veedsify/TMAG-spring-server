@@ -18,11 +18,15 @@ import com.TravelMedicineAdvisory.Server.core.utils.QuestionnaireResponseSanitiz
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.PlanGenerationService;
+import com.TravelMedicineAdvisory.Server.domain.plans.PlanTier;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -192,6 +196,11 @@ public class TravelPlanService {
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(normalized, entity);
         entity.setStatus("QUEUED");
+
+        PlanTier tier = resolvePlanTier(request.planTier(), user);
+        entity.setPlanTier(tier);
+        entity.setDoctorValidationStatus(tier == PlanTier.FREE ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+
         TravelPlan saved = repository.save(entity);
         persistQuestionnaireResponses(normalized, saved);
 
@@ -274,6 +283,12 @@ public class TravelPlanService {
     }
 
     private TravelPlanResponse toResponse(TravelPlan entity, GeneratedPlanPayload generatedPlan) {
+        User validatedBy = entity.getValidatedBy();
+        String validatedByName = validatedBy != null
+                ? ((validatedBy.getFirstName() != null ? validatedBy.getFirstName() : "") + " " +
+                   (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
+                : null;
+        String signedPdfUrl = generatedPlan != null ? generatedPlan.signedPdfUrl() : null;
         return new TravelPlanResponse(
                 entity.getId(),
                 entity.getDestination(),
@@ -296,7 +311,13 @@ public class TravelPlanService {
                 entity.getUser() != null ? entity.getUser().getId() : null,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                generatedPlan);
+                generatedPlan,
+                entity.getPlanTier() != null ? entity.getPlanTier().name() : null,
+                entity.getDoctorValidationStatus() != null ? entity.getDoctorValidationStatus().name() : null,
+                validatedByName,
+                entity.getValidatedAt(),
+                entity.getRejectionReason(),
+                signedPdfUrl);
     }
 
     private GeneratedPlanPayload toGeneratedPayload(GeneratedPlan g) {
@@ -307,7 +328,9 @@ public class TravelPlanService {
                 g.getModelUsed(),
                 g.getTokensUsed(),
                 g.getProcessingTimeMs(),
-                g.getErrorMessage());
+                g.getErrorMessage(),
+                g.getSignedPdfUrl(),
+                g.getIsSigned());
     }
 
     private void mapRequestToEntity(TravelPlanRequest request, TravelPlan entity) {
@@ -416,7 +439,8 @@ public class TravelPlanService {
                     request.questionnaireResponses(),
                     request.companyId(),
                     request.employeeId(),
-                    request.userId());
+                    request.userId(),
+                    request.planTier());
         } catch (Exception ex) {
             return request;
         }
@@ -425,5 +449,24 @@ public class TravelPlanService {
     private static String tripDetailText(JsonNode root, String field) {
         JsonNode n = root.path(field);
         return n.isTextual() ? n.asText() : "";
+    }
+
+    private PlanTier resolvePlanTier(String requestTier, User user) {
+        if (requestTier != null && !requestTier.isBlank()) {
+            try {
+                return PlanTier.valueOf(requestTier.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        CreditPlan creditPlan = user.getCreditPlan();
+        if (creditPlan == null || creditPlan.getCode() == null) {
+            return PlanTier.FREE;
+        }
+        return switch (creditPlan.getCode()) {
+            case ESSENTIAL -> PlanTier.FREE;
+            case STANDARD -> PlanTier.STANDARD;
+            case PREMIUM -> PlanTier.PREMIUM;
+            default -> PlanTier.PREMIUM; // enterprise plans
+        };
     }
 }

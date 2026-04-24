@@ -5,5 +5,6 @@ public enum Roles {
     Administrator,
     Hr,
     Individual,
-    CustomerSupport
+    CustomerSupport,
+    Doctor
 }
