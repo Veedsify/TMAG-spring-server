@@ -1,12 +1,16 @@
 package com.TravelMedicineAdvisory.Server.core.currency;
 
-import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
 @RestController
 @RequestMapping("/api/v1/exchange-rates")
