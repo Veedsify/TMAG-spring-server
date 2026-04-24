@@ -17,127 +17,141 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('SUPERADMIN', 'DOCTOR')")
 public class DoctorController {
 
-    private final DoctorValidationService doctorValidationService;
+  private final DoctorValidationService doctorValidationService;
 
-    public DoctorController(DoctorValidationService doctorValidationService) {
-        this.doctorValidationService = doctorValidationService;
-    }
+  public DoctorController(DoctorValidationService doctorValidationService) {
+    this.doctorValidationService = doctorValidationService;
+  }
 
-    @GetMapping("/profile")
-    public ResponseEntity<SuccessResponse> getProfile(@AuthenticationPrincipal AppUserDetails user) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getDoctorProfile(user.getUserId())));
-    }
+  @GetMapping("/profile")
+  public ResponseEntity<SuccessResponse> getProfile(@AuthenticationPrincipal AppUserDetails user) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getDoctorProfile(user.getUserId())));
+  }
 
-    @PostMapping("/onboard")
-    public ResponseEntity<SuccessResponse> onboard(
-            @AuthenticationPrincipal AppUserDetails user,
-            @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
-            @RequestParam("signature") MultipartFile signature) {
-        doctorValidationService.onboardDoctor(user.getUserId(), medicalLicenseNumber, signature);
-        return ResponseEntity.ok(new SuccessResponse("Onboarded successfully", null));
-    }
+  @PostMapping("/onboard")
+  public ResponseEntity<SuccessResponse> onboard(
+      @AuthenticationPrincipal AppUserDetails user,
+      @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
+      @RequestParam("signature") MultipartFile signature) {
+    doctorValidationService.onboardDoctor(user.getUserId(), medicalLicenseNumber, signature);
+    return ResponseEntity.ok(new SuccessResponse("Onboarded successfully", null));
+  }
 
-    @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<SuccessResponse> apply(
-            @AuthenticationPrincipal AppUserDetails user,
-            @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
-            @RequestParam("signature") MultipartFile signature) {
-        doctorValidationService.applyToBecomeDoctor(user.getUserId(), medicalLicenseNumber, signature);
-        return ResponseEntity.ok(new SuccessResponse("Application submitted successfully", null));
-    }
+  @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("isAuthenticated()")
+  public ResponseEntity<SuccessResponse> apply(
+      @AuthenticationPrincipal AppUserDetails user,
+      @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
+      @RequestParam("signature") MultipartFile signature,
+      @RequestParam(value = "stamp", required = false) MultipartFile stamp) {
+    doctorValidationService.applyToBecomeDoctor(user.getUserId(), medicalLicenseNumber, signature, stamp);
+    return ResponseEntity.ok(new SuccessResponse("Application submitted successfully", null));
+  }
 
-    // ─── Dashboard ────────────────────────────────────────────
+  @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<SuccessResponse> updateProfile(
+      @AuthenticationPrincipal AppUserDetails user,
+      @RequestParam(required = false) String firstName,
+      @RequestParam(required = false) String lastName,
+      @RequestParam(required = false) String medicalLicenseNumber,
+      @RequestParam(value = "signature", required = false) MultipartFile signature,
+      @RequestParam(value = "stamp", required = false) MultipartFile stamp) {
+    return ResponseEntity.ok(new SuccessResponse("Profile updated successfully",
+        doctorValidationService.updateDoctorProfile(
+            user.getUserId(), firstName, lastName, medicalLicenseNumber, signature, stamp)));
+  }
 
-    @GetMapping("/dashboard")
-    public ResponseEntity<SuccessResponse> getDashboard(@AuthenticationPrincipal AppUserDetails user) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getDashboardStats(user.getUserId())));
-    }
+  // ─── Dashboard ────────────────────────────────────────────
 
-    // ─── Plan Lists ───────────────────────────────────────────
+  @GetMapping("/dashboard")
+  public ResponseEntity<SuccessResponse> getDashboard(@AuthenticationPrincipal AppUserDetails user) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getDashboardStats(user.getUserId())));
+  }
 
-    @GetMapping("/pending")
-    public ResponseEntity<SuccessResponse> getPendingPlans() {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                Map.of("data", doctorValidationService.getPendingPlansDto())));
-    }
+  // ─── Plan Lists ───────────────────────────────────────────
 
-    @GetMapping("/validated")
-    public ResponseEntity<SuccessResponse> getValidatedPlans(@AuthenticationPrincipal AppUserDetails user) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                Map.of("data", doctorValidationService.getValidatedPlansDto(user.getUserId()))));
-    }
+  @GetMapping("/pending")
+  public ResponseEntity<SuccessResponse> getPendingPlans() {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        Map.of("data", doctorValidationService.getPendingPlansDto())));
+  }
 
-    @GetMapping("/plans/pending")
-    public ResponseEntity<SuccessResponse> getPendingPlansLegacy() {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getPendingPlans()));
-    }
+  @GetMapping("/validated")
+  public ResponseEntity<SuccessResponse> getValidatedPlans(@AuthenticationPrincipal AppUserDetails user) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        Map.of("data", doctorValidationService.getValidatedPlansDto(user.getUserId()))));
+  }
 
-    @GetMapping("/plans/approved")
-    public ResponseEntity<SuccessResponse> getApprovedPlans(@AuthenticationPrincipal AppUserDetails user) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getApprovedPlans(user.getUserId())));
-    }
+  @GetMapping("/plans/pending")
+  public ResponseEntity<SuccessResponse> getPendingPlansLegacy() {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getPendingPlans()));
+  }
 
-    @GetMapping("/plans/rejected")
-    public ResponseEntity<SuccessResponse> getRejectedPlans(@AuthenticationPrincipal AppUserDetails user) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getRejectedPlans(user.getUserId())));
-    }
+  @GetMapping("/plans/approved")
+  public ResponseEntity<SuccessResponse> getApprovedPlans(@AuthenticationPrincipal AppUserDetails user) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getApprovedPlans(user.getUserId())));
+  }
 
-    // ─── Plan Detail ──────────────────────────────────────────
+  @GetMapping("/plans/rejected")
+  public ResponseEntity<SuccessResponse> getRejectedPlans(@AuthenticationPrincipal AppUserDetails user) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getRejectedPlans(user.getUserId())));
+  }
 
-    @GetMapping("/plans/{id}")
-    public ResponseEntity<SuccessResponse> getPlanDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-                doctorValidationService.getPlanDetailDto(id)));
-    }
+  // ─── Plan Detail ──────────────────────────────────────────
 
-    // ─── Validate (unified approve or reject) ─────────────────
+  @GetMapping("/plans/{id}")
+  public ResponseEntity<SuccessResponse> getPlanDetail(@PathVariable Long id) {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getPlanDetailDto(id)));
+  }
 
-    @PostMapping("/validate")
-    public ResponseEntity<SuccessResponse> validatePlan(
-            @AuthenticationPrincipal AppUserDetails user,
-            @RequestBody ValidatePlanRequest request) {
-        doctorValidationService.validatePlan(
-                request.planId(),
-                user.getUserId(),
-                request.approved(),
-                request.rejectionReason());
-        String msg = request.approved() ? "Plan approved successfully" : "Plan rejected successfully";
-        return ResponseEntity.ok(new SuccessResponse(msg, null));
-    }
+  // ─── Validate (unified approve or reject) ─────────────────
 
-    @PostMapping("/plans/{id}/approve")
-    public ResponseEntity<SuccessResponse> approvePlan(
-            @PathVariable Long id,
-            @AuthenticationPrincipal AppUserDetails user) {
-        doctorValidationService.approvePlan(id, user.getUserId());
-        return ResponseEntity.ok(new SuccessResponse("Plan approved successfully", null));
-    }
+  @PostMapping("/validate")
+  public ResponseEntity<SuccessResponse> validatePlan(
+      @AuthenticationPrincipal AppUserDetails user,
+      @RequestBody ValidatePlanRequest request) {
+    doctorValidationService.validatePlan(
+        request.planId(),
+        user.getUserId(),
+        request.approved(),
+        request.rejectionReason());
+    String msg = request.approved() ? "Plan approved successfully" : "Plan rejected successfully";
+    return ResponseEntity.ok(new SuccessResponse(msg, null));
+  }
 
-    @PostMapping("/plans/{id}/reject")
-    public ResponseEntity<SuccessResponse> rejectPlan(
-            @PathVariable Long id,
-            @AuthenticationPrincipal AppUserDetails user,
-            @RequestBody DoctorValidationRequest request) {
-        doctorValidationService.rejectPlan(id, user.getUserId(), request.rejectionReason());
-        return ResponseEntity.ok(new SuccessResponse("Plan rejected successfully", null));
-    }
+  @PostMapping("/plans/{id}/approve")
+  public ResponseEntity<SuccessResponse> approvePlan(
+      @PathVariable Long id,
+      @AuthenticationPrincipal AppUserDetails user) {
+    doctorValidationService.approvePlan(id, user.getUserId());
+    return ResponseEntity.ok(new SuccessResponse("Plan approved successfully", null));
+  }
 
-    // ─── Signed PDF Download ──────────────────────────────────
+  @PostMapping("/plans/{id}/reject")
+  public ResponseEntity<SuccessResponse> rejectPlan(
+      @PathVariable Long id,
+      @AuthenticationPrincipal AppUserDetails user,
+      @RequestBody DoctorValidationRequest request) {
+    doctorValidationService.rejectPlan(id, user.getUserId(), request.rejectionReason());
+    return ResponseEntity.ok(new SuccessResponse("Plan rejected successfully", null));
+  }
 
-    @GetMapping("/plans/{id}/signed-pdf")
-    public ResponseEntity<byte[]> downloadSignedPdf(
-            @PathVariable Long id,
-            @AuthenticationPrincipal AppUserDetails user) {
-        byte[] pdf = doctorValidationService.getSignedPdf(id, user.getUserId());
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"signed-travel-plan-" + id + ".pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
-    }
+  // ─── Signed PDF Download ──────────────────────────────────
+
+  @GetMapping("/plans/{id}/signed-pdf")
+  public ResponseEntity<byte[]> downloadSignedPdf(
+      @PathVariable Long id,
+      @AuthenticationPrincipal AppUserDetails user) {
+    byte[] pdf = doctorValidationService.getSignedPdf(id, user.getUserId());
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"signed-travel-plan-" + id + ".pdf\"")
+        .contentType(MediaType.APPLICATION_PDF)
+        .body(pdf);
+  }
 }

@@ -10,6 +10,7 @@ public record DoctorProfileResponse(
     String phone,
     String medicalLicenseNumber,
     String signatureUrl,
+    String stampUrl,
     String doctorApplicationStatus,
     LocalDateTime applicationSubmittedAt
 ) {}

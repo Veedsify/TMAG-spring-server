@@ -175,19 +175,22 @@ public class TravelPlanPdfGenerator {
         // Section heading
         sb.append("td.cap,th.cap{background:").append(BG_SUBTLE)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ")
+                .append(
+                        ";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ")
                 .append(BORDER).append("}");
 
         // Sub-section heading
         sb.append("td.cap-sub{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ")
+                .append(
+                        ";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ")
                 .append(TEAL_BORDER).append("}");
 
         // KV label / value
         sb.append("td.lbl{width:26%;background:").append(BG_SUBTLE)
                 .append(";color:").append(MUTED)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ")
+                .append(
+                        ";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ")
                 .append(BORDER_LT).append("}");
         sb.append("td.val{color:").append(DARK)
                 .append(";padding:8px 12px;border-bottom:1px solid ").append(BORDER_LT)
@@ -197,7 +200,8 @@ public class TravelPlanPdfGenerator {
         // Column headers + data cells
         sb.append("th.h{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ")
+                .append(
+                        ";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ")
                 .append(TEAL_BORDER).append(";text-align:left}");
         sb.append("td.c{padding:8px 12px;border:1px solid ").append(BORDER)
                 .append(";vertical-align:top;line-height:1.5;white-space:pre-wrap;color:").append(DARK)
@@ -426,7 +430,8 @@ public class TravelPlanPdfGenerator {
                 sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
                         .append("\">")
                         .append("<div class=\"alert\"><div class=\"alert-t\">Airline MEDIF clearance required</div>")
-                        .append("<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
+                        .append(
+                                "<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
                         .append("</td></tr>");
             }
             if (flight.path("medicationTimingGuidance").isTextual()
@@ -678,7 +683,8 @@ public class TravelPlanPdfGenerator {
             appendTableStart(sb, "After you return", 1);
             if (ar.path("redFlag").isTextual() && StringUtils.hasText(ar.get("redFlag").asText())) {
                 sb.append("<tr><td class=\"val\" style=\"border:none;padding:6px 12px 4px\">")
-                        .append("<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
+                        .append(
+                                "<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
                         .append("<div class=\"alert-b\">").append(escapeHtml(ar.get("redFlag").asText()))
                         .append("</div></div>")
                         .append("</td></tr>");
@@ -1076,13 +1082,13 @@ public class TravelPlanPdfGenerator {
         return s != null ? s : "";
     }
 
-    public byte[] generateSignedPdf(TravelPlan plan, GeneratedPlan generatedPlan, com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
+    public byte[] generateSignedPdf(TravelPlan plan, GeneratedPlan generatedPlan,
+            com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             String baseHtml = buildHtml(plan, generatedPlan);
             String signedHtml = baseHtml.replace(
-                "</body></html>",
-                buildDoctorVerificationSection(doctor) + "</body></html>"
-            );
+                    "</body></html>",
+                    buildDoctorVerificationSection(doctor) + "</body></html>");
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.withHtmlContent(signedHtml, frontendUrl);
             builder.toStream(out);
@@ -1097,31 +1103,71 @@ public class TravelPlanPdfGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='page-break-before:always;padding:14pt 16mm 0;'>");
         sb.append("<table class='sec' cellspacing='0' cellpadding='0'><tr>");
-        sb.append("<td class='cap' style='background:").append(TEAL_DEEP).append(";color:#ffffff;'>Doctor Verification &amp; Digital Signature</td>");
-        sb.append("</tr><tr><td style='padding:12px;'>");
+        sb.append("<td class='cap' style='background:").append(TEAL_DEEP)
+                .append(";color:#ffffff;'>Doctor Verification &amp; Digital Signature</td>");
+        sb.append("</tr><tr><td style='padding:0;'>");
+        sb.append("<div style='padding:12px;position:relative;'>");
+
+        boolean hasStamp = StringUtils.hasText(doctor.getStampUrl());
+        boolean hasSignature = StringUtils.hasText(doctor.getSignatureUrl());
+
+        // Stamp as watermark behind content
+        if (hasStamp) {
+            sb.append("<div style='position:absolute;top:12px;right:12px;opacity:0.2;'>");
+            sb.append("<img src='").append(doctor.getStampUrl())
+                    .append("' style='max-height:120px;max-width:200px;' alt='Official Stamp'/>");
+            sb.append("</div>");
+        }
+
         sb.append("<p style='margin:0 0 8px;font-size:10pt;color:").append(DARK).append(";'>");
-        sb.append("This travel health plan has been reviewed and approved by a licensed physician on the TMAG Doctor Network.");
+        sb.append(
+                "This travel health plan has been reviewed and approved by a licensed physician on the TMAG Doctor Network.");
         sb.append("</p>");
         sb.append("<table style='width:100%;border-collapse:collapse;margin-top:10px;'>");
-        sb.append("<tr><td style='width:30%;font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>Physician Name</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getName())).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>License Number</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getMedicalLicenseNumber())).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>Validation Date</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;'>Status</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(GREEN).append(";font-weight:700;padding:6px 0;'>TMAG Verified &amp; Approved</td></tr>");
+        sb.append("<tr><td style='width:30%;font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>Physician Name</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getFullName())).append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>License Number</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getMedicalLicenseNumber()))
+                .append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>Validation Date</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>")
+                .append(java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")))
+                .append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;'>Status</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(GREEN)
+                .append(";font-weight:700;padding:6px 0;'>TMAG Verified &amp; Approved</td></tr>");
         sb.append("</table>");
-        if (StringUtils.hasText(doctor.getSignatureUrl())) {
-            sb.append("<div style='margin-top:16px;text-align:center;'>");
-            sb.append("<img src='").append(doctor.getSignatureUrl()).append("' style='max-height:80px;max-width:300px;' alt='Doctor Signature'/>");
+
+        // Signature below doctor info
+        if (hasSignature) {
+            sb.append("<div style='margin-top:16px;'>");
+            sb.append("<img src='").append(doctor.getSignatureUrl())
+                    .append("' style='max-height:80px;max-width:250px;' alt='Doctor Signature'/>");
             sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
             sb.append("</div>");
         }
+
+        sb.append("</div>");
         sb.append("</td></tr></table>");
-        sb.append("<div style='margin-top:14pt;text-align:center;padding:12px;background:").append(GOLD_SOFT).append(";border:1px solid ").append(GOLD_BORDER).append(";border-radius:4px;'>");
-        sb.append("<p style='margin:0;font-size:9pt;color:").append(DARK).append(";font-weight:600;'>TMAG Verified Seal</p>");
-        sb.append("<p style='margin:4px 0 0;font-size:7.5pt;color:").append(MUTED).append(";'>This document was generated by Travel Medicine Advisory Global and approved by a licensed physician.</p>");
+        sb.append("<div style='margin-top:14pt;text-align:center;padding:12px;background:").append(GOLD_SOFT)
+                .append(";border:1px solid ").append(GOLD_BORDER).append(";border-radius:4px;'>");
+        sb.append("<p style='margin:0;font-size:9pt;color:").append(DARK)
+                .append(";font-weight:600;'>TMAG Verified Seal</p>");
+        sb.append("<p style='margin:4px 0 0;font-size:7.5pt;color:").append(MUTED).append(
+                ";'>This document was generated by Travel Medicine Advisory Global and approved by a licensed physician.</p>");
         sb.append("</div>");
         sb.append("</div>");
         return sb.toString();

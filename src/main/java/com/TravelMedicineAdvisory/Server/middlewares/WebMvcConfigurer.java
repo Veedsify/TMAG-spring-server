@@ -13,12 +13,12 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 @Configuration
 public class WebMvcConfigurer implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
 
-    @Value("${app.storage.path:storage/upload}")
+    @Value("${storage.local.base-path:storage/uploads}")
     private String storagePath;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/storage/**")
+        registry.addResourceHandler("/storage/uploads/**")
                 .addResourceLocations("file:" + storagePath + "/");
     }
 }

@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +76,8 @@ public class CompanyAdminCreditPurchaseController {
             Long userId = getUserIdFromUserDetails(userDetails);
 
             if (body.get("companyId") == null || body.get("credits") == null) {
-                return ResponseEntity.badRequest().body(new SuccessResponse("companyId and credits are required", null));
+                return ResponseEntity.badRequest()
+                        .body(new SuccessResponse("companyId and credits are required", null));
             }
 
             Long companyId = ((Number) body.get("companyId")).longValue();
@@ -92,8 +92,7 @@ public class CompanyAdminCreditPurchaseController {
                     "amount", result.totalAmount(),
                     "currency", result.currency(),
                     "currencySymbol", result.currencySymbol(),
-                    "purchaseId", result.purchaseId()
-            )));
+                    "purchaseId", result.purchaseId())));
         } catch (NoSuchElementException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (IllegalArgumentException e) {
@@ -103,7 +102,8 @@ public class CompanyAdminCreditPurchaseController {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (Exception e) {
             logger.error("Unexpected error during payment initiation: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+            return ResponseEntity.status(500)
+                    .body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
         }
     }
 
@@ -115,7 +115,8 @@ public class CompanyAdminCreditPurchaseController {
             Long userId = getUserIdFromUserDetails(userDetails);
 
             if (body.get("companyId") == null || body.get("credits") == null) {
-                return ResponseEntity.badRequest().body(new SuccessResponse("companyId and credits are required", null));
+                return ResponseEntity.badRequest()
+                        .body(new SuccessResponse("companyId and credits are required", null));
             }
 
             Long companyId = ((Number) body.get("companyId")).longValue();
@@ -130,8 +131,7 @@ public class CompanyAdminCreditPurchaseController {
                     "amount", result.totalAmount(),
                     "currency", result.currency(),
                     "currencySymbol", result.currencySymbol(),
-                    "purchaseId", result.purchaseId()
-            )));
+                    "purchaseId", result.purchaseId())));
         } catch (NoSuchElementException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (IllegalArgumentException e) {
@@ -141,7 +141,8 @@ public class CompanyAdminCreditPurchaseController {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (Exception e) {
             logger.error("Unexpected error during HR payment initiation: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+            return ResponseEntity.status(500)
+                    .body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
         }
     }
 
@@ -162,13 +163,13 @@ public class CompanyAdminCreditPurchaseController {
 
             if ("completed".equals(result.status())) {
                 return new RedirectView(
-                    frontendUrl +
-                    "?success=true" +
-                    "&credits=" + result.creditsPurchased() +
-                    "&tx_ref=" + tx_ref
-                );
+                        frontendUrl +
+                                "?success=true" +
+                                "&credits=" + result.creditsPurchased() +
+                                "&tx_ref=" + tx_ref);
             } else {
-                String errorMsg = result.status() != null ? "Payment%20" + result.status() : "Payment%20not%20completed";
+                String errorMsg = result.status() != null ? "Payment%20" + result.status()
+                        : "Payment%20not%20completed";
                 return new RedirectView(frontendUrl + "?success=false&error=" + errorMsg);
             }
         } catch (NoSuchElementException e) {
@@ -187,8 +188,7 @@ public class CompanyAdminCreditPurchaseController {
             boolean isCompleted = "completed".equalsIgnoreCase(result.status());
             return ResponseEntity.ok(new SuccessResponse(
                     isCompleted ? "Payment verified" : "Payment " + result.status(),
-                    Map.of("success", isCompleted, "purchase", result)
-            ));
+                    Map.of("success", isCompleted, "purchase", result)));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse(e.getMessage(), null));
         }

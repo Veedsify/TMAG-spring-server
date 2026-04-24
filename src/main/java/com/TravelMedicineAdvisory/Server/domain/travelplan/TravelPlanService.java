@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.TravelMedicineAdvisory.Server.core.utils.QuestionnaireResponseSanitizer;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
@@ -34,6 +35,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.gax.rpc.NotFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -76,7 +78,8 @@ public class TravelPlanService {
     public Page<TravelPlanResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
         if (companyId != null) {
             if (!isUserInCompany(currentUserId, companyId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this company's plans");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "You do not have access to this company's plans");
             }
             return repository.findAllByCompanyId(companyId, pageable)
                     .map(this::toResponse);
@@ -139,7 +142,8 @@ public class TravelPlanService {
 
     private boolean isUserInCompany(Long userId, Long companyId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
         return companyUserRepository.findAllByUser(user).stream()
                 .map(companyUser -> companyUser.getCompany().getId())
                 .anyMatch(companyId::equals);
@@ -197,9 +201,10 @@ public class TravelPlanService {
         mapRequestToEntity(normalized, entity);
         entity.setStatus("QUEUED");
 
-        PlanTier tier = resolvePlanTier(request.planTier(), user);
-        entity.setPlanTier(tier);
-        entity.setDoctorValidationStatus(tier == PlanTier.FREE ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+        String tier = resolvePlanTier(user);
+        entity.setPlanTier(PlanTier.valueOf(tier));
+        entity.setDoctorValidationStatus(
+                tier == PlanTier.FREE.name() ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
 
         TravelPlan saved = repository.save(entity);
         persistQuestionnaireResponses(normalized, saved);
@@ -221,7 +226,8 @@ public class TravelPlanService {
         questionnaire.setEmployee(travelPlan.getEmployee());
         questionnaire.setCompany(travelPlan.getCompany());
         questionnaire.setSource("create-plan");
-        questionnaire.setResponsesJson(QuestionnaireResponseSanitizer.sanitize(request.questionnaireResponses(), objectMapper));
+        questionnaire.setResponsesJson(
+                QuestionnaireResponseSanitizer.sanitize(request.questionnaireResponses(), objectMapper));
         travelPlanQuestionnaireRepository.save(questionnaire);
     }
 
@@ -255,6 +261,7 @@ public class TravelPlanService {
         entity.setTripDetailsJson(source.getTripDetailsJson());
         entity.setRiskScore(source.getRiskScore());
         entity.setStatus("QUEUED");
+        entity.setPlanTier(PlanTier.PREMIUM);
         entity.setCompany(source.getCompany());
         entity.setEmployee(source.getEmployee());
         entity.setUser(source.getUser());
@@ -286,7 +293,7 @@ public class TravelPlanService {
         User validatedBy = entity.getValidatedBy();
         String validatedByName = validatedBy != null
                 ? ((validatedBy.getFirstName() != null ? validatedBy.getFirstName() : "") + " " +
-                   (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
+                        (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
                 : null;
         String signedPdfUrl = generatedPlan != null ? generatedPlan.signedPdfUrl() : null;
         return new TravelPlanResponse(
@@ -451,22 +458,33 @@ public class TravelPlanService {
         return n.isTextual() ? n.asText() : "";
     }
 
-    private PlanTier resolvePlanTier(String requestTier, User user) {
-        if (requestTier != null && !requestTier.isBlank()) {
-            try {
-                return PlanTier.valueOf(requestTier.toUpperCase());
-            } catch (IllegalArgumentException ignored) {
+    private String resolvePlanTier(User user) {
+        if ("company".equalsIgnoreCase(user.getType())) {
+            CompanyUser companyUser = companyUserRepository.findByUser(user).orElse(null);
+            if (companyUser != null &&
+                    companyUser.getCompany() != null &&
+                    companyUser.getCompany().getCreditPlan() != null) {
+                return switch (companyUser.getCompany().getCreditPlan().getCode()) {
+                    case ENTERPRISE_SILVER -> PlanTier.STANDARD.name();
+                    case ENTERPRISE_PLUS -> PlanTier.PREMIUM.name();
+                    case ENTERPRISE_GOLD -> PlanTier.STANDARD.name();
+                    case ENTERPRISE_ELITE -> PlanTier.PREMIUM.name();
+                    case ENTERPRISE_PLATINUM -> PlanTier.STANDARD.name();
+                    case ENTERPRISE_SIGNATURE -> PlanTier.PREMIUM.name();
+                    default -> PlanTier.FREE.name();
+                };
             }
         }
+
         CreditPlan creditPlan = user.getCreditPlan();
         if (creditPlan == null || creditPlan.getCode() == null) {
-            return PlanTier.FREE;
+            return PlanTier.FREE.name();
         }
         return switch (creditPlan.getCode()) {
-            case ESSENTIAL -> PlanTier.FREE;
-            case STANDARD -> PlanTier.STANDARD;
-            case PREMIUM -> PlanTier.PREMIUM;
-            default -> PlanTier.PREMIUM; // enterprise plans
+            case ESSENTIAL -> PlanTier.FREE.name();
+            case STANDARD -> PlanTier.STANDARD.name();
+            case PREMIUM -> PlanTier.PREMIUM.name();
+            default -> PlanTier.FREE.name(); // enterprise plans
         };
     }
 }

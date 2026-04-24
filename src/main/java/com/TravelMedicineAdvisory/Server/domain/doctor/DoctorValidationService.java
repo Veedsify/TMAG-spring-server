@@ -77,7 +77,7 @@ public class DoctorValidationService {
     // Doctor onboarding / application
     // -------------------------------------------------------------------------
 
-    public void applyToBecomeDoctor(Long userId, String licenseNumber, MultipartFile signatureFile) {
+    public void applyToBecomeDoctor(Long userId, String licenseNumber, MultipartFile signatureFile, MultipartFile stampFile) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
@@ -87,18 +87,64 @@ public class DoctorValidationService {
             throw new IllegalArgumentException("You have already applied or are already a doctor");
         }
 
-        String path = storageService.storeBytes(
+        String sigPath = storageService.storeBytes(
                 readMultipartFile(signatureFile),
                 "doctor-signatures",
                 UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
                 signatureFile.getContentType());
 
         user.setMedicalLicenseNumber(licenseNumber);
-        user.setSignatureUrl(storageService.getUrl(path));
+        user.setSignatureUrl(storageService.getUrl(sigPath));
+
+        if (stampFile != null && !stampFile.isEmpty()) {
+            String stampPath = storageService.storeBytes(
+                    readMultipartFile(stampFile),
+                    "doctor-stamps",
+                    UUID.randomUUID() + "_" + stampFile.getOriginalFilename(),
+                    stampFile.getContentType());
+            user.setStampUrl(storageService.getUrl(stampPath));
+        }
+
         user.setDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
         userRepository.save(user);
 
         log.info("Doctor application submitted: userId={}", userId);
+    }
+
+    public DoctorProfileResponse updateDoctorProfile(Long userId, String firstName, String lastName,
+            String licenseNumber, MultipartFile signatureFile, MultipartFile stampFile) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("Doctor not found"));
+
+        if (user.getDoctorApplicationStatus() != DoctorApplicationStatus.APPROVED) {
+            throw new IllegalArgumentException("Only approved doctors can update their profile");
+        }
+
+        if (firstName != null && !firstName.isBlank()) user.setFirstName(firstName);
+        if (lastName != null && !lastName.isBlank()) user.setLastName(lastName);
+        if (licenseNumber != null && !licenseNumber.isBlank()) user.setMedicalLicenseNumber(licenseNumber);
+
+        if (signatureFile != null && !signatureFile.isEmpty()) {
+            String path = storageService.storeBytes(
+                    readMultipartFile(signatureFile),
+                    "doctor-signatures",
+                    UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
+                    signatureFile.getContentType());
+            user.setSignatureUrl(storageService.getUrl(path));
+        }
+
+        if (stampFile != null && !stampFile.isEmpty()) {
+            String path = storageService.storeBytes(
+                    readMultipartFile(stampFile),
+                    "doctor-stamps",
+                    UUID.randomUUID() + "_" + stampFile.getOriginalFilename(),
+                    stampFile.getContentType());
+            user.setStampUrl(storageService.getUrl(path));
+        }
+
+        userRepository.save(user);
+        log.info("Doctor profile updated: userId={}", userId);
+        return getDoctorProfile(userId);
     }
 
     public void onboardDoctor(Long userId, String licenseNumber, MultipartFile signatureFile) {
@@ -449,6 +495,7 @@ public class DoctorValidationService {
                 doctor.getPhone(),
                 doctor.getMedicalLicenseNumber(),
                 doctor.getSignatureUrl(),
+                doctor.getStampUrl(),
                 doctor.getDoctorApplicationStatus() != null ? doctor.getDoctorApplicationStatus().name() : null,
                 doctor.getCreatedAt());
     }
