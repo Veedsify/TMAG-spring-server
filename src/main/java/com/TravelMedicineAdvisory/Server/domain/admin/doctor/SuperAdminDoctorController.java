@@ -80,7 +80,8 @@ public class SuperAdminDoctorController {
     @PostMapping("/applications/{userId}/reject")
     public ResponseEntity<SuccessResponse> rejectApplication(
             @PathVariable Long userId,
-            @RequestParam String reason) {
+            @RequestBody java.util.Map<String, String> body) {
+        String reason = body.getOrDefault("reason", "");
         doctorValidationService.rejectDoctorApplication(userId, reason);
         return ResponseEntity.ok(new SuccessResponse("Application rejected successfully", null));
     }

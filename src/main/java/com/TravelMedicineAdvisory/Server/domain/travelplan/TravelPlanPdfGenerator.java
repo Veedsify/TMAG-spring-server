@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
 import java.util.StringJoiner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -20,6 +22,8 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
  */
 @Component
 public class TravelPlanPdfGenerator {
+
+    private static final Logger log = LoggerFactory.getLogger(TravelPlanPdfGenerator.class);
 
     // Primary teal palette
     private static final String TEAL_DEEP = "#0d3d35";
@@ -1114,8 +1118,8 @@ public class TravelPlanPdfGenerator {
         // Stamp as watermark behind content
         if (hasStamp) {
             sb.append("<div style='position:absolute;top:12px;right:12px;opacity:0.2;'>");
-            sb.append("<img src='").append(doctor.getStampUrl())
-                    .append("' style='max-height:120px;max-width:200px;' alt='Official Stamp'/>");
+            sb.append("<img src='").append(resolveImageSrc(doctor.getStampUrl()))
+                    .append("' style='max-height:220px;max-width:200px;' alt='Official Stamp'/>");
             sb.append("</div>");
         }
 
@@ -1153,11 +1157,13 @@ public class TravelPlanPdfGenerator {
 
         // Signature below doctor info
         if (hasSignature) {
-            sb.append("<div style='margin-top:16px;'>");
-            sb.append("<img src='").append(doctor.getSignatureUrl())
-                    .append("' style='max-height:80px;max-width:250px;' alt='Doctor Signature'/>");
+            sb.append("<table style='width:100%;margin-top:16px;border-collapse:collapse;'>");
+            sb.append("<tr><td style='text-align:center;padding:5px;'>");
+            sb.append("<img src='").append(resolveImageSrc(doctor.getSignatureUrl()))
+                    .append("' style='height:250px;width:250px;' alt='Doctor Signature'/>");
             sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
-            sb.append("</div>");
+            sb.append("</td></tr>");
+            sb.append("</table>");
         }
 
         sb.append("</div>");
@@ -1171,6 +1177,23 @@ public class TravelPlanPdfGenerator {
         sb.append("</div>");
         sb.append("</div>");
         return sb.toString();
+    }
+
+    private String resolveImageSrc(String url) {
+        if (!StringUtils.hasText(url))
+            return null;
+        try (java.io.InputStream in = new java.net.URI(url).toURL().openStream()) {
+            byte[] bytes = in.readAllBytes();
+            String lower = url.toLowerCase();
+            String mime = lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg"
+                    : lower.endsWith(".webp") ? "image/webp"
+                            : lower.endsWith(".gif") ? "image/gif"
+                                    : "image/png";
+            return "data:" + mime + ";base64," + java.util.Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            log.warn("Could not load image for PDF embed, falling back to URL: {}", url);
+            return url;
+        }
     }
 
     private static String escapeHtml(String str) {
