@@ -15,6 +15,8 @@ import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerato
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -46,6 +47,7 @@ public class DoctorValidationService {
     private final EmailService emailService;
     private final EmailTemplates emailTemplates;
     private final ObjectMapper objectMapper;
+    private final UserSettingService userSettingService;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -60,7 +62,8 @@ public class DoctorValidationService {
             TravelPlanPdfGenerator pdfGenerator,
             EmailService emailService,
             EmailTemplates emailTemplates,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            UserSettingService userSettingService) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.userRepository = userRepository;
@@ -71,6 +74,7 @@ public class DoctorValidationService {
         this.emailService = emailService;
         this.emailTemplates = emailTemplates;
         this.objectMapper = objectMapper;
+        this.userSettingService = userSettingService;
     }
 
     // -------------------------------------------------------------------------
@@ -81,9 +85,11 @@ public class DoctorValidationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        if (user.getDoctorApplicationStatus() != null
-                && user.getDoctorApplicationStatus() != DoctorApplicationStatus.NONE
-                && user.getDoctorApplicationStatus() != DoctorApplicationStatus.REJECTED) {
+        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
+
+        if (settings.getDoctorApplicationStatus() != null
+                && settings.getDoctorApplicationStatus() != DoctorApplicationStatus.NONE
+                && settings.getDoctorApplicationStatus() != DoctorApplicationStatus.REJECTED) {
             throw new IllegalArgumentException("You have already applied or are already a doctor");
         }
 
@@ -93,8 +99,8 @@ public class DoctorValidationService {
                 UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
                 signatureFile.getContentType());
 
-        user.setMedicalLicenseNumber(licenseNumber);
-        user.setSignatureUrl(storageService.getUrl(sigPath));
+        settings.setMedicalLicenseNumber(licenseNumber);
+        settings.setSignatureUrl(storageService.getUrl(sigPath));
 
         if (stampFile != null && !stampFile.isEmpty()) {
             String stampPath = storageService.storeBytes(
@@ -102,11 +108,15 @@ public class DoctorValidationService {
                     "doctor-stamps",
                     UUID.randomUUID() + "_" + stampFile.getOriginalFilename(),
                     stampFile.getContentType());
-            user.setStampUrl(storageService.getUrl(stampPath));
+            settings.setStampUrl(storageService.getUrl(stampPath));
         }
 
-        user.setDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
-        userRepository.save(user);
+        settings.setDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
+        userSettingService.updateDoctorFields(userId,
+                settings.getMedicalLicenseNumber(),
+                settings.getSignatureUrl(),
+                settings.getStampUrl(),
+                DoctorApplicationStatus.PENDING);
 
         log.info("Doctor application submitted: userId={}", userId);
     }
@@ -116,13 +126,22 @@ public class DoctorValidationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("Doctor not found"));
 
-        if (user.getDoctorApplicationStatus() != DoctorApplicationStatus.APPROVED) {
+        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
+
+        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.APPROVED) {
             throw new IllegalArgumentException("Only approved doctors can update their profile");
         }
 
         if (firstName != null && !firstName.isBlank()) user.setFirstName(firstName);
         if (lastName != null && !lastName.isBlank()) user.setLastName(lastName);
-        if (licenseNumber != null && !licenseNumber.isBlank()) user.setMedicalLicenseNumber(licenseNumber);
+        if (firstName != null || lastName != null) {
+            user.setName(user.getFirstName() + " " + user.getLastName());
+            userRepository.save(user);
+        }
+
+        if (licenseNumber != null && !licenseNumber.isBlank()) {
+            settings.setMedicalLicenseNumber(licenseNumber);
+        }
 
         if (signatureFile != null && !signatureFile.isEmpty()) {
             String path = storageService.storeBytes(
@@ -130,7 +149,7 @@ public class DoctorValidationService {
                     "doctor-signatures",
                     UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
                     signatureFile.getContentType());
-            user.setSignatureUrl(storageService.getUrl(path));
+            settings.setSignatureUrl(storageService.getUrl(path));
         }
 
         if (stampFile != null && !stampFile.isEmpty()) {
@@ -139,19 +158,23 @@ public class DoctorValidationService {
                     "doctor-stamps",
                     UUID.randomUUID() + "_" + stampFile.getOriginalFilename(),
                     stampFile.getContentType());
-            user.setStampUrl(storageService.getUrl(path));
+            settings.setStampUrl(storageService.getUrl(path));
         }
 
-        userRepository.save(user);
+        userSettingService.updateDoctorFields(userId,
+                settings.getMedicalLicenseNumber(),
+                settings.getSignatureUrl(),
+                settings.getStampUrl(),
+                null);
+
         log.info("Doctor profile updated: userId={}", userId);
         return getDoctorProfile(userId);
     }
 
     public void onboardDoctor(Long userId, String licenseNumber, MultipartFile signatureFile) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
 
-        if (user.getDoctorApplicationStatus() != DoctorApplicationStatus.APPROVED) {
+        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.APPROVED) {
             throw new IllegalArgumentException("You must be invited/approved before onboarding");
         }
 
@@ -161,9 +184,11 @@ public class DoctorValidationService {
                 UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
                 signatureFile.getContentType());
 
-        user.setMedicalLicenseNumber(licenseNumber);
-        user.setSignatureUrl(storageService.getUrl(path));
-        userRepository.save(user);
+        userSettingService.updateDoctorFields(userId,
+                licenseNumber,
+                storageService.getUrl(path),
+                null,
+                null);
 
         log.info("Doctor onboarded: userId={}", userId);
     }
@@ -176,14 +201,18 @@ public class DoctorValidationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        if (user.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
+        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
+
+        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
             throw new IllegalArgumentException("User does not have a pending doctor application");
         }
 
         Role doctorRole = roleRepository.findByName(Roles.Doctor.name())
                 .orElseThrow(() -> new IllegalStateException("Doctor role not found in database"));
 
-        user.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
+        settings.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
+        userSettingService.updateDoctorFields(userId, null, null, null, DoctorApplicationStatus.APPROVED);
+
         user.setRole(doctorRole);
         userRepository.save(user);
 
@@ -201,12 +230,13 @@ public class DoctorValidationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        if (user.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
+        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
+
+        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
             throw new IllegalArgumentException("User does not have a pending doctor application");
         }
 
-        user.setDoctorApplicationStatus(DoctorApplicationStatus.REJECTED);
-        userRepository.save(user);
+        userSettingService.updateDoctorFields(userId, null, null, null, DoctorApplicationStatus.REJECTED);
 
         queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
                 "to", user.getEmail(),
@@ -233,9 +263,12 @@ public class DoctorValidationService {
         Role doctorRole = roleRepository.findByName(Roles.Doctor.name())
                 .orElseThrow(() -> new IllegalStateException("Doctor role not found in database"));
 
-        user.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
         user.setRole(doctorRole);
         userRepository.save(user);
+
+        UserSetting settings = userSettingService.getOrCreateByUserId(user.getId());
+        settings.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
+        userSettingService.updateDoctorFields(user.getId(), null, null, null, DoctorApplicationStatus.APPROVED);
 
         queueService.dispatch(JobType.EMAIL_DOCTOR_INVITATION, Map.of(
                 "to", email,
@@ -399,7 +432,8 @@ public class DoctorValidationService {
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId)
                 .orElseThrow(() -> new NoSuchElementException("Generated plan not found"));
 
-        byte[] signedPdf = pdfGenerator.generateSignedPdf(plan, generated, doctor);
+        UserSetting doctorSettings = userSettingService.getOrCreateByUserId(doctorId);
+        byte[] signedPdf = pdfGenerator.generateSignedPdf(plan, generated, doctor, doctorSettings);
         String filename = "signed-plan-" + planId + "-" + UUID.randomUUID() + ".pdf";
         String storagePath = storageService.storeBytes(signedPdf, "signed-plans", filename, "application/pdf");
         String signedPdfUrl = storageService.getUrl(storagePath);
@@ -487,16 +521,17 @@ public class DoctorValidationService {
     public DoctorProfileResponse getDoctorProfile(Long doctorId) {
         User doctor = userRepository.findById(doctorId)
                 .orElseThrow(() -> new NoSuchElementException("Doctor not found"));
+        UserSetting settings = userSettingService.getOrCreateByUserId(doctorId);
         return new DoctorProfileResponse(
                 doctor.getId(),
                 doctor.getFirstName(),
                 doctor.getLastName(),
                 doctor.getEmail(),
                 doctor.getPhone(),
-                doctor.getMedicalLicenseNumber(),
-                doctor.getSignatureUrl(),
-                doctor.getStampUrl(),
-                doctor.getDoctorApplicationStatus() != null ? doctor.getDoctorApplicationStatus().name() : null,
+                settings.getMedicalLicenseNumber(),
+                settings.getSignatureUrl(),
+                settings.getStampUrl(),
+                settings.getDoctorApplicationStatus() != null ? settings.getDoctorApplicationStatus().name() : null,
                 doctor.getCreatedAt());
     }
 
@@ -508,8 +543,9 @@ public class DoctorValidationService {
                 .orElseThrow(() -> new IllegalStateException("Individual role not found in database"));
 
         user.setRole(individualRole);
-        user.setDoctorApplicationStatus(DoctorApplicationStatus.NONE);
         userRepository.save(user);
+
+        userSettingService.updateDoctorFields(userId, null, null, null, DoctorApplicationStatus.NONE);
 
         log.info("Doctor privileges revoked: userId={}", userId);
     }

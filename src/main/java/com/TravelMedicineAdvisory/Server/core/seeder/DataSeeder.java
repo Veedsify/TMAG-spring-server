@@ -42,6 +42,9 @@ import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -66,6 +69,7 @@ public class DataSeeder implements CommandLineRunner {
     private final InvoiceRepository invoiceRepository;
     private final PasswordEncoder passwordEncoder;
     private final RandomNumberGenerator randomNumberGenerator;
+    private final UserSettingRepository userSettingRepository;
 
     public DataSeeder(UserRepository userRepository,
             RoleRepository roleRepository,
@@ -81,7 +85,8 @@ public class DataSeeder implements CommandLineRunner {
             FaqItemRepository faqItemRepository,
             InvoiceRepository invoiceRepository,
             PasswordEncoder passwordEncoder,
-            RandomNumberGenerator randomNumberGenerator) {
+            RandomNumberGenerator randomNumberGenerator,
+            UserSettingRepository userSettingRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
@@ -97,6 +102,7 @@ public class DataSeeder implements CommandLineRunner {
         this.invoiceRepository = invoiceRepository;
         this.passwordEncoder = passwordEncoder;
         this.randomNumberGenerator = randomNumberGenerator;
+        this.userSettingRepository = userSettingRepository;
     }
 
     @Override
@@ -489,8 +495,14 @@ public class DataSeeder implements CommandLineRunner {
         doctorUser.setOnboardingStage(5);
         doctorUser.setOnboarded(true);
         doctorUser.setCredits(0);
-        doctorUser.setMedicalLicenseNumber("TMAG-DOC-001");
         userRepository.save(doctorUser);
+
+        UserSetting doctorSetting = new UserSetting();
+        doctorSetting.setUser(doctorUser);
+        doctorSetting.setMedicalLicenseNumber("TMAG-DOC-001");
+        doctorSetting.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
+        userSettingRepository.save(doctorSetting);
+
         logger.info("Seeded doctor user: doctor@tmag.com");
     }
 

@@ -12,6 +12,8 @@ import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
@@ -61,6 +63,7 @@ public class AuthService {
     private final CompanyUserRepository companyUserRepository;
     private final AdminNotificationService adminNotificationService;
     private final CreditPlanRepository userCreditPlanRepository;
+    private final UserSettingService userSettingService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -82,7 +85,8 @@ public class AuthService {
             QueueService queueService, CreditRepository creditRepository,
             CompanyUserRepository companyUserRepository,
             AdminNotificationService adminNotificationService,
-            CreditPlanRepository userCreditPlanRepository) {
+            CreditPlanRepository userCreditPlanRepository,
+            UserSettingService userSettingService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -94,6 +98,7 @@ public class AuthService {
         this.companyUserRepository = companyUserRepository;
         this.adminNotificationService = adminNotificationService;
         this.userCreditPlanRepository = userCreditPlanRepository;
+        this.userSettingService = userSettingService;
 
     }
 
@@ -547,6 +552,8 @@ public class AuthService {
         if (user.getCreditPlan() != null) {
             response.setUserCreditPlan(CreditPlanResponse.from(user.getCreditPlan()));
         }
+
+        response.setSettings(UserSettingResponse.from(userSettingService.getOrCreateByUserId(user.getId())));
 
         return response;
     }

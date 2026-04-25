@@ -1103,12 +1103,13 @@ public class TravelPlanPdfGenerator {
     }
 
     public byte[] generateSignedPdf(TravelPlan plan, GeneratedPlan generatedPlan,
-            com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
+            com.TravelMedicineAdvisory.Server.domain.user.User doctor,
+            com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting doctorSettings) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             String baseHtml = buildHtml(plan, generatedPlan);
             String signedHtml = baseHtml.replace(
                     "</body></html>",
-                    buildDoctorVerificationSection(doctor) + "</body></html>");
+                    buildDoctorVerificationSection(doctor, doctorSettings) + "</body></html>");
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.withHtmlContent(signedHtml, frontendUrl);
             builder.toStream(out);
@@ -1119,7 +1120,8 @@ public class TravelPlanPdfGenerator {
         }
     }
 
-    private String buildDoctorVerificationSection(com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
+    private String buildDoctorVerificationSection(com.TravelMedicineAdvisory.Server.domain.user.User doctor,
+            com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting doctorSettings) {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='page-break-before:always;padding:14pt 16mm 0;'>");
         sb.append("<table class='sec' cellspacing='0' cellpadding='0'><tr>");
@@ -1128,13 +1130,13 @@ public class TravelPlanPdfGenerator {
         sb.append("</tr><tr><td style='padding:0;'>");
         sb.append("<div style='padding:12px;position:relative;'>");
 
-        boolean hasStamp = StringUtils.hasText(doctor.getStampUrl());
-        boolean hasSignature = StringUtils.hasText(doctor.getSignatureUrl());
+        boolean hasStamp = StringUtils.hasText(doctorSettings.getStampUrl());
+        boolean hasSignature = StringUtils.hasText(doctorSettings.getSignatureUrl());
 
         // Stamp as watermark behind content
         if (hasStamp) {
             sb.append("<div style='position:absolute;top:12px;right:12px;opacity:0.2;'>");
-            sb.append("<img src='").append(resolveImageSrc(doctor.getStampUrl()))
+            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getStampUrl()))
                     .append("' style='max-height:220px;max-width:200px;' alt='Official Stamp'/>");
             sb.append("</div>");
         }
@@ -1155,7 +1157,7 @@ public class TravelPlanPdfGenerator {
                         ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
                 .append(BORDER_LT).append(";'>License Number</td>");
         sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
-                .append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getMedicalLicenseNumber()))
+                .append(BORDER_LT).append(";'>").append(escapeHtml(doctorSettings.getMedicalLicenseNumber()))
                 .append("</td></tr>");
         sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
                 .append(
@@ -1175,7 +1177,7 @@ public class TravelPlanPdfGenerator {
         if (hasSignature) {
             sb.append("<table style='width:100%;margin-top:16px;border-collapse:collapse;'>");
             sb.append("<tr><td style='text-align:center;padding:5px;'>");
-            sb.append("<img src='").append(resolveImageSrc(doctor.getSignatureUrl()))
+            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getSignatureUrl()))
                     .append("' style='height:250px;width:250px;' alt='Doctor Signature'/>");
             sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
             sb.append("</td></tr>");

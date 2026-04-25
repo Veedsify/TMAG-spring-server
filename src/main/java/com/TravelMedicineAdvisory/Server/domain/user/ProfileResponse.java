@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record ProfileResponse(
@@ -23,5 +24,6 @@ public record ProfileResponse(
         @JsonProperty("is_verified") Boolean isVerified,
         @JsonProperty("role_id") Long roleId,
         @JsonProperty("billing_currency") BillingCurrency billingCurrency,
-        CreditPlanResponse userCreditPlan) {
+        CreditPlanResponse userCreditPlan,
+        UserSettingResponse settings) {
 }

@@ -10,6 +10,8 @@ import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,14 +31,17 @@ public class SuperAdminDoctorController {
     private final UserRepository userRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final RoleRepository doctorRoleRepository;
+    private final UserSettingService userSettingService;
 
     public SuperAdminDoctorController(DoctorValidationService doctorValidationService,
             UserRepository userRepository,
-            TravelPlanRepository travelPlanRepository, RoleRepository doctorRoleRepository) {
+            TravelPlanRepository travelPlanRepository, RoleRepository doctorRoleRepository,
+            UserSettingService userSettingService) {
         this.doctorValidationService = doctorValidationService;
         this.doctorRoleRepository = doctorRoleRepository;
         this.userRepository = userRepository;
         this.travelPlanRepository = travelPlanRepository;
+        this.userSettingService = userSettingService;
     }
 
     private Role getDoctorRole() {
@@ -49,21 +54,22 @@ public class SuperAdminDoctorController {
 
     @GetMapping("/applications")
     public ResponseEntity<SuccessResponse> getApplications() {
-        List<User> applications = userRepository.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
+        List<UserSetting> applications = userSettingService.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
         List<Map<String, Object>> dtos = applications.stream()
-                .map(u -> {
+                .map(s -> {
+                    User u = s.getUser();
                     Map<String, Object> dto = new HashMap<>();
                     dto.put("userId", u.getId());
                     dto.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
                     dto.put("lastName", u.getLastName() != null ? u.getLastName() : "");
                     dto.put("email", u.getEmail() != null ? u.getEmail() : "");
                     dto.put("phone", u.getPhone() != null ? u.getPhone() : "");
-                    dto.put("licenseNumber", u.getMedicalLicenseNumber() != null ? u.getMedicalLicenseNumber() : "");
+                    dto.put("licenseNumber", s.getMedicalLicenseNumber() != null ? s.getMedicalLicenseNumber() : "");
                     dto.put("specialization", "");
-                    dto.put("applicationStatus", u.getDoctorApplicationStatus() != null ? u.getDoctorApplicationStatus().name() : "NONE");
+                    dto.put("applicationStatus", s.getDoctorApplicationStatus() != null ? s.getDoctorApplicationStatus().name() : "NONE");
                     dto.put("applicationSubmittedAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
                     dto.put("identityDocumentUrl", null);
-                    dto.put("licenseDocumentUrl", u.getSignatureUrl());
+                    dto.put("licenseDocumentUrl", s.getSignatureUrl());
                     dto.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
                     return dto;
                 })
@@ -95,7 +101,7 @@ public class SuperAdminDoctorController {
     @GetMapping("/stats")
     public ResponseEntity<SuccessResponse> getStats() {
         long totalDoctors = userRepository.findByRole(this.getDoctorRole().getId()).size();
-        long pendingApplications = userRepository.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING).size();
+        long pendingApplications = userSettingService.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING).size();
         long totalValidatedPlans = travelPlanRepository.countAllActive();
 
         Map<String, Object> stats = new HashMap<>();
@@ -112,13 +118,14 @@ public class SuperAdminDoctorController {
         List<Map<String, Object>> dtos = doctors.stream()
                 .map(u -> {
                     long validatedCount = travelPlanRepository.findApprovedByDoctor(u.getId()).size();
+                    UserSetting settings = userSettingService.getOrCreateByUserId(u.getId());
                     Map<String, Object> dto = new HashMap<>();
                     dto.put("userId", u.getId());
                     dto.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
                     dto.put("lastName", u.getLastName() != null ? u.getLastName() : "");
                     dto.put("email", u.getEmail() != null ? u.getEmail() : "");
                     dto.put("phone", u.getPhone() != null ? u.getPhone() : "");
-                    dto.put("licenseNumber", u.getMedicalLicenseNumber() != null ? u.getMedicalLicenseNumber() : "");
+                    dto.put("licenseNumber", settings.getMedicalLicenseNumber() != null ? settings.getMedicalLicenseNumber() : "");
                     dto.put("specialization", "");
                     dto.put("validatedPlansCount", validatedCount);
                     dto.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);

@@ -7,6 +7,8 @@ import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
 import org.springframework.http.ResponseEntity;
@@ -34,13 +36,16 @@ public class ProfileController {
     private final PasswordEncoder passwordEncoder;
     private final CompanyUserService companyUserService;
     private final CreditPlanRepository creditPlanRepository;
+    private final UserSettingService userSettingService;
 
     public ProfileController(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            CompanyUserService companyUserService, CreditPlanRepository creditPlanRepository) {
+            CompanyUserService companyUserService, CreditPlanRepository creditPlanRepository,
+            UserSettingService userSettingService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.companyUserService = companyUserService;
         this.creditPlanRepository = creditPlanRepository;
+        this.userSettingService = userSettingService;
     }
 
     @GetMapping("/companies")
@@ -181,6 +186,7 @@ public class ProfileController {
                 user.getVerified(),
                 user.getRole() != null ? user.getRole().getId() : null,
                 user.getBillingCurrency(),
-                user.getCreditPlan() != null ? CreditPlanResponse.from(user.getCreditPlan()) : null);
+                user.getCreditPlan() != null ? CreditPlanResponse.from(user.getCreditPlan()) : null,
+                UserSettingResponse.from(userSettingService.getOrCreateByUserId(user.getId())));
     }
 }

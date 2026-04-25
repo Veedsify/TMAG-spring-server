@@ -47,12 +47,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> searchUsers(@Param("search") String search, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE u.doctorApplicationStatus = :status AND u.deletedAt IS NULL")
-    List<User> findByDoctorApplicationStatus(
-            @Param("status") com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus status);
-
-    List<User> findByRoleId(Long roleId);
-
     @Query("SELECT u FROM User u WHERE u.role.name = :roleName AND u.deletedAt IS NULL")
     List<User> findByRoleName(@Param("roleName") String roleName);
 
