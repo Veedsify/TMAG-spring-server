@@ -52,6 +52,9 @@ public class TravelPlanPdfGenerator {
     private static final String GREEN_SOFT = "#d1fae5";
     private static final String GREEN_BORDER = "#6ee7b7";
 
+    private static final String IMPORTANT_MEDICAL_DISCLAIMER = "This travel health advisory plan was generated with artificial intelligence and reviewed and validated by a licensed medical doctor. It is provided for informational and educational purposes only and does not substitute consultation, diagnosis, or treatment from a certified travel medicine doctor or a licensed medical doctor. Before making decisions about vaccinations, medications, or travel health, consult your doctor or a qualified travel medicine specialist, especially if you are pregnant, have chronic conditions, or take regular medications. If you become ill during travel, seek immediate local medical care.";
+    private static final String CLOSING_DISCLAIMER = "This report supports, but does not substitute care from a certified travel medicine doctor or licensed medical doctor.";
+
     private final ObjectMapper objectMapper;
 
     @Value("${app.frontend.url:http://localhost:3000}")
@@ -92,13 +95,14 @@ public class TravelPlanPdfGenerator {
         JsonNode structured = parseStructuredJson(generatedPlan);
         if (structured != null && structured.isObject()) {
             appendStructuredBody(sb, structured);
+            appendMedicalDisclaimer(sb, structured);
         } else {
             appendLegacyBody(sb, plan);
+            appendMedicalDisclaimer(sb, null);
         }
 
         // appendGenerationFooter(sb, generatedPlan);
-        sb.append(
-                "<p class=\"closing\">Travel Medicine Advisory Global \u2014 not a substitute for professional medical advice.</p>");
+        sb.append("<p class=\"closing\">").append(escapeHtml(CLOSING_DISCLAIMER)).append("</p>");
         sb.append("</div>");
         sb.append("</body></html>");
         return sb.toString();
@@ -794,11 +798,6 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
-        if (root.path("medicalDisclaimer").isTextual() && StringUtils.hasText(root.get("medicalDisclaimer").asText())) {
-            sb.append("<div class=\"disclaimer\">")
-                    .append(escapeHtml(root.get("medicalDisclaimer").asText()))
-                    .append("</div>");
-        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -876,6 +875,23 @@ public class TravelPlanPdfGenerator {
                 .append("<tr><td class=\"val\" style=\"border:none\">").append(escapeHtml(raw.trim()))
                 .append("</td></tr>")
                 .append("</table>");
+    }
+
+    private void appendMedicalDisclaimer(StringBuilder sb, JsonNode root) {
+        sb.append("<div class=\"disclaimer\">")
+                .append("<strong>Important Medical Disclaimer</strong>\n")
+                .append(escapeHtml(resolveMedicalDisclaimer(root)))
+                .append("</div>");
+    }
+
+    private String resolveMedicalDisclaimer(JsonNode root) {
+        if (root != null && root.path("medicalDisclaimer").isTextual()) {
+            String structured = root.get("medicalDisclaimer").asText();
+            if (StringUtils.hasText(structured)) {
+                return structured;
+            }
+        }
+        return IMPORTANT_MEDICAL_DISCLAIMER;
     }
 
     // private void appendGenerationFooter(StringBuilder sb, GeneratedPlan gp) {
