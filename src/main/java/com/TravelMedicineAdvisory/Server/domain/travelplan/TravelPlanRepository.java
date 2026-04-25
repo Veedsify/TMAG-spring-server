@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -66,4 +67,7 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     @Query("SELECT COUNT(tp) FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus IN ('APPROVED', 'REJECTED') AND tp.deletedAt IS NULL")
     long countValidatedByDoctor(@Param("doctorId") Long doctorId);
+
+    @Query("SELECT tp FROM TravelPlan tp WHERE tp.doctorValidationStatus = :status AND tp.deletedAt IS NULL ORDER BY tp.updatedAt DESC")
+    Page<TravelPlan> findByDoctorValidationStatus(@Param("status") DoctorValidationStatus status, Pageable pageable);
 }

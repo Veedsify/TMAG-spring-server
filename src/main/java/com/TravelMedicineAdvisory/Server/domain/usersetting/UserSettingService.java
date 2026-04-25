@@ -31,7 +31,6 @@ public class UserSettingService {
                 .orElseThrow(() -> new NoSuchElementException("User settings not found"));
     }
 
-    @Transactional(readOnly = true)
     public UserSetting getOrCreateByUserId(Long userId) {
         return userSettingRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseGet(() -> createDefaultSettings(userId));

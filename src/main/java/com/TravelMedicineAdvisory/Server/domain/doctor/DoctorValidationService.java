@@ -472,7 +472,7 @@ public class DoctorValidationService {
             throw new IllegalArgumentException("Plan is not pending validation");
         }
 
-        plan.setDoctorValidationStatus(DoctorValidationStatus.REJECTED);
+        plan.setDoctorValidationStatus(DoctorValidationStatus.ELEVATED);
         plan.setValidatedBy(doctor);
         plan.setValidatedAt(LocalDateTime.now());
         plan.setRejectionReason(reason);
@@ -480,14 +480,17 @@ public class DoctorValidationService {
 
         User traveller = plan.getUser();
         if (traveller != null && traveller.getEmail() != null) {
-            String html = emailTemplates.planRejectedEmail(firstName(traveller), plan.getDestination(), reason);
+            String html = emailTemplates.planElevatedEmail(firstName(traveller), plan.getDestination());
             emailService.sendHtmlEmail(
                     traveller.getEmail(),
-                    "Update on Your Travel Health Plan for " + plan.getDestination(),
+                    "Your Travel Health Plan Has Been Elevated for Review",
                     html);
         }
 
-        log.info("Plan rejected: planId={} doctorId={} reason={}", planId, doctorId, reason);
+        // Notify super admins
+        notifySuperAdminsOfElevatedPlan(plan, reason, doctor);
+
+        log.info("Plan elevated for review: planId={} doctorId={} reason={}", planId, doctorId, reason);
     }
 
     // -------------------------------------------------------------------------
@@ -597,6 +600,34 @@ public class DoctorValidationService {
             return file.getBytes();
         } catch (Exception e) {
             throw new RuntimeException("Failed to read uploaded file", e);
+        }
+    }
+
+    private void notifySuperAdminsOfElevatedPlan(TravelPlan plan, String reason, User doctor) {
+        try {
+            // Get all super admins to notify
+            Role superAdminRole = roleRepository.findByName(Roles.SuperAdmin.name()).orElse(null);
+            if (superAdminRole != null) {
+                List<User> superAdmins = userRepository.findByRole(superAdminRole.getId());
+                
+                String travellerName = plan.getUser() != null ? 
+                    (plan.getUser().getFirstName() + " " + plan.getUser().getLastName()).trim() : "Unknown";
+                String doctorName = doctor != null ? 
+                    (doctor.getFirstName() + " " + doctor.getLastName()).trim() : "Unknown";
+                String feedbackMessage = "Doctor: " + doctorName + "\nFeedback: " + reason;
+                
+                for (User superAdmin : superAdmins) {
+                    if (superAdmin.getEmail() != null) {
+                        String html = emailTemplates.planElevatedNotificationEmail(travellerName, plan.getDestination(), feedbackMessage);
+                        emailService.sendHtmlEmail(
+                            superAdmin.getEmail(),
+                            "Elevated Plan Review Required - " + travellerName + " for " + plan.getDestination(),
+                            html);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to notify super admins of elevated plan: {}", e.getMessage());
         }
     }
 }
