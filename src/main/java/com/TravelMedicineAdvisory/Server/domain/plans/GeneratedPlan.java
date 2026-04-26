@@ -54,6 +54,9 @@ public class GeneratedPlan extends BaseEntity {
     @Column(name = "signed_pdf_url")
     private String signedPdfUrl;
 
+    @Column(name = "summary_pdf_url")
+    private String summaryPdfUrl;
+
     @Column(name = "is_signed")
     private Boolean isSigned = false;
 
@@ -175,6 +178,14 @@ public class GeneratedPlan extends BaseEntity {
 
     public void setSignedPdfUrl(String signedPdfUrl) {
         this.signedPdfUrl = signedPdfUrl;
+    }
+
+    public String getSummaryPdfUrl() {
+        return summaryPdfUrl;
+    }
+
+    public void setSummaryPdfUrl(String summaryPdfUrl) {
+        this.summaryPdfUrl = summaryPdfUrl;
     }
 
     public Boolean getIsSigned() {

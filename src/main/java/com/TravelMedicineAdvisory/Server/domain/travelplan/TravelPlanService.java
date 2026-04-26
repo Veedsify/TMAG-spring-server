@@ -116,6 +116,27 @@ public class TravelPlanService {
         return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
     }
 
+    @Transactional(readOnly = true)
+    public TravelPlanPdfExport exportSummaryPdfForUser(Long planId, Long currentUserId) {
+        TravelPlan plan = repository.findById(planId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Travel plan not found"));
+        if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
+        }
+        String status = plan.getStatus();
+        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Travel plan summary PDF is only available when the plan is completed");
+        }
+        if (plan.getPlanTier() == null || plan.getPlanTier() == PlanTier.FREE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Travel plan summary PDF is only available for standard and premium plans");
+        }
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
+        byte[] pdf = travelPlanPdfGenerator.generateSummary(plan, generated);
+        return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
+    }
+
     private static String slugifyFilename(String destination) {
         if (!StringUtils.hasText(destination)) {
             return "travel-health-plan";
@@ -294,6 +315,7 @@ public class TravelPlanService {
                         (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
                 : null;
         String signedPdfUrl = generatedPlan != null ? generatedPlan.signedPdfUrl() : null;
+        String summaryPdfUrl = generatedPlan != null ? generatedPlan.summaryPdfUrl() : null;
         return new TravelPlanResponse(
                 entity.getId(),
                 entity.getDestination(),
@@ -322,7 +344,8 @@ public class TravelPlanService {
                 validatedByName,
                 entity.getValidatedAt(),
                 entity.getRejectionReason(),
-                signedPdfUrl);
+                signedPdfUrl,
+                summaryPdfUrl);
     }
 
     private GeneratedPlanPayload toGeneratedPayload(GeneratedPlan g) {
@@ -335,6 +358,7 @@ public class TravelPlanService {
                 g.getProcessingTimeMs(),
                 g.getErrorMessage(),
                 g.getSignedPdfUrl(),
+                g.getSummaryPdfUrl(),
                 g.getIsSigned());
     }
 

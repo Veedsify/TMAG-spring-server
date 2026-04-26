@@ -4,6 +4,7 @@ import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
 import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
@@ -11,6 +12,7 @@ import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenera
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 /**
  * AI generation pipeline for travel health plans created by end users
@@ -68,6 +71,8 @@ public class PlanGenerationService {
     private final UserRepository userRepository;
     private final ClinicalContextExtractor clinicalContextExtractor;
     private final SystemPromptBuilder systemPromptBuilder;
+    private final TravelPlanPdfGenerator travelPlanPdfGenerator;
+    private final StorageService storageService;
 
     public PlanGenerationService(
             TravelPlanRepository travelPlanRepository,
@@ -82,7 +87,9 @@ public class PlanGenerationService {
             DoctorWebSocketService doctorWebSocketService,
             UserRepository userRepository,
             ClinicalContextExtractor clinicalContextExtractor,
-            SystemPromptBuilder systemPromptBuilder) {
+            SystemPromptBuilder systemPromptBuilder,
+            TravelPlanPdfGenerator travelPlanPdfGenerator,
+            StorageService storageService) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
@@ -96,6 +103,8 @@ public class PlanGenerationService {
         this.userRepository = userRepository;
         this.clinicalContextExtractor = clinicalContextExtractor;
         this.systemPromptBuilder = systemPromptBuilder;
+        this.travelPlanPdfGenerator = travelPlanPdfGenerator;
+        this.storageService = storageService;
     }
 
     public void enqueueGeneration(Long travelPlanId, Long userId) {
@@ -182,7 +191,6 @@ public class PlanGenerationService {
             generatedPlan.setTokensUsed(result.estimatedTokens());
             generatedPlan.setProcessingTimeMs(elapsedMs);
             generatedPlan.setErrorMessage(null);
-            generatedPlanRepository.save(generatedPlan);
 
             travelPlan.setStatus("COMPLETED");
             travelPlan.setMedicalConsiderations(joinArray(structuredOutput, "recommendations"));
@@ -191,6 +199,9 @@ public class PlanGenerationService {
             travelPlan.setSafetyAdvisories(joinArray(structuredOutput, "nextSteps"));
             travelPlan.setEmergencyContacts(joinArray(structuredOutput.path("medicalCare"), "emergencyContacts"));
             travelPlanRepository.save(travelPlan);
+
+            attachSummaryPdfIfEligible(travelPlan, generatedPlan);
+            generatedPlanRepository.save(generatedPlan);
 
             aiLog.setStatus("success");
             aiLog.setOutputSummary(compactSummary(structuredOutput));
@@ -275,6 +286,16 @@ public class PlanGenerationService {
                             "destination", travelPlan.getDestination(),
                             "planId", String.valueOf(travelPlan.getId()))));
         }
+    }
+
+    private void attachSummaryPdfIfEligible(TravelPlan travelPlan, GeneratedPlan generatedPlan) {
+        if (travelPlan.getPlanTier() != PlanTier.STANDARD && travelPlan.getPlanTier() != PlanTier.PREMIUM) {
+            return;
+        }
+        byte[] summaryPdf = travelPlanPdfGenerator.generateSummary(travelPlan, generatedPlan);
+        String filename = "summary-plan-" + travelPlan.getId() + "-" + UUID.randomUUID() + ".pdf";
+        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename, "application/pdf");
+        generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
     }
 
     private void sendReadyEmail(TravelPlan travelPlan) {

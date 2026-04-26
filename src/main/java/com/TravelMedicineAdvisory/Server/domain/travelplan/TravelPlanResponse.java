@@ -30,5 +30,6 @@ public record TravelPlanResponse(
     String validatedByName,
     LocalDateTime validatedAt,
     String rejectionReason,
-    String signedPdfUrl
+    String signedPdfUrl,
+    String summaryPdfUrl
 ) {}

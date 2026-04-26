@@ -77,6 +77,19 @@ public class TravelPlanPdfGenerator {
         }
     }
 
+    public byte[] generateSummary(TravelPlan plan, GeneratedPlan generatedPlan) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            String html = buildSummaryHtml(plan, generatedPlan);
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.withHtmlContent(html, frontendUrl);
+            builder.toStream(out);
+            builder.run();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate travel plan summary PDF", e);
+        }
+    }
+
     private String buildHtml(TravelPlan plan, GeneratedPlan generatedPlan) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
@@ -102,6 +115,31 @@ public class TravelPlanPdfGenerator {
         }
 
         // appendGenerationFooter(sb, generatedPlan);
+        sb.append("<p class=\"closing\">").append(escapeHtml(CLOSING_DISCLAIMER)).append("</p>");
+        sb.append("</div>");
+        sb.append("</body></html>");
+        return sb.toString();
+    }
+
+    private String buildSummaryHtml(TravelPlan plan, GeneratedPlan generatedPlan) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
+        appendStyles(sb);
+        sb.append("</head><body>");
+        sb.append("<div class=\"hero-wrap\">");
+        appendSummaryHero(sb, plan, generatedPlan);
+        sb.append("</div>");
+        sb.append("<div class=\"body-wrap\">");
+
+        JsonNode structured = parseStructuredJson(generatedPlan);
+        if (structured != null && structured.isObject()) {
+            appendSummaryBody(sb, structured);
+            appendMedicalDisclaimer(sb, structured);
+        } else {
+            appendLegacyBody(sb, plan);
+            appendMedicalDisclaimer(sb, null);
+        }
+
         sb.append("<p class=\"closing\">").append(escapeHtml(CLOSING_DISCLAIMER)).append("</p>");
         sb.append("</div>");
         sb.append("</body></html>");
@@ -322,7 +360,164 @@ public class TravelPlanPdfGenerator {
         sb.append("<div class=\"hero-rule\"></div>");
     }
 
+    private void appendSummaryHero(StringBuilder sb, TravelPlan plan, GeneratedPlan gp) {
+        JsonNode j = parseStructuredJson(gp);
+        String title = "Travel health summary";
+        if (plan.getDestination() != null) {
+            title = "Travel health summary: " + plan.getDestination();
+        }
+
+        sb.append("<div class=\"brand-strip\">")
+                .append("<div class=\"brand-name\">Travel Medicine Advisory Global</div>")
+                .append("<div class=\"brand-sub\">Condensed Travel Health Summary</div>")
+                .append("</div>");
+        sb.append("<table class=\"hero-tbl\" cellspacing=\"0\" cellpadding=\"0\"><tr>");
+        sb.append("<td class=\"hero-left\">");
+        sb.append("<h1 class=\"doc-title\">").append(escapeHtml(title)).append("</h1>");
+        sb.append("<p class=\"hero-meta\">")
+                .append(escapeHtml(nullSafe(plan.getCountry())))
+                .append(plan.getDuration() != null ? " \u00B7 " + plan.getDuration() + " days" : "")
+                .append(StringUtils.hasText(plan.getPurpose()) ? " \u00B7 " + escapeHtml(plan.getPurpose()) : "")
+                .append("</p>");
+        if (j != null && j.path("travelDates").isTextual() && StringUtils.hasText(j.get("travelDates").asText())) {
+            sb.append("<p class=\"hero-dates\">").append(escapeHtml(j.get("travelDates").asText())).append("</p>");
+        } else {
+            String fallbackDates = formatReturnDatesFromPlan(plan);
+            if (StringUtils.hasText(fallbackDates)) {
+                sb.append("<p class=\"hero-dates\">").append(escapeHtml(fallbackDates)).append("</p>");
+            }
+        }
+        if (j != null && j.path("travellerName").isTextual() && StringUtils.hasText(j.get("travellerName").asText())) {
+            sb.append("<p class=\"hero-traveller\">Traveller: <strong>")
+                    .append(escapeHtml(j.get("travellerName").asText()))
+                    .append("</strong></p>");
+        }
+        sb.append("</td>");
+        sb.append("<td class=\"hero-right\">");
+        sb.append("<span class=\"badge ").append(riskBadgeClass(plan.getRiskScore())).append("\">")
+                .append(escapeHtml(riskLabel(plan.getRiskScore()))).append(" risk</span>");
+        sb.append("<span class=\"badge b-nu\">SUMMARY</span>");
+        if (plan.getCreatedAt() != null) {
+            sb.append("<span class=\"badge b-nu\">")
+                    .append(plan.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM d, yyyy")))
+                    .append("</span>");
+        }
+        sb.append("</td></tr></table>");
+        sb.append("<div class=\"hero-rule\"></div>");
+    }
+
     // ── Structured body ───────────────────────────────────────────────────────
+    private void appendSummaryBody(StringBuilder sb, JsonNode root) {
+        JsonNode risks = root.path("healthRiskOverview");
+        if (risks.isArray() && risks.size() > 0) {
+            appendTableStart(sb, "Key health risks", 3);
+            sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Level</th><th class=\"h\">Summary</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = risks.elements(); it.hasNext(); rowIdx++) {
+                JsonNode r = it.next();
+                String lvl = r.path("level").asText("—");
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("category").asText("—"))).append("</td>")
+                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">")
+                        .append(escapeHtml(lvl.toUpperCase())).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("summary").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        appendSummaryRecommendations(sb, root.path("vaccinations"), "Vaccination actions", "vaccine", "recommendation", "action");
+        appendMalariaSummary(sb, root.path("malariaPrevention"));
+        appendSummaryRecommendations(sb, root.path("recommendations"), "Priority medical advice", "title", "details", null);
+        appendTextArraySection(sb, root.path("clinicalFlags"), "Clinical flags");
+        appendTextArraySection(sb, root.path("contraindications"), "Contraindications");
+
+        JsonNode afterReturn = root.path("afterReturn");
+        if (afterReturn.isObject() && afterReturnNonEmpty(afterReturn)) {
+            appendTableStart(sb, "After return red flags", 1);
+            if (afterReturn.path("redFlag").isTextual() && StringUtils.hasText(afterReturn.get("redFlag").asText())) {
+                sb.append("<tr><td class=\"val\">").append(escapeHtml(afterReturn.get("redFlag").asText())).append("</td></tr>");
+            }
+            appendBulletSubTable(sb, afterReturn.path("within1Week"), "Within 1 week");
+            appendBulletSubTable(sb, afterReturn.path("within4Weeks"), "Within 4 weeks");
+            sb.append("</table>");
+        }
+
+        JsonNode medicalCare = root.path("medicalCare");
+        if (medicalCare.isObject() && medicalCare.path("emergencyContacts").isArray()
+                && medicalCare.path("emergencyContacts").size() > 0) {
+            appendTableStart(sb, "Emergency contacts", 1);
+            appendBulletSubTable(sb, medicalCare.path("emergencyContacts"), "Contacts");
+            sb.append("</table>");
+        }
+    }
+
+    private void appendSummaryRecommendations(StringBuilder sb, JsonNode items, String title, String labelField,
+            String primaryField, String secondaryField) {
+        if (!items.isArray() || items.size() == 0) {
+            return;
+        }
+        appendTableStart(sb, title, 2);
+        sb.append("<tr><th class=\"h\">Topic</th><th class=\"h\">Action</th></tr>");
+        int rowIdx = 0;
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext(); rowIdx++) {
+            JsonNode item = it.next();
+            StringBuilder details = new StringBuilder(item.path(primaryField).asText(""));
+            if (secondaryField != null && item.path(secondaryField).isTextual()
+                    && StringUtils.hasText(item.get(secondaryField).asText())) {
+                if (!details.isEmpty()) {
+                    details.append("\n\n");
+                }
+                details.append(item.get(secondaryField).asText());
+            }
+            String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+            sb.append("<tr").append(alt).append(">")
+                    .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                    .append(escapeHtml(item.path(labelField).asText("—"))).append("</strong></td>")
+                    .append("<td class=\"c\">").append(escapeHtml(details.toString())).append("</td>")
+                    .append("</tr>");
+        }
+        sb.append("</table>");
+    }
+
+    private void appendMalariaSummary(StringBuilder sb, JsonNode malaria) {
+        if (!malaria.isObject() || !malariaNonEmpty(malaria)) {
+            return;
+        }
+        appendTableStart(sb, "Malaria prevention summary", 2);
+        int rows = 3;
+        int i = 0;
+        i += appendKVRow(sb, "Risk level", textOrNull(malaria, "riskLevel"), i, rows);
+        i += appendKVRow(sb, "Recommended chemoprophylaxis", textOrNull(malaria, "recommendedAgent"), i, rows);
+        appendKVRow(sb, "Rationale", textOrNull(malaria, "rationale"), i, rows);
+        JsonNode mosquito = malaria.path("mosquitoProtection");
+        if (mosquito.isArray() && mosquito.size() > 0) {
+            sb.append("<tr><td colspan=\"2\" class=\"cap-sub\">Mosquito protection</td></tr>");
+            for (Iterator<JsonNode> it = mosquito.elements(); it.hasNext();) {
+                JsonNode line = it.next();
+                if (line.isTextual()) {
+                    sb.append("<tr><td colspan=\"2\" class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                }
+            }
+        }
+        sb.append("</table>");
+    }
+
+    private void appendTextArraySection(StringBuilder sb, JsonNode items, String title) {
+        if (!items.isArray() || items.size() == 0) {
+            return;
+        }
+        appendTableStart(sb, title, 1);
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext();) {
+            JsonNode item = it.next();
+            if (item.isTextual()) {
+                sb.append("<tr><td class=\"bull\">").append(escapeHtml(item.asText())).append("</td></tr>");
+            }
+        }
+        sb.append("</table>");
+    }
+
     private void appendStructuredBody(StringBuilder sb, JsonNode root) {
         JsonNode glance = root.path("tripAtGlance");
         if (glance.isObject() && glance.size() > 0) {

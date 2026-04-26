@@ -71,6 +71,23 @@ public class TravelPlanController {
                 .body(exp.pdfBytes());
     }
 
+    @GetMapping("/{id}/summary-pdf")
+    public ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        TravelPlanPdfExport exp = service.exportSummaryPdfForUser(id, user.getUserId());
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(exp.filenameBase() + "-travel-health-summary.pdf", StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(exp.pdfBytes());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id,
             @AuthenticationPrincipal AppUserDetails user) {
