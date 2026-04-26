@@ -51,11 +51,13 @@ public class CallbackRegistry {
     }
 
     /** @deprecated Use getFrontendPath or getFrontendRedirectUrl instead */
+    @Deprecated
     public String getRedirectPath(String callbackType) {
         return getFrontendPath(callbackType);
     }
 
     /** @deprecated Use getBackendCallbackUrl instead */
+    @Deprecated
     public String buildCallbackUrl(String callbackType, String baseUrl) {
         return baseUrl + getRedirectPath(callbackType);
     }

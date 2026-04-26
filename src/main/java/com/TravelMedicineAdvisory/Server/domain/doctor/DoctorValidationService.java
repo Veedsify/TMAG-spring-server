@@ -81,9 +81,10 @@ public class DoctorValidationService {
     // Doctor onboarding / application
     // -------------------------------------------------------------------------
 
-    public void applyToBecomeDoctor(Long userId, String licenseNumber, MultipartFile signatureFile, MultipartFile stampFile) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+    public void applyToBecomeDoctor(Long userId, String licenseNumber, MultipartFile signatureFile,
+            MultipartFile stampFile) {
+        // User user = userRepository.findById(userId)
+        // .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         UserSetting settings = userSettingService.getOrCreateByUserId(userId);
 
@@ -132,8 +133,10 @@ public class DoctorValidationService {
             throw new IllegalArgumentException("Only approved doctors can update their profile");
         }
 
-        if (firstName != null && !firstName.isBlank()) user.setFirstName(firstName);
-        if (lastName != null && !lastName.isBlank()) user.setLastName(lastName);
+        if (firstName != null && !firstName.isBlank())
+            user.setFirstName(firstName);
+        if (lastName != null && !lastName.isBlank())
+            user.setLastName(lastName);
         if (firstName != null || lastName != null) {
             user.setName(user.getFirstName() + " " + user.getLastName());
             userRepository.save(user);
@@ -243,7 +246,8 @@ public class DoctorValidationService {
                 "subject", "Update on Your TMAG Doctor Application",
                 "variables", Map.of(
                         "firstName", firstName(user),
-                        "content", "We regret to inform you that your doctor application was not approved. Reason: " + reason)));
+                        "content",
+                        "We regret to inform you that your doctor application was not approved. Reason: " + reason)));
 
         log.info("Doctor application rejected: userId={} reason={}", userId, reason);
     }
@@ -357,16 +361,17 @@ public class DoctorValidationService {
         User traveller = plan.getUser();
         User validatedBy = plan.getValidatedBy();
 
-        GeneratedPlanSnapshot snapshot = gp == null ? null : new GeneratedPlanSnapshot(
-                gp.getStatus(),
-                gp.getPlanJson(),
-                gp.getProvider(),
-                gp.getModelUsed(),
-                gp.getTokensUsed(),
-                gp.getProcessingTimeMs(),
-                gp.getErrorMessage(),
-                gp.getSignedPdfUrl(),
-                gp.getIsSigned());
+        GeneratedPlanSnapshot snapshot = gp == null ? null
+                : new GeneratedPlanSnapshot(
+                        gp.getStatus(),
+                        gp.getPlanJson(),
+                        gp.getProvider(),
+                        gp.getModelUsed(),
+                        gp.getTokensUsed(),
+                        gp.getProcessingTimeMs(),
+                        gp.getErrorMessage(),
+                        gp.getSignedPdfUrl(),
+                        gp.getIsSigned());
 
         Object parsedContent = null;
         if (gp != null && gp.getPlanJson() != null) {
@@ -609,20 +614,22 @@ public class DoctorValidationService {
             Role superAdminRole = roleRepository.findByName(Roles.SuperAdmin.name()).orElse(null);
             if (superAdminRole != null) {
                 List<User> superAdmins = userRepository.findByRole(superAdminRole.getId());
-                
-                String travellerName = plan.getUser() != null ? 
-                    (plan.getUser().getFirstName() + " " + plan.getUser().getLastName()).trim() : "Unknown";
-                String doctorName = doctor != null ? 
-                    (doctor.getFirstName() + " " + doctor.getLastName()).trim() : "Unknown";
+
+                String travellerName = plan.getUser() != null
+                        ? (plan.getUser().getFirstName() + " " + plan.getUser().getLastName()).trim()
+                        : "Unknown";
+                String doctorName = doctor != null ? (doctor.getFirstName() + " " + doctor.getLastName()).trim()
+                        : "Unknown";
                 String feedbackMessage = "Doctor: " + doctorName + "\nFeedback: " + reason;
-                
+
                 for (User superAdmin : superAdmins) {
                     if (superAdmin.getEmail() != null) {
-                        String html = emailTemplates.planElevatedNotificationEmail(travellerName, plan.getDestination(), feedbackMessage);
+                        String html = emailTemplates.planElevatedNotificationEmail(travellerName, plan.getDestination(),
+                                feedbackMessage);
                         emailService.sendHtmlEmail(
-                            superAdmin.getEmail(),
-                            "Elevated Plan Review Required - " + travellerName + " for " + plan.getDestination(),
-                            html);
+                                superAdmin.getEmail(),
+                                "Elevated Plan Review Required - " + travellerName + " for " + plan.getDestination(),
+                                html);
                     }
                 }
             }

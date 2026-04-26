@@ -31,7 +31,7 @@ public class AbuseFlagController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<AbuseFlagResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<AbuseFlagResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

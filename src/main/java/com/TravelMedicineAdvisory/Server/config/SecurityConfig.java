@@ -31,6 +31,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@SuppressWarnings("deprecation")
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;

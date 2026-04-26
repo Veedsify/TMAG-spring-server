@@ -31,7 +31,7 @@ public class RolePermissionController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<RolePermissionResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<RolePermissionResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

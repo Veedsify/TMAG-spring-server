@@ -31,7 +31,7 @@ public class AiRequestLogController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<AiRequestLogResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<AiRequestLogResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

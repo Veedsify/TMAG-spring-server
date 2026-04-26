@@ -32,7 +32,7 @@ public class EmployeeController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<EmployeeResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<EmployeeResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

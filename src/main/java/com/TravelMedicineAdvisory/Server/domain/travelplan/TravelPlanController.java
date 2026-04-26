@@ -50,7 +50,7 @@ public class TravelPlanController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<TravelPlanResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<TravelPlanResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

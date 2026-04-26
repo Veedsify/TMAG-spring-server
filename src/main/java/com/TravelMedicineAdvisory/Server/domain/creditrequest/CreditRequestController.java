@@ -42,7 +42,7 @@ public class CreditRequestController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<CreditRequestResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<CreditRequestResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

@@ -20,7 +20,7 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+// import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
@@ -35,7 +35,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.gax.rpc.NotFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 

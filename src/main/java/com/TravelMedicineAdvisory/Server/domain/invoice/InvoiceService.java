@@ -2,7 +2,6 @@ package com.TravelMedicineAdvisory.Server.domain.invoice;
 
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
@@ -29,17 +28,15 @@ public class InvoiceService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final CompanyUserRepository companyUserRepository;
-    private final QueueService queueService;
     private final AdminNotificationService adminNotificationService;
 
-    public InvoiceService(InvoiceRepository repository, CompanyRepository companyRepository, 
-            UserRepository userRepository, CompanyUserRepository companyUserRepository, QueueService queueService,
+    public InvoiceService(InvoiceRepository repository, CompanyRepository companyRepository,
+            UserRepository userRepository, CompanyUserRepository companyUserRepository,
             AdminNotificationService adminNotificationService) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
         this.companyUserRepository = companyUserRepository;
-        this.queueService = queueService;
         this.adminNotificationService = adminNotificationService;
     }
 
@@ -127,7 +124,8 @@ public class InvoiceService {
     }
 
     private String getCurrencySymbol(String currency) {
-        if (currency == null) return "$";
+        if (currency == null)
+            return "$";
         return switch (currency.toUpperCase()) {
             case "USD" -> "$";
             case "EUR" -> "€";
@@ -155,20 +153,19 @@ public class InvoiceService {
 
     private InvoiceResponse toResponse(Invoice entity) {
         return new InvoiceResponse(
-            entity.getId(),
-            entity.getAmount(),
-            entity.getCurrency(),
-            entity.getStatus(),
-            entity.getDescription(),
-            entity.getIssuedAt(),
-            entity.getDueDate(),
-            entity.getPaidAt(),
-            entity.getPaymentMethod(),
-            entity.getCompany() != null ? entity.getCompany().getId() : null,
-            entity.getUser() != null ? entity.getUser().getId() : null,
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
+                entity.getId(),
+                entity.getAmount(),
+                entity.getCurrency(),
+                entity.getStatus(),
+                entity.getDescription(),
+                entity.getIssuedAt(),
+                entity.getDueDate(),
+                entity.getPaidAt(),
+                entity.getPaymentMethod(),
+                entity.getCompany() != null ? entity.getCompany().getId() : null,
+                entity.getUser() != null ? entity.getUser().getId() : null,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 
     private void mapRequestToEntity(InvoiceRequest request, Invoice entity) {

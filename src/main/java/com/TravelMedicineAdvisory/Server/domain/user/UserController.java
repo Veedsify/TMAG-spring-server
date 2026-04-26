@@ -30,7 +30,7 @@ public class UserController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<UserResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<UserResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

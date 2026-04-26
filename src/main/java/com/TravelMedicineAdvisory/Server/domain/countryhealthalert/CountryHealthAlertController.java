@@ -31,7 +31,7 @@ public class CountryHealthAlertController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<CountryHealthAlertResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<CountryHealthAlertResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

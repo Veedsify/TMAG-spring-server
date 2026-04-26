@@ -227,6 +227,7 @@ public class AuthService {
     }
 
     @Transactional
+    @SuppressWarnings("unchecked")
     public AuthResponse googleCallback(String code, String planCode) {
         if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null
                 || googleClientSecret.isBlank()) {

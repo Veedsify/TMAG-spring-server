@@ -22,6 +22,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 @Configuration
 @EnableCaching
+@SuppressWarnings("deprecation")
 public class CacheConfig {
 
     /**

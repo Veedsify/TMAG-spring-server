@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@SuppressWarnings("deprecation")
 public class AiGenerationClient {
 
     private final WebClient webClient;

@@ -36,7 +36,7 @@ public class PlanUsageLedgerController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+        PaginatedResponse<java.util.List<PlanUsageLedgerResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(),
                 pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
@@ -52,7 +52,7 @@ public class PlanUsageLedgerController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+        PaginatedResponse<java.util.List<PlanUsageLedgerResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(),
                 pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
@@ -67,7 +67,7 @@ public class PlanUsageLedgerController {
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<PlanUsageLedgerResponse> paginatedResponse = new PaginatedResponse(page.getContent(),
+        PaginatedResponse<java.util.List<PlanUsageLedgerResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(),
                 pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }

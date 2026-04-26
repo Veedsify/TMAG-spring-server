@@ -51,7 +51,7 @@ public class InvoiceController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<InvoiceResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<InvoiceResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

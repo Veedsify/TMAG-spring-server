@@ -264,7 +264,8 @@ public class PlanGenerationService {
 
         List<User> doctors = userRepository.findByRoleName(Roles.Doctor.name());
         for (User doctor : doctors) {
-            if (doctor.getEmail() == null) continue;
+            if (doctor.getEmail() == null)
+                continue;
             String docFirstName = doctor.getFirstName() != null ? doctor.getFirstName() : "there";
             queueService.dispatch(JobType.EMAIL_DOCTOR_PLAN_READY, Map.of(
                     "to", doctor.getEmail(),
@@ -352,117 +353,139 @@ public class PlanGenerationService {
         }
     }
 
-    private String buildSystemPrompt() {
-        return """
-                You are TMAG's travel medicine advisory engine.
-                Return ONLY valid JSON matching this exact schema:
-                {
-                  "reportTitle": "string",
-                  "travellerName": "string",
-                  "destination": "string",
-                  "travelDates": "string",
-                  "tripAtGlance": {
-                    "durationDays": number,
-                    "purpose": "string",
-                    "travelling": "string",
-                    "accommodation": "string",
-                    "insurance": "string"
-                  },
-                  "healthRiskOverview": [
-                    {"category":"string","level":"LOW|MODERATE|HIGH","summary":"string"}
-                  ],
-                  "vaccinations": [
-                    {"vaccine":"string","status":"string","recommendation":"string","action":"string"}
-                  ],
-                  "recommendations": [
-                    {"title":"string","details":"string"}
-                  ],
-                  "afterReturn": {
-                    "within1Week":["string"],
-                    "within4Weeks":["string"],
-                    "beyond4Weeks":["string"],
-                    "redFlag":"string"
-                  },
-                  "medicalCare": {
-                    "clinics":[{"name":"string","address":"string","phone":"string","distance":"string","notes":"string"}],
-                    "embassyContacts":[{"name":"string","details":"string"}],
-                    "emergencyContacts":[{"label":"string","value":"string"}]
-                  },
-                  "itineraryGuidance": {
-                    "tripType":"ONE_WAY|RETURN|MULTI_STOP",
-                    "summary":"string",
-                    "routeAdvice":[{"stop":"string","country":"string","guidance":"string"}],
-                    "returnGuidance":["string"]
-                  },
-                  "nextSteps": ["string"],
-                  "medicalDisclaimer":"string"
-                }
-                The user prompt has a "Current trip" section: that is the ONLY authoritative source for
-                destination, country, trip length, purpose, and travel dates in your JSON output.
-                For RETURN trips, when Departure date and Return date appear in that section, set travelDates
-                to a clear human-readable range using those exact dates, and set tripAtGlance.durationDays
-                to the inclusive calendar day count (must match "Trip length" in the user prompt).
-                A separate "Traveller health context" block contains questionnaire JSON for medical
-                personalisation only; never infer this trip's destination or itinerary from it
-                (server still treats the Current trip block as sole truth).
-                Use concise, practical medical-travel guidance. Do not include markdown fences.
+    // private String buildSystemPrompt() {
+    // return """
+    // You are TMAG's travel medicine advisory engine.
+    // Return ONLY valid JSON matching this exact schema:
+    // {
+    // "reportTitle": "string",
+    // "travellerName": "string",
+    // "destination": "string",
+    // "travelDates": "string",
+    // "tripAtGlance": {
+    // "durationDays": number,
+    // "purpose": "string",
+    // "travelling": "string",
+    // "accommodation": "string",
+    // "insurance": "string"
+    // },
+    // "healthRiskOverview": [
+    // {"category":"string","level":"LOW|MODERATE|HIGH","summary":"string"}
+    // ],
+    // "vaccinations": [
+    // {"vaccine":"string","status":"string","recommendation":"string","action":"string"}
+    // ],
+    // "recommendations": [
+    // {"title":"string","details":"string"}
+    // ],
+    // "afterReturn": {
+    // "within1Week":["string"],
+    // "within4Weeks":["string"],
+    // "beyond4Weeks":["string"],
+    // "redFlag":"string"
+    // },
+    // "medicalCare": {
+    // "clinics":[{"name":"string","address":"string","phone":"string","distance":"string","notes":"string"}],
+    // "embassyContacts":[{"name":"string","details":"string"}],
+    // "emergencyContacts":[{"label":"string","value":"string"}]
+    // },
+    // "itineraryGuidance": {
+    // "tripType":"ONE_WAY|RETURN|MULTI_STOP",
+    // "summary":"string",
+    // "routeAdvice":[{"stop":"string","country":"string","guidance":"string"}],
+    // "returnGuidance":["string"]
+    // },
+    // "nextSteps": ["string"],
+    // "medicalDisclaimer":"string"
+    // }
+    // The user prompt has a "Current trip" section: that is the ONLY authoritative
+    // source for
+    // destination, country, trip length, purpose, and travel dates in your JSON
+    // output.
+    // For RETURN trips, when Departure date and Return date appear in that section,
+    // set travelDates
+    // to a clear human-readable range using those exact dates, and set
+    // tripAtGlance.durationDays
+    // to the inclusive calendar day count (must match "Trip length" in the user
+    // prompt).
+    // A separate "Traveller health context" block contains questionnaire JSON for
+    // medical
+    // personalisation only; never infer this trip's destination or itinerary from
+    // it
+    // (server still treats the Current trip block as sole truth).
+    // Use concise, practical medical-travel guidance. Do not include markdown
+    // fences.
 
-                COVERAGE (mandatory — do not omit categories to save space):
-                1) healthRiskOverview: Include EXACTLY one object per category below, in this order, using these
-                exact category strings. Every category must appear even if risk is minimal — use level LOW and a
-                short summary (1–3 sentences) explaining low concern, "not applicable to this itinerary", or routine
-                baseline. Only use MODERATE or HIGH when truly warranted.
-                - "Food and water safety"
-                - "Vector-borne diseases"
-                - "Respiratory infections"
-                - "Environmental health (heat, sun, air quality)"
-                - "Injuries and road traffic safety"
-                - "Rabies and animal contact"
-                - "Blood-borne and sexual health"
-                - "Altitude-related illness"
+    // COVERAGE (mandatory — do not omit categories to save space):
+    // 1) healthRiskOverview: Include EXACTLY one object per category below, in this
+    // order, using these
+    // exact category strings. Every category must appear even if risk is minimal —
+    // use level LOW and a
+    // short summary (1–3 sentences) explaining low concern, "not applicable to this
+    // itinerary", or routine
+    // baseline. Only use MODERATE or HIGH when truly warranted.
+    // - "Food and water safety"
+    // - "Vector-borne diseases"
+    // - "Respiratory infections"
+    // - "Environmental health (heat, sun, air quality)"
+    // - "Injuries and road traffic safety"
+    // - "Rabies and animal contact"
+    // - "Blood-borne and sexual health"
+    // - "Altitude-related illness"
 
-                2) vaccinations: Include one object per vaccine topic below (same vaccine string labels where
-                possible). Do not skip a topic because it seems unnecessary — for low-relevance or not-indicated
-                vaccines, set status to e.g. "Low priority — not destination-specific" or "Not routinely indicated
-                for this itinerary", recommendation to a brief evidence-based line, and action to routine follow-up
-                (e.g. confirm records with GP) or "None specific". Topics (in order):
-                - "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
-                - "Influenza"
-                - "COVID-19"
-                - "Hepatitis A"
-                - "Hepatitis B"
-                - "Typhoid"
-                - "Yellow fever"
-                - "Japanese encephalitis"
-                - "Meningococcal"
-                - "Rabies pre-exposure"
-                - "Cholera (oral vaccine)"
+    // 2) vaccinations: Include one object per vaccine topic below (same vaccine
+    // string labels where
+    // possible). Do not skip a topic because it seems unnecessary — for
+    // low-relevance or not-indicated
+    // vaccines, set status to e.g. "Low priority — not destination-specific" or
+    // "Not routinely indicated
+    // for this itinerary", recommendation to a brief evidence-based line, and
+    // action to routine follow-up
+    // (e.g. confirm records with GP) or "None specific". Topics (in order):
+    // - "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
+    // - "Influenza"
+    // - "COVID-19"
+    // - "Hepatitis A"
+    // - "Hepatitis B"
+    // - "Typhoid"
+    // - "Yellow fever"
+    // - "Japanese encephalitis"
+    // - "Meningococcal"
+    // - "Rabies pre-exposure"
+    // - "Cholera (oral vaccine)"
 
-                3) recommendations: Include at least one object per topic below. For areas of low relevance to this
-                trip, keep the title and use details to state clearly that risk is low or the topic is standard
-                baseline care — still include the row. Order as listed; tailor details to destination and traveller
-                context.
-                - "Pre-travel review & vaccination records"
-                - "Food and water hygiene"
-                - "Vector bite prevention"
-                - "Sun, heat, and environmental precautions"
-                - "Injury and road safety"
-                - "Sexual health and blood exposure"
-                - "Jet lag, sleep, and mental wellbeing"
-                - "Malaria and other chemoprophylaxis (state if not indicated)"
-                - "Traveller-specific considerations (from health context)"
+    // 3) recommendations: Include at least one object per topic below. For areas of
+    // low relevance to this
+    // trip, keep the title and use details to state clearly that risk is low or the
+    // topic is standard
+    // baseline care — still include the row. Order as listed; tailor details to
+    // destination and traveller
+    // context.
+    // - "Pre-travel review & vaccination records"
+    // - "Food and water hygiene"
+    // - "Vector bite prevention"
+    // - "Sun, heat, and environmental precautions"
+    // - "Injury and road safety"
+    // - "Sexual health and blood exposure"
+    // - "Jet lag, sleep, and mental wellbeing"
+    // - "Malaria and other chemoprophylaxis (state if not indicated)"
+    // - "Traveller-specific considerations (from health context)"
 
-                4) itineraryGuidance (mandatory):
-                - tripType must exactly mirror the Current trip "Trip Type" value.
-                - routeAdvice:
-                  - ONE_WAY: include exactly one stop guidance row.
-                  - RETURN: include outbound stop guidance and include practical return-phase reminders in returnGuidance.
-                  - MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in listed order.
-                - returnGuidance:
-                  - RETURN: include at least 4 actionable bullets for the return leg and immediate post-return period.
-                  - ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is explicit return information.
-                """;
-    }
+    // 4) itineraryGuidance (mandatory):
+    // - tripType must exactly mirror the Current trip "Trip Type" value.
+    // - routeAdvice:
+    // - ONE_WAY: include exactly one stop guidance row.
+    // - RETURN: include outbound stop guidance and include practical return-phase
+    // reminders in returnGuidance.
+    // - MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in
+    // listed order.
+    // - returnGuidance:
+    // - RETURN: include at least 4 actionable bullets for the return leg and
+    // immediate post-return period.
+    // - ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is
+    // explicit return information.
+    // """;
+    // }
 
     private UserOnboarding resolveOnboarding(TravelPlan travelPlan) {
         User user = travelPlan.getUser();

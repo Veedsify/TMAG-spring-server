@@ -31,7 +31,7 @@ public class SystemSettingController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<SystemSettingResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<SystemSettingResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

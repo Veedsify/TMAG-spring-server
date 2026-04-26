@@ -31,7 +31,7 @@ public class UserOnboardingController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<UserOnboardingResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<UserOnboardingResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
