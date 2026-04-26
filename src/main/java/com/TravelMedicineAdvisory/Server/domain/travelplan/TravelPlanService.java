@@ -20,7 +20,6 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-// import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
@@ -203,7 +202,7 @@ public class TravelPlanService {
         String tier = resolvePlanTier(user);
         entity.setPlanTier(PlanTier.valueOf(tier));
         entity.setDoctorValidationStatus(
-                tier == PlanTier.FREE.name() ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+                tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
 
         TravelPlan saved = repository.save(entity);
         persistQuestionnaireResponses(normalized, saved);
@@ -447,7 +446,7 @@ public class TravelPlanService {
                     request.employeeId(),
                     request.userId(),
                     request.planTier());
-        } catch (Exception ex) {
+        } catch (JsonProcessingException ex) {
             return request;
         }
     }
