@@ -1,7 +1,10 @@
 package com.TravelMedicineAdvisory.Server.domain.doctor;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+import com.TravelMedicineAdvisory.Server.core.types.Pagination;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -73,15 +76,31 @@ public class DoctorController {
   // ─── Plan Lists ───────────────────────────────────────────
 
   @GetMapping("/pending")
-  public ResponseEntity<SuccessResponse> getPendingPlans() {
+  public ResponseEntity<SuccessResponse> getPendingPlans(Pageable pageable) {
+    Page<DoctorValidationPlanDto> page = doctorValidationService.getPendingPlansDto(pageable);
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-        Map.of("data", doctorValidationService.getPendingPlansDto())));
+        Map.of(
+            "data", page.getContent(),
+            "pagination", new Pagination(
+                (int) page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getSize(),
+                page.getTotalPages()))));
   }
 
   @GetMapping("/validated")
-  public ResponseEntity<SuccessResponse> getValidatedPlans(@AuthenticationPrincipal AppUserDetails user) {
+  public ResponseEntity<SuccessResponse> getValidatedPlans(
+      @AuthenticationPrincipal AppUserDetails user,
+      Pageable pageable) {
+    Page<DoctorValidationPlanDto> page = doctorValidationService.getValidatedPlansDto(user.getUserId(), pageable);
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
-        Map.of("data", doctorValidationService.getValidatedPlansDto(user.getUserId()))));
+        Map.of(
+            "data", page.getContent(),
+            "pagination", new Pagination(
+                (int) page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getSize(),
+                page.getTotalPages()))));
   }
 
   @GetMapping("/plans/pending")

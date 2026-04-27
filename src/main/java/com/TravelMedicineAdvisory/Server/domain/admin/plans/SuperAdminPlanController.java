@@ -2,11 +2,9 @@ package com.TravelMedicineAdvisory.Server.domain.admin.plans;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
-import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.ElevatedPlanProjection;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,7 +44,7 @@ public class SuperAdminPlanController {
     @Transactional(readOnly = true)
     public ResponseEntity<SuccessResponse> getElevatedPlans(Pageable pageable) {
         Page<ElevatedPlanResponse> elevatedPlans = travelPlanRepository
-                .findByDoctorValidationStatus(DoctorValidationStatus.ELEVATED, pageable)
+                .findElevatedPlanSummaries(DoctorValidationStatus.ELEVATED, pageable)
                 .map(this::toElevatedPlanResponse);
         return ResponseEntity.ok(new SuccessResponse("Elevated plans retrieved successfully", elevatedPlans));
     }
@@ -107,32 +105,26 @@ public class SuperAdminPlanController {
                 .body(pdf);
     }
 
-    private ElevatedPlanResponse toElevatedPlanResponse(TravelPlan plan) {
-        User traveller = plan.getUser();
-        User doctor = plan.getValidatedBy();
-        GeneratedPlan generatedPlan = generatedPlanRepository.findByTravelPlanId(plan.getId()).orElse(null);
+    private ElevatedPlanResponse toElevatedPlanResponse(ElevatedPlanProjection plan) {
         return new ElevatedPlanResponse(
                 plan.getId(),
                 plan.getDestination(),
                 plan.getDuration(),
                 plan.getPurpose(),
                 plan.getRiskScore(),
-                fullName(traveller),
-                traveller != null ? traveller.getEmail() : "",
-                fullName(doctor),
-                plan.getRejectionReason(),
-                generatedPlan != null ? generatedPlan.getSignedPdfUrl() : null,
-                generatedPlan != null ? generatedPlan.getSummaryPdfUrl() : null,
-                plan.getValidatedAt());
+                fullName(plan.getTravellerFirstName(), plan.getTravellerLastName(), plan.getTravellerName()),
+                plan.getTravellerEmail() != null ? plan.getTravellerEmail() : "",
+                fullName(plan.getDoctorFirstName(), plan.getDoctorLastName(), plan.getDoctorName()),
+                plan.getDoctorFeedback(),
+                plan.getPdfPreviewUrl(),
+                plan.getSummaryPreviewUrl(),
+                plan.getElevatedAt());
     }
 
-    private String fullName(User user) {
-        if (user == null) {
-            return "";
-        }
-        String firstName = user.getFirstName() != null ? user.getFirstName() : "";
-        String lastName = user.getLastName() != null ? user.getLastName() : "";
+    private String fullName(String firstNameValue, String lastNameValue, String fallbackName) {
+        String firstName = firstNameValue != null ? firstNameValue : "";
+        String lastName = lastNameValue != null ? lastNameValue : "";
         String name = (firstName + " " + lastName).trim();
-        return name.isBlank() && user.getName() != null ? user.getName() : name;
+        return !name.isBlank() ? name : (fallbackName != null ? fallbackName : "");
     }
 }

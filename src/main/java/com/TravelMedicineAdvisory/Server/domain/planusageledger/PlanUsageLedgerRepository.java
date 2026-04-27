@@ -24,4 +24,27 @@ public interface PlanUsageLedgerRepository extends JpaRepository<PlanUsageLedger
 
     @Query("SELECT l FROM PlanUsageLedger l WHERE l.travelPlan.company.id = :companyId ORDER BY l.createdAt DESC")
     List<PlanUsageLedger> findByCompanyIdOrderByCreatedAtDesc(@Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT new com.TravelMedicineAdvisory.Server.domain.report.ComplianceAuditProjection(
+                l.id, l.action, e.name, u.name, tp.destination, l.ipAddress, l.userAgent, l.createdAt)
+            FROM PlanUsageLedger l
+            LEFT JOIN l.travelPlan tp
+            LEFT JOIN tp.employee e
+            LEFT JOIN l.user u
+            ORDER BY l.createdAt DESC
+            """)
+    List<com.TravelMedicineAdvisory.Server.domain.report.ComplianceAuditProjection> findComplianceAuditRows();
+
+    @Query("""
+            SELECT new com.TravelMedicineAdvisory.Server.domain.report.ComplianceAuditProjection(
+                l.id, l.action, e.name, u.name, tp.destination, l.ipAddress, l.userAgent, l.createdAt)
+            FROM PlanUsageLedger l
+            LEFT JOIN l.travelPlan tp
+            LEFT JOIN tp.employee e
+            LEFT JOIN l.user u
+            WHERE tp.company.id = :companyId
+            ORDER BY l.createdAt DESC
+            """)
+    List<com.TravelMedicineAdvisory.Server.domain.report.ComplianceAuditProjection> findComplianceAuditRowsByCompanyId(@Param("companyId") Long companyId);
 }

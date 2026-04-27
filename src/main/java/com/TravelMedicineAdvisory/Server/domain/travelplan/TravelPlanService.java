@@ -73,17 +73,15 @@ public class TravelPlanService {
     }
 
     @Transactional(readOnly = true)
-    public Page<TravelPlanResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
+    public Page<TravelPlanListItemResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
         if (companyId != null) {
             if (!isUserInCompany(currentUserId, companyId)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "You do not have access to this company's plans");
             }
-            return repository.findAllByCompanyId(companyId, pageable)
-                    .map(this::toResponse);
+            return repository.findListItemsByCompanyId(companyId, pageable);
         }
-        return repository.findAllByUserId(currentUserId, pageable)
-                .map(this::toResponse);
+        return repository.findListItemsByUserId(currentUserId, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -173,12 +171,10 @@ public class TravelPlanService {
     }
 
     private boolean isUserInCompany(Long userId, Long companyId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(
-                        () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
-        return companyUserRepository.findAllByUser(user).stream()
-                .map(companyUser -> companyUser.getCompany().getId())
-                .anyMatch(companyId::equals);
+        if (!userRepository.existsById(userId)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found");
+        }
+        return companyUserRepository.existsActiveByUserIdAndCompanyId(userId, companyId);
     }
 
     @Transactional

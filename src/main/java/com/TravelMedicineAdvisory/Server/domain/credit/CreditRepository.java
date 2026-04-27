@@ -48,5 +48,8 @@ public interface CreditRepository extends JpaRepository<Credit, Long> {
     @Query("SELECT COALESCE(SUM(c.amount), 0) FROM Credit c WHERE c.type = 'consume' AND c.company.id = :companyId")
     Integer sumConsumedByCompanyId(@Param("companyId") Long companyId);
 
+    @Query("SELECT COALESCE(SUM(ABS(c.amount)), 0) FROM Credit c WHERE c.type = 'consume' AND c.user.type = :userType")
+    long sumConsumedByUserType(@Param("userType") String userType);
+
     boolean existsByTypeAndReference(String type, String reference);
 }

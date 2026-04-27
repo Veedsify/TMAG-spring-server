@@ -14,12 +14,21 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "travel_plans")
+@Table(name = "travel_plans", indexes = {
+        @Index(name = "idx_travel_plans_active_created", columnList = "deleted_at, created_at"),
+        @Index(name = "idx_travel_plans_user_active_created", columnList = "user_id, deleted_at, created_at"),
+        @Index(name = "idx_travel_plans_company_active_created", columnList = "company_id, deleted_at, created_at"),
+        @Index(name = "idx_travel_plans_employee_created", columnList = "employee_id, created_at"),
+        @Index(name = "idx_travel_plans_status_active_created", columnList = "status, deleted_at, created_at"),
+        @Index(name = "idx_travel_plans_doctor_status_updated", columnList = "doctor_validation_status, deleted_at, updated_at"),
+        @Index(name = "idx_travel_plans_validator_status_date", columnList = "validated_by_id, doctor_validation_status, deleted_at, validated_at")
+})
 @SQLDelete(sql = "UPDATE travel_plans SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class TravelPlan extends BaseEntity {
 

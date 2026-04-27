@@ -8,7 +8,11 @@ import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 @Entity
-@Table(name = "employees")
+@Table(name = "employees", indexes = {
+    @Index(name = "idx_employees_company_active", columnList = "company_id, deleted_at"),
+    @Index(name = "idx_employees_company_status", columnList = "company_id, status"),
+    @Index(name = "idx_employees_user", columnList = "user_id")
+})
 @SQLDelete(sql = "UPDATE employees SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 
 public class Employee extends BaseEntity {

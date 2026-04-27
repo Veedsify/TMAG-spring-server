@@ -89,6 +89,11 @@ public class UserSettingService {
 
     @Transactional(readOnly = true)
     public List<UserSetting> findByDoctorApplicationStatus(DoctorApplicationStatus status) {
-        return userSettingRepository.findByDoctorApplicationStatusAndDeletedAtIsNull(status);
+        return userSettingRepository.findWithUserByDoctorApplicationStatusAndDeletedAtIsNull(status);
+    }
+
+    @Transactional(readOnly = true)
+    public long countByDoctorApplicationStatus(DoctorApplicationStatus status) {
+        return userSettingRepository.countByDoctorApplicationStatusAndDeletedAtIsNull(status);
     }
 }

@@ -50,4 +50,11 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("SELECT COALESCE(SUM(i.amount), 0) FROM Invoice i WHERE i.status = 'pending' AND i.deletedAt IS NULL")
     Long sumPendingInvoices();
+
+    @Query("""
+            SELECT new com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRevenueProjection(i.amount, i.currency, i.paidAt)
+            FROM Invoice i
+            WHERE i.status = :status AND i.deletedAt IS NULL
+            """)
+    List<InvoiceRevenueProjection> findRevenueFieldsByStatus(@Param("status") String status);
 }

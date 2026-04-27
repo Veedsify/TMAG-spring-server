@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
+import java.time.LocalDateTime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,6 +44,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.deletedAt IS NOT NULL")
     long countSuspended();
+
+    @Query("SELECT COALESCE(SUM(u.credits), 0) FROM User u WHERE u.type = :type AND u.deletedAt IS NULL")
+    long sumCreditsByType(@Param("type") String type);
+
+    @Query("SELECT COALESCE(AVG(u.credits), 0) FROM User u WHERE u.deletedAt IS NULL")
+    double averageCreditsActiveUsers();
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.deletedAt IS NULL AND u.lastLogin >= :start AND u.lastLogin < :end")
+    long countActiveLastLoginBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.deletedAt IS NULL AND u.createdAt >= :since")
+    long countCreatedSince(@Param("since") LocalDateTime since);
 
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> searchUsers(@Param("search") String search, Pageable pageable);

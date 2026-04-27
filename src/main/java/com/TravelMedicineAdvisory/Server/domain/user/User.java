@@ -17,13 +17,21 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_users_active_created", columnList = "deleted_at, created_at"),
+    @Index(name = "idx_users_type_active", columnList = "type, deleted_at"),
+    @Index(name = "idx_users_role_active", columnList = "role_id, deleted_at"),
+    @Index(name = "idx_users_last_login_active", columnList = "deleted_at, last_login"),
+    @Index(name = "idx_users_email", columnList = "email"),
+    @Index(name = "idx_users_username", columnList = "username")
+})
 @SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class User extends BaseEntity {
 

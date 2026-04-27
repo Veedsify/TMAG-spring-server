@@ -11,21 +11,28 @@ import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.DoctorValidationPlanProjection;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -290,18 +297,16 @@ public class DoctorValidationService {
 
     @Transactional(readOnly = true)
     public DoctorDashboardStats getDashboardStats(Long doctorId) {
-        long pendingValidations = travelPlanRepository.findPendingDoctorValidation().size();
-        long approvedToday = travelPlanRepository.countApprovedByDoctorToday(doctorId);
+        LocalDateTime todayStart = LocalDateTime.now().with(LocalTime.MIN);
+        LocalDateTime tomorrowStart = todayStart.plusDays(1);
+        long pendingValidations = travelPlanRepository.countPendingDoctorValidation();
+        long approvedToday = travelPlanRepository.countApprovedByDoctorBetween(doctorId, todayStart, tomorrowStart);
         long totalValidated = travelPlanRepository.countValidatedByDoctor(doctorId);
 
-        List<TravelPlan> recentPending = travelPlanRepository.findPendingDoctorValidation();
-        List<DoctorValidationPlanDto> recentPlans = recentPending.stream()
-                .limit(5)
-                .map(plan -> {
-                    GeneratedPlan gp = generatedPlanRepository.findByTravelPlanId(plan.getId()).orElse(null);
-                    return toDoctorValidationPlanDto(plan, gp);
-                })
-                .toList();
+        List<DoctorValidationPlanDto> recentPlans = travelPlanRepository
+                .findPendingDoctorValidationSummaries(PageRequest.of(0, 5))
+                .map(this::toDoctorValidationPlanDto)
+                .getContent();
 
         return new DoctorDashboardStats(pendingValidations, approvedToday, totalValidated, recentPlans);
     }
@@ -311,23 +316,15 @@ public class DoctorValidationService {
     // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public List<DoctorValidationPlanDto> getPendingPlansDto() {
-        return travelPlanRepository.findPendingDoctorValidation().stream()
-                .map(plan -> {
-                    GeneratedPlan gp = generatedPlanRepository.findByTravelPlanId(plan.getId()).orElse(null);
-                    return toDoctorValidationPlanDto(plan, gp);
-                })
-                .toList();
+    public Page<DoctorValidationPlanDto> getPendingPlansDto(Pageable pageable) {
+        return travelPlanRepository.findPendingDoctorValidationSummaries(pageable)
+                .map(this::toDoctorValidationPlanDto);
     }
 
     @Transactional(readOnly = true)
-    public List<DoctorValidationPlanDto> getValidatedPlansDto(Long doctorId) {
-        return travelPlanRepository.findValidatedByDoctor(doctorId).stream()
-                .map(plan -> {
-                    GeneratedPlan gp = generatedPlanRepository.findByTravelPlanId(plan.getId()).orElse(null);
-                    return toDoctorValidationPlanDto(plan, gp);
-                })
-                .toList();
+    public Page<DoctorValidationPlanDto> getValidatedPlansDto(Long doctorId, Pageable pageable) {
+        return travelPlanRepository.findValidatedDoctorValidationSummaries(doctorId, pageable)
+                .map(this::toDoctorValidationPlanDto);
     }
 
     @Transactional(readOnly = true)
@@ -377,7 +374,7 @@ public class DoctorValidationService {
         if (gp != null && gp.getPlanJson() != null) {
             try {
                 parsedContent = objectMapper.readValue(gp.getPlanJson(), Object.class);
-            } catch (Exception e) {
+            } catch (JsonProcessingException e) {
                 log.warn("Failed to parse planJson for planId={}: {}", planId, e.getMessage());
             }
         }
@@ -562,21 +559,20 @@ public class DoctorValidationService {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private DoctorValidationPlanDto toDoctorValidationPlanDto(TravelPlan plan, GeneratedPlan gp) {
-        User user = plan.getUser();
+    private DoctorValidationPlanDto toDoctorValidationPlanDto(DoctorValidationPlanProjection plan) {
         return new DoctorValidationPlanDto(
-                plan.getId(),
+                plan.getPlanId(),
                 plan.getDestination(),
                 plan.getCountry(),
                 plan.getPurpose(),
                 plan.getDuration(),
                 plan.getRiskScore(),
-                plan.getDoctorValidationStatus() != null ? plan.getDoctorValidationStatus().name() : "NOT_REQUIRED",
+                plan.getValidationStatus() != null ? plan.getValidationStatus().name() : "NOT_REQUIRED",
                 plan.getPlanTier() != null ? plan.getPlanTier().name() : "FREE",
-                user != null ? (user.getFirstName() + " " + user.getLastName()).trim() : "",
-                user != null ? user.getEmail() : "",
+                fullName(plan.getTravellerFirstName(), plan.getTravellerLastName(), plan.getTravellerName()),
+                plan.getTravellerEmail() != null ? plan.getTravellerEmail() : "",
                 plan.getCreatedAt(),
-                gp != null ? gp.getStatus() : null);
+                plan.getGeneratedPlanStatus());
     }
 
     private DoctorPlanResponse toDoctorPlanResponse(TravelPlan plan) {
@@ -600,10 +596,17 @@ public class DoctorValidationService {
         return "there";
     }
 
+    private String fullName(String firstName, String lastName, String fallbackName) {
+        String first = firstName != null ? firstName : "";
+        String last = lastName != null ? lastName : "";
+        String name = (first + " " + last).trim();
+        return !name.isBlank() ? name : (fallbackName != null ? fallbackName : "");
+    }
+
     private byte[] readMultipartFile(MultipartFile file) {
         try {
             return file.getBytes();
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException("Failed to read uploaded file", e);
         }
     }

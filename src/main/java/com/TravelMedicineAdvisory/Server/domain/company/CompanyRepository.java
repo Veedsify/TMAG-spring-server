@@ -33,6 +33,12 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     @Query("SELECT COUNT(c) FROM Company c WHERE c.deletedAt IS NULL")
     long countAllActive();
 
+    @Query("SELECT COALESCE(SUM(c.totalCredits), 0) FROM Company c WHERE c.deletedAt IS NULL")
+    long sumTotalCreditsActive();
+
+    @Query("SELECT COALESCE(SUM(c.usedCredits), 0) FROM Company c WHERE c.deletedAt IS NULL")
+    long sumUsedCreditsActive();
+
     @Query("SELECT c FROM Company c WHERE c.deletedAt IS NULL AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Company> searchCompanies(@Param("search") String search, Pageable pageable);
 }

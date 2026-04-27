@@ -10,7 +10,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "invoices")
+@Table(name = "invoices", indexes = {
+    @Index(name = "idx_invoices_active_created", columnList = "deleted_at, created_at"),
+    @Index(name = "idx_invoices_company_active_created", columnList = "company_id, deleted_at, created_at"),
+    @Index(name = "idx_invoices_user_active_created", columnList = "user_id, deleted_at, created_at"),
+    @Index(name = "idx_invoices_status_active_created", columnList = "status, deleted_at, created_at"),
+    @Index(name = "idx_invoices_status_active_paid", columnList = "status, deleted_at, paid_at")
+})
 @SQLDelete(sql = "UPDATE invoices SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 
 public class Invoice extends BaseEntity {

@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,23 +54,22 @@ public class SuperAdminDoctorController {
     @GetMapping("/applications")
     public ResponseEntity<SuccessResponse> getApplications() {
         List<UserSetting> applications = userSettingService.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
-        List<Map<String, Object>> dtos = applications.stream()
+        List<AdminDoctorApplicationDto> dtos = applications.stream()
                 .map(s -> {
                     User u = s.getUser();
-                    Map<String, Object> dto = new HashMap<>();
-                    dto.put("userId", u.getId());
-                    dto.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
-                    dto.put("lastName", u.getLastName() != null ? u.getLastName() : "");
-                    dto.put("email", u.getEmail() != null ? u.getEmail() : "");
-                    dto.put("phone", u.getPhone() != null ? u.getPhone() : "");
-                    dto.put("licenseNumber", s.getMedicalLicenseNumber() != null ? s.getMedicalLicenseNumber() : "");
-                    dto.put("specialization", "");
-                    dto.put("applicationStatus", s.getDoctorApplicationStatus() != null ? s.getDoctorApplicationStatus().name() : "NONE");
-                    dto.put("applicationSubmittedAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
-                    dto.put("identityDocumentUrl", null);
-                    dto.put("licenseDocumentUrl", s.getSignatureUrl());
-                    dto.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
-                    return dto;
+                    return new AdminDoctorApplicationDto(
+                            u.getId(),
+                            valueOrEmpty(u.getFirstName()),
+                            valueOrEmpty(u.getLastName()),
+                            valueOrEmpty(u.getEmail()),
+                            valueOrEmpty(u.getPhone()),
+                            valueOrEmpty(s.getMedicalLicenseNumber()),
+                            "",
+                            s.getDoctorApplicationStatus() != null ? s.getDoctorApplicationStatus().name() : "NONE",
+                            u.getCreatedAt() != null ? u.getCreatedAt().toString() : null,
+                            null,
+                            s.getSignatureUrl(),
+                            u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
                 })
                 .toList();
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", dtos));
@@ -83,6 +81,11 @@ public class SuperAdminDoctorController {
         return ResponseEntity.ok(new SuccessResponse("Application approved successfully", null));
     }
 
+    @PostMapping("/{userId}/approve")
+    public ResponseEntity<SuccessResponse> approveApplicationAlias(@PathVariable Long userId) {
+        return approveApplication(userId);
+    }
+
     @PostMapping("/applications/{userId}/reject")
     public ResponseEntity<SuccessResponse> rejectApplication(
             @PathVariable Long userId,
@@ -90,6 +93,13 @@ public class SuperAdminDoctorController {
         String reason = body.getOrDefault("reason", "");
         doctorValidationService.rejectDoctorApplication(userId, reason);
         return ResponseEntity.ok(new SuccessResponse("Application rejected successfully", null));
+    }
+
+    @PostMapping("/{userId}/reject")
+    public ResponseEntity<SuccessResponse> rejectApplicationAlias(
+            @PathVariable Long userId,
+            @RequestBody java.util.Map<String, String> body) {
+        return rejectApplication(userId, body);
     }
 
     @PostMapping("/invite")
@@ -101,43 +111,47 @@ public class SuperAdminDoctorController {
     @GetMapping("/stats")
     public ResponseEntity<SuccessResponse> getStats() {
         long totalDoctors = userRepository.findByRole(this.getDoctorRole().getId()).size();
-        long pendingApplications = userSettingService.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING).size();
+        long pendingApplications = userSettingService.countByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
         long totalValidatedPlans = travelPlanRepository.countAllActive();
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalDoctors", totalDoctors);
-        stats.put("pendingApplications", pendingApplications);
-        stats.put("approvedToday", 0);
-        stats.put("totalValidatedPlans", totalValidatedPlans);
+        AdminDoctorStatsDto stats = new AdminDoctorStatsDto(totalDoctors, pendingApplications, 0, totalValidatedPlans);
         return ResponseEntity.ok(new SuccessResponse("Stats fetched successfully", stats));
     }
 
     @GetMapping
     public ResponseEntity<SuccessResponse> getDoctors() {
         List<User> doctors = userRepository.findByRole(this.getDoctorRole().getId());
-        List<Map<String, Object>> dtos = doctors.stream()
+        List<AdminDoctorListItemDto> dtos = doctors.stream()
                 .map(u -> {
-                    long validatedCount = travelPlanRepository.findApprovedByDoctor(u.getId()).size();
+                    long validatedCount = travelPlanRepository.countApprovedByDoctor(u.getId());
                     UserSetting settings = userSettingService.getOrCreateByUserId(u.getId());
-                    Map<String, Object> dto = new HashMap<>();
-                    dto.put("userId", u.getId());
-                    dto.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
-                    dto.put("lastName", u.getLastName() != null ? u.getLastName() : "");
-                    dto.put("email", u.getEmail() != null ? u.getEmail() : "");
-                    dto.put("phone", u.getPhone() != null ? u.getPhone() : "");
-                    dto.put("licenseNumber", settings.getMedicalLicenseNumber() != null ? settings.getMedicalLicenseNumber() : "");
-                    dto.put("specialization", "");
-                    dto.put("validatedPlansCount", validatedCount);
-                    dto.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
-                    return dto;
+                    return new AdminDoctorListItemDto(
+                            u.getId(),
+                            valueOrEmpty(u.getFirstName()),
+                            valueOrEmpty(u.getLastName()),
+                            valueOrEmpty(u.getEmail()),
+                            valueOrEmpty(u.getPhone()),
+                            valueOrEmpty(settings.getMedicalLicenseNumber()),
+                            "",
+                            validatedCount,
+                            u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
                 })
                 .toList();
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", dtos));
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", Map.of(
+                "data", dtos,
+                "pagination", Map.of(
+                        "total", dtos.size(),
+                        "page", 1,
+                        "pageSize", dtos.size(),
+                        "totalPages", 1))));
     }
 
     @PostMapping("/{userId}/revoke")
     public ResponseEntity<SuccessResponse> revokeDoctor(@PathVariable Long userId) {
         doctorValidationService.revokeDoctor(userId);
         return ResponseEntity.ok(new SuccessResponse("Doctor privileges revoked successfully", null));
+    }
+
+    private String valueOrEmpty(String value) {
+        return value != null ? value : "";
     }
 }

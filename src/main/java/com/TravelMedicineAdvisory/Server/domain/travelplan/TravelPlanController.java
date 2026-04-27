@@ -45,13 +45,13 @@ public class TravelPlanController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Page<TravelPlanResponse> page = service.findAll(companyId, user.getUserId(), pageable);
+        Page<TravelPlanListItemResponse> page = service.findAll(companyId, user.getUserId(), pageable);
         Pagination pagination = new Pagination(
                 (int) page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getSize(),
                 page.getTotalPages());
-        PaginatedResponse<java.util.List<TravelPlanResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<TravelPlanListItemResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 

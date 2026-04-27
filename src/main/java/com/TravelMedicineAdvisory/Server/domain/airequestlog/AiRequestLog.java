@@ -8,7 +8,11 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "ai_request_logs")
+@Table(name = "ai_request_logs", indexes = {
+    @Index(name = "idx_ai_request_logs_active_created", columnList = "deleted_at, created_at"),
+    @Index(name = "idx_ai_request_logs_active_status_created", columnList = "deleted_at, status, created_at"),
+    @Index(name = "idx_ai_request_logs_model_created", columnList = "model_used, created_at")
+})
 @SQLDelete(sql = "UPDATE ai_request_logs SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class AiRequestLog extends BaseEntity {
 

@@ -1,16 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.report;
 
-import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequest;
-import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequestRepository;
-import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
-import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
-import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedger;
-import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedgerRepository;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +8,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequest;
+import com.TravelMedicineAdvisory.Server.domain.creditrequest.CreditRequestRepository;
+import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
+import com.TravelMedicineAdvisory.Server.domain.planusageledger.PlanUsageLedgerRepository;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -40,40 +39,19 @@ public class ReportService {
     }
 
     public UsageReportSummary getUsageReport(Long companyId) {
-        List<Employee> employees;
+        List<UsageReportDto> employeeDtos;
         if (companyId != null) {
-            employees = employeeRepository.findAllByCompanyId(companyId);
+            employeeDtos = employeeRepository.findUsageReportRowsByCompanyId(companyId);
         } else {
-            employees = employeeRepository.findAll();
+            employeeDtos = employeeRepository.findUsageReportRows();
         }
 
-        List<UsageReportDto> employeeDtos = new ArrayList<>();
-        int totalPlans = 0;
-        int totalCreditsUsed = 0;
-        int totalCreditsAllocated = 0;
-
-        for (Employee emp : employees) {
-            int creditsUsed = emp.getCreditsUsed() != null ? emp.getCreditsUsed() : 0;
-            int creditsAllocated = emp.getCreditsAllocated() != null ? emp.getCreditsAllocated() : 0;
-            int plansGen = emp.getPlansGenerated() != null ? emp.getPlansGenerated() : 0;
-
-            totalPlans += plansGen;
-            totalCreditsUsed += creditsUsed;
-            totalCreditsAllocated += creditsAllocated;
-
-            employeeDtos.add(new UsageReportDto(
-                    emp.getName(),
-                    emp.getEmail(),
-                    emp.getDepartment(),
-                    creditsAllocated,
-                    creditsUsed,
-                    plansGen,
-                    emp.getStatus(),
-                    emp.getUpdatedAt()));
-        }
+        int totalPlans = employeeDtos.stream().mapToInt(row -> safeInt(row.plansGenerated())).sum();
+        int totalCreditsUsed = employeeDtos.stream().mapToInt(row -> safeInt(row.creditsUsed())).sum();
+        int totalCreditsAllocated = employeeDtos.stream().mapToInt(row -> safeInt(row.creditsAllocated())).sum();
 
         return new UsageReportSummary(
-                employees.size(),
+                employeeDtos.size(),
                 totalPlans,
                 totalCreditsUsed,
                 totalCreditsAllocated,
@@ -81,61 +59,50 @@ public class ReportService {
     }
 
     public List<PlanHistoryDto> getPlanHistory(Long companyId) {
-        List<TravelPlan> plans;
+        List<PlanHistoryProjection> plans;
         if (companyId != null) {
-            plans = travelPlanRepository.findAllActiveByCompanyId(companyId);
+            plans = travelPlanRepository.findPlanHistoryRowsByCompanyId(companyId);
         } else {
-            plans = travelPlanRepository.findAllActive();
+            plans = travelPlanRepository.findPlanHistoryRows();
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         return plans.stream()
                 .map(plan -> new PlanHistoryDto(
-                        plan.getId(),
-                        plan.getDestination(),
-                        plan.getCountry(),
-                        plan.getPurpose(),
-                        plan.getDuration(),
-                        plan.getRiskScore(),
-                        plan.getStatus(),
-                        plan.getEmployee() != null
-                                ? plan.getEmployee().getName()
-                                : (plan.getUser() != null ? plan.getUser().getName() : null),
-                        plan.getCreatedAt() != null ? plan.getCreatedAt().format(formatter) : null,
-                        plan.getUpdatedAt() != null ? plan.getUpdatedAt().format(formatter) : null))
+                        plan.planId(),
+                        plan.destination(),
+                        plan.country(),
+                        plan.purpose(),
+                        plan.duration(),
+                        plan.riskScore(),
+                        plan.status(),
+                        plan.employeeName(),
+                        plan.createdAt() != null ? plan.createdAt().format(formatter) : null,
+                        plan.updatedAt() != null ? plan.updatedAt().format(formatter) : null))
                 .toList();
     }
 
     public ComplianceReportDto getComplianceReport(Long companyId) {
-        List<PlanUsageLedger> ledgers;
+        List<ComplianceAuditProjection> ledgers;
 
         if (companyId != null) {
-            ledgers = planUsageLedgerRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+            ledgers = planUsageLedgerRepository.findComplianceAuditRowsByCompanyId(companyId);
         } else {
-            ledgers = planUsageLedgerRepository.findAll();
+            ledgers = planUsageLedgerRepository.findComplianceAuditRows();
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         List<ComplianceAuditDto> auditDtos = ledgers.stream()
-                .map(ledger -> {
-                    String employeeName = null;
-                    if (ledger.getTravelPlan() != null && ledger.getTravelPlan().getEmployee() != null) {
-                        employeeName = ledger.getTravelPlan().getEmployee().getName();
-                    } else if (ledger.getUser() != null) {
-                        employeeName = ledger.getUser().getName();
-                    }
-
-                    return new ComplianceAuditDto(
-                            ledger.getId(),
-                            ledger.getAction(),
-                            employeeName,
-                            ledger.getTravelPlan() != null ? ledger.getTravelPlan().getDestination() : null,
-                            ledger.getIpAddress(),
-                            ledger.getUserAgent(),
-                            ledger.getCreatedAt() != null ? ledger.getCreatedAt().format(formatter) : null);
-                })
+                .map(ledger -> new ComplianceAuditDto(
+                        ledger.ledgerId(),
+                        ledger.action(),
+                        ledger.employeeName() != null ? ledger.employeeName() : ledger.fallbackUserName(),
+                        ledger.planDestination(),
+                        ledger.ipAddress(),
+                        ledger.userAgent(),
+                        ledger.createdAt() != null ? ledger.createdAt().format(formatter) : null))
                 .toList();
 
         return new ComplianceReportDto(
@@ -236,13 +203,13 @@ public class ReportService {
     private List<TopEmployeePlansDto> buildTopEmployees(Long companyId) {
         return getUsageReport(companyId).employees().stream()
                 .sorted((a, b) -> Integer.compare(
-                        b.plansGenerated() != null ? b.plansGenerated() : 0,
-                        a.plansGenerated() != null ? a.plansGenerated() : 0))
+                        safeInt(b.plansGenerated()),
+                        safeInt(a.plansGenerated())))
                 .limit(8)
                 .map(e -> new TopEmployeePlansDto(
                         e.employeeName() != null ? e.employeeName() : "—",
-                        e.plansGenerated() != null ? e.plansGenerated() : 0,
-                        e.creditsUsed() != null ? e.creditsUsed() : 0))
+                        safeInt(e.plansGenerated()),
+                        safeInt(e.creditsUsed())))
                 .toList();
     }
 
@@ -257,5 +224,9 @@ public class ReportService {
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .map(e -> new NamedCountDto(e.getKey(), e.getValue()))
                 .toList();
+    }
+
+    private int safeInt(Integer value) {
+        return value != null ? value : 0;
     }
 }

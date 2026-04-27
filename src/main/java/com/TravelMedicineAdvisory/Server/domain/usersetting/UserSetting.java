@@ -10,7 +10,10 @@ import org.hibernate.annotations.SQLDelete;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_settings")
+@Table(name = "user_settings", indexes = {
+    @Index(name = "idx_user_settings_user", columnList = "user_id"),
+    @Index(name = "idx_user_settings_doctor_status", columnList = "doctor_application_status")
+})
 @SQLDelete(sql = "UPDATE user_settings SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class UserSetting extends BaseEntity {
 
