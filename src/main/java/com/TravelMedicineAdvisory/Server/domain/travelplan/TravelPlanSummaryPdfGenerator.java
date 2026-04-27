@@ -26,6 +26,14 @@ public class TravelPlanSummaryPdfGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(TravelPlanSummaryPdfGenerator.class);
 
+    static final String SECTION_1_HEADING = "SECTION 1: CRITICAL ACTIONS BEFORE DEPARTURE";
+    static final String SECTION_2_HEADING = "SECTION 2: TRIP SNAPSHOT";
+    static final String SECTION_3_HEADING = "SECTION 3: VACCINES";
+    static final String SECTION_4_HEADING = "SECTION 4: WHAT TO PACK AND DAILY ROUTINE";
+    static final String SECTION_5_HEADING = "SECTION 5: RED FLAGS AND EMERGENCY CONTACTS";
+    static final String CLOSING_LINE_EXACT =
+            "Full clinical dossier attached. Share with your travel medicine clinician at your pre-travel appointment.";
+
     private static final String TEAL_DEEP = "#0d3d35";
     private static final String TEAL_MID = "#1a7a6a";
     private static final String TEAL_LIGHT = "#dff2ee";
@@ -33,18 +41,181 @@ public class TravelPlanSummaryPdfGenerator {
     private static final String BG_SUBTLE = "#f2ede7";
     private static final String DARK = "#1a1208";
     private static final String BODY = "#3a2e22";
-    private static final String MUTED = "#7a6a5a";
     private static final String BORDER = "#ddd5cb";
-    private static final String GOLD = "#b8892e";
-    private static final String GOLD_SOFT = "#fef6e8";
-    private static final String GOLD_BORDER = "#e8d0a0";
-    private static final String RED = "#b91c1c";
     private static final String RED_SOFT = "#fef2f2";
-    private static final String GREEN = "#065f46";
-    private static final String GREEN_SOFT = "#d1fae5";
     private static final String SEPARATOR = " &#183; ";
 
-    private static final String DISCLAIMER = "This travel health summary was generated with artificial intelligence from the full advisory plan and is provided for quick reference only. It does not replace consultation with a certified travel medicine doctor or licensed medical doctor. Seek urgent medical care for severe symptoms during or after travel.";
+    private static final String ACTION_SHEET_SYSTEM_PROMPT = """
+            You are the TMAG Action Sheet Generator. You operate as the
+            second stage of a two-stage report pipeline. Stage 1 has
+            already produced a complete TMAG Personalised Travel Health
+            Dossier for a specific traveller. Your sole task is to
+            summarise that dossier into a one-page Action Sheet.
+
+            ROLE BOUNDARY
+
+            You are a summariser, not a clinician. You do not generate
+            clinical recommendations. You extract, condense, and reword
+            content that already exists in the input dossier. If a
+            recommendation is not in the dossier, it does not appear in
+            the Action Sheet. If the dossier is silent on an item, you
+            are silent on it. You do not soften, upgrade, or downgrade
+            any clinical instruction. Required stays Required. Strongly
+            Recommended stays Strongly Recommended. Consider stays
+            Consider.
+
+            AUDIENCE
+
+            The traveller themselves, reading on a phone the night
+            before a clinic appointment. Plain language. No medical
+            jargon where a lay term works. Assume no clinical training.
+
+            OUTPUT STRUCTURE
+
+            Produce exactly five sections in this order. Do not add
+            sections. Do not rename sections. Do not reorder sections.
+
+            SECTION 1: CRITICAL ACTIONS BEFORE DEPARTURE
+            A maximum of four bullets. Include only items that are
+            mandatory for entry, time-sensitive due to vaccine lead
+            times, or life-threatening if missed. Each bullet must
+            state the action and the deadline or timing. Order bullets
+            by urgency, most urgent first. If the dossier flags fewer
+            than four such items, list only those.
+
+            SECTION 2: TRIP SNAPSHOT
+            One line. Format: Origin to Destination, duration, purpose,
+            overall risk level. Pull these directly from the dossier
+            header.
+
+            SECTION 3: VACCINES
+            A table with three columns: Vaccine, Status, Action.
+            Include only vaccines marked Required, Strongly
+            Recommended, or Recommended in the input dossier.
+            Exclude any vaccine marked Not Indicated, Not Applicable,
+            or where the dossier states the vaccine is not required for
+            the itinerary.
+            The Action column must be a single short instruction, for
+            example, Arrange before departure, Confirm status with
+            clinician, or Complete accelerated course.
+            Do not include rationale text. Do not include schedule
+            detail. The clinician handles that.
+
+            SECTION 4: WHAT TO PACK AND DAILY ROUTINE
+            A maximum of eight bullets. Must include, when present in
+            the dossier:
+            Malaria prophylaxis: drug name, when to start, daily
+            dosing instruction, when to stop.
+            Essential kit drawn from the dossier: insect repellent
+            with concentration, sunscreen, oral rehydration salts,
+            bed net, condoms if flagged, first aid kit.
+            Do not invent kit items. If the dossier does not list
+            something, do not add it.
+
+            SECTION 5: RED FLAGS AND EMERGENCY CONTACTS
+            One line listing symptoms that require immediate medical
+            attention, drawn from the dossier red flags section.
+            The top two named clinical facilities at the destination,
+            with location.
+            The local emergency number.
+            A line referencing the traveller's insurance emergency
+            line.
+
+            CLOSING LINE
+
+            End the Action Sheet with this exact line on its own:
+            Full clinical dossier attached. Share with your travel
+            medicine clinician at your pre-travel appointment.
+
+            LENGTH CONSTRAINT
+
+            Total output must fit on one A4 page at 11pt body type.
+            Target 350 to 450 words across all five sections combined.
+            Do not exceed 450 words.
+
+            STYLE RULES
+
+            Plain language. Short sentences.
+            Active voice where possible.
+            No dashes anywhere. Use commas, full stops, or rephrase.
+            No clinical rationale, no behavioural risk discussion, no
+            jet lag content, no general hygiene paragraphs, no
+            pregnancy counselling paragraphs, no sexual health
+            counselling paragraphs. These live in the full dossier.
+            Do not include disclaimers. The full dossier carries the
+            disclaimer.
+            Do not address the traveller by name in body copy. The
+            dossier header already personalises the document.
+
+            PROHIBITED BEHAVIOURS
+
+            Do not generate any clinical content not present in the
+            input dossier.
+            Do not infer a vaccine status. If the dossier says
+            Unknown, the Action Sheet says Unknown.
+            Do not change a Required entry into a Recommended entry
+            or vice versa.
+            Do not merge or split vaccine entries.
+            Do not add destinations, activities, or risks not in the
+            source dossier.
+
+            INPUT FORMAT
+
+            The dossier is provided as JSON below. It is the single
+            source of truth for the completed TMAG Personalised Travel
+            Health Dossier. If the dossier contains an internal
+            contradiction, defer to the more cautious recommendation
+            and do not flag the contradiction in the Action Sheet.
+
+            MACHINE OUTPUT CONTRACT
+
+            Return only valid JSON. No markdown fences. No preamble.
+            No commentary. No text outside the JSON object.
+            Map your five sections and closing line into this exact
+            schema (field names and nesting are fixed):
+            {
+              "section1CriticalBeforeDeparture": ["string"],
+              "section2TripSnapshot": "string",
+              "section3Vaccines": [{"vaccine":"string","status":"string","action":"string"}],
+              "section4PackAndRoutine": ["string"],
+              "section5": {
+                "redFlagsLine": "string",
+                "facilities": [{"name":"string","location":"string"}],
+                "localEmergencyNumber": "string",
+                "insuranceEmergencyLine": "string"
+              },
+              "closingLine": "string"
+            }
+            Limits: section1CriticalBeforeDeparture at most 4 strings;
+            section4PackAndRoutine at most 8 strings;
+            section3Vaccines only rows that belong in the table per rules above;
+            section5.facilities at most 2 objects (top two facilities).
+            closingLine must match the exact closing sentence above.
+            Skip any string value matching TREE_<digits>_<UPPERCASE>.
+            Remove hyphen, en dash, em dash, and underscore characters
+            from all string values in the JSON (use spaces or rephrase).
+            """;
+
+    private static final String ACTION_SHEET_USER_PROMPT_PREFIX = """
+            Produce the Action Sheet as JSON only, following the system instructions.
+
+            Return exactly this JSON shape (types as shown):
+            {
+              "section1CriticalBeforeDeparture": ["string"],
+              "section2TripSnapshot": "string",
+              "section3Vaccines": [{"vaccine":"string","status":"string","action":"string"}],
+              "section4PackAndRoutine": ["string"],
+              "section5": {
+                "redFlagsLine": "string",
+                "facilities": [{"name":"string","location":"string"}],
+                "localEmergencyNumber": "string",
+                "insuranceEmergencyLine": "string"
+              },
+              "closingLine": "string"
+            }
+
+            Personalised Travel Health Dossier (JSON):
+            """;
 
     private final ObjectMapper objectMapper;
     private final AiGenerationClient aiGenerationClient;
@@ -77,59 +248,39 @@ public class TravelPlanSummaryPdfGenerator {
         }
     }
 
+    /**
+     * Builds HTML for the Action Sheet PDF. Package-private for tests in the same package.
+     */
+    String buildHtml(TravelPlan plan, JsonNode summary) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
+        appendStyles(sb);
+        sb.append("</head><body>");
+        appendHero(sb, plan);
+        sb.append("<main>");
+        appendSection(sb, SECTION_1_HEADING, summary.path("section1CriticalBeforeDeparture"), 4);
+        appendSectionOneLine(sb, SECTION_2_HEADING, text(summary, "section2TripSnapshot"));
+        appendVaccineTable(sb, summary.path("section3Vaccines"));
+        appendSection(sb, SECTION_4_HEADING, summary.path("section4PackAndRoutine"), 8);
+        appendSection5(sb, summary.path("section5"));
+        sb.append("<p class=\"closing\">").append(escape(text(summary, "closingLine"))).append("</p>");
+        sb.append("</main></body></html>");
+        return sb.toString();
+    }
+
     private JsonNode summarize(TravelPlan plan, GeneratedPlan generatedPlan) {
         JsonNode source = parsePlanJson(generatedPlan);
         if (source == null || !source.isObject()) {
-            return fallbackSummary(plan, source);
+            return fallbackActionSheet(plan, source);
         }
 
-        String systemPrompt = """
-                You are a travel-medicine clinician writing a NEW executive summary for a patient-facing PDF.
-                Return only valid JSON. No markdown fences.
-                Do NOT copy sentences from the source. Synthesize and rewrite in your own words.
-                Preserve clinically important warnings, contraindications, and referral advice.
-                Do not invent facts absent from the source.
-                The PDF must be detailed enough to span at least two A4 pages.
-                Prefer preserving clinically useful detail over brevity.
-                IMPORTANT: Skip any value matching the pattern TREE_<digits>_<UPPERCASE> entirely.
-                Never truncate any recommendation mid-sentence.
-                """;
-        String userPrompt = """
-                Create a compact travel-health summary from the curated source below.
-
-                Required writing style:
-                - Write each action as a traveller instruction: prefer "Book...", "Confirm...", "Carry...", "Seek care if..."
-                - Include high-priority and practical supporting details; do not over-compress.
-                - Plain language; keep medical meaning precise.
-                - Keep each item concise but complete, and avoid clipped wording.
-
-                Return exactly this JSON shape:
-                {
-                  "travellerName": "string or empty",
-                  "travelDates": "string or empty",
-                  "overallRisk": "low|medium|high|unknown",
-                  "topRisks": [{"topic":"string","level":"low|medium|high|unknown","action":"string"}],
-                  "vaccines": [{"name":"string","action":"string"}],
-                  "medications": [{"name":"string","action":"string"}],
-                  "urgentFlags": ["string"],
-                  "afterReturn": ["string"],
-                  "emergency": ["string"]
-                }
-
-                Array size limits (hard): topRisks ≤ 8, vaccines ≤ 8, medications ≤ 8,
-                urgentFlags ≤ 8, afterReturn ≤ 6, emergency ≤ 6.
-
-                IMPORTANT:
-                Remove all "-" hyphens and "_" underscore characters from the provided response.
-
-                Curated source:
-                """ + createSummarySource(plan, source).toString();
+        String userPrompt = ACTION_SHEET_USER_PROMPT_PREFIX + generatedPlan.getPlanJson();
 
         try {
-            AiGenerationResult result = aiGenerationClient.generateSummary(systemPrompt, userPrompt);
-            JsonNode summary = normalizeSummary(objectMapper.readTree(stripJsonFences(result.content())));
-            if (hasUsableSummary(summary)) {
-                log.info("Generated travel plan summary PDF content with {} model {} for travelPlanId={} generatedPlanId={} tokens={}",
+            AiGenerationResult result = aiGenerationClient.generateSummary(ACTION_SHEET_SYSTEM_PROMPT, userPrompt);
+            JsonNode summary = normalizeActionSheet(objectMapper.readTree(stripJsonFences(result.content())));
+            if (hasUsableActionSheet(summary)) {
+                log.info("Generated travel plan Action Sheet PDF with {} model {} for travelPlanId={} generatedPlanId={} tokens={}",
                         result.provider(),
                         result.model(),
                         plan.getId(),
@@ -137,324 +288,334 @@ public class TravelPlanSummaryPdfGenerator {
                         result.estimatedTokens());
                 return summary;
             }
-            log.warn("Summary model returned unusable JSON for travelPlanId={}; using fallback summary",
+            log.warn("Summary model returned unusable JSON for travelPlanId={}; using fallback Action Sheet",
                     plan.getId());
         } catch (Exception ex) {
-            log.warn("Summary model unavailable for travelPlanId={}; using fallback summary: {}",
+            log.warn("Summary model unavailable for travelPlanId={}; using fallback Action Sheet: {}",
                     plan.getId(),
                     ex.getMessage());
         }
-        return fallbackSummary(plan, source);
+        return fallbackActionSheet(plan, source);
     }
 
-    private ObjectNode createSummarySource(TravelPlan plan, JsonNode source) {
-        ObjectNode root = objectMapper.createObjectNode();
-        ObjectNode trip = root.putObject("trip");
-        trip.put("destination", nullSafe(plan.getDestination()));
-        trip.put("country", nullSafe(plan.getCountry()));
-        trip.put("durationDays", plan.getDuration());
-        trip.put("purpose", nullSafe(plan.getPurpose()));
-        trip.put("riskScore", plan.getRiskScore());
-        trip.put("travellerName", text(source, "travellerName"));
-        trip.put("travelDates", text(source, "travelDates"));
-
-        putIfPresent(root, "healthRiskOverview", source.path("healthRiskOverview"));
-        putIfPresent(root, "vaccinations", source.path("vaccinations"));
-        putIfPresent(root, "malariaPrevention", source.path("malariaPrevention"));
-        putIfPresent(root, "medications", source.path("medications"));
-        putIfPresent(root, "recommendations", source.path("recommendations"));
-        putIfPresent(root, "clinicalFlags", source.path("clinicalFlags"));
-        putIfPresent(root, "contraindications", source.path("contraindications"));
-        putIfPresent(root, "afterReturn", source.path("afterReturn"));
-        putIfPresent(root, "medicalCare", source.path("medicalCare"));
-        putIfPresent(root, "emergencyPlan", source.path("emergencyPlan"));
-        putIfPresent(root, "doctorReferral", source.path("doctorReferral"));
-        putIfPresent(root, "flightHealth", source.path("flightHealth"));
-        putIfPresent(root, "medicalConditions", source.path("medicalConditions"));
-        putIfPresent(root, "medicationLogistics", source.path("medicationLogistics"));
-        putIfPresent(root, "specialistReferrals", source.path("specialistReferrals"));
-        putIfPresent(root, "sexualHealth", source.path("sexualHealth"));
-        putIfPresent(root, "pregnancyGuidance", source.path("pregnancyGuidance"));
-        putIfPresent(root, "nextSteps", source.path("nextSteps"));
-        return root;
-    }
-
-    private void putIfPresent(ObjectNode root, String field, JsonNode value) {
-        if (value != null && !value.isMissingNode() && !value.isNull()) {
-            root.set(field, value);
-        }
-    }
-
-    private JsonNode normalizeSummary(JsonNode summary) {
-        if (summary == null || !summary.isObject()) {
+    private JsonNode normalizeActionSheet(JsonNode raw) {
+        if (raw == null || !raw.isObject()) {
             return objectMapper.createObjectNode();
         }
+        ObjectNode root = (ObjectNode) raw.deepCopy();
 
-        ObjectNode root = (ObjectNode) summary.deepCopy();
-        normalizeTextField(root, "travellerName");
-        normalizeTextField(root, "travelDates");
-        root.put("overallRisk", levelClass(text(root, "overallRisk"), null));
-        normalizeObjectArray(root, "topRisks", 8);
-        normalizeObjectArray(root, "vaccines", 8);
-        normalizeObjectArray(root, "medications", 8);
-        normalizeTextArray(root, "urgentFlags", 8);
-        normalizeTextArray(root, "afterReturn", 6);
-        normalizeTextArray(root, "emergency", 6);
+        ArrayNode s1 = objectMapper.createArrayNode();
+        JsonNode a1 = root.path("section1CriticalBeforeDeparture");
+        if (a1.isArray()) {
+            for (JsonNode item : a1) {
+                if (s1.size() >= 4) {
+                    break;
+                }
+                addTextIfUsable(s1, item);
+            }
+        }
+        root.set("section1CriticalBeforeDeparture", s1);
+
+        root.put("section2TripSnapshot", cleanActionSheetText(text(root, "section2TripSnapshot")));
+
+        ArrayNode vaccines = objectMapper.createArrayNode();
+        JsonNode v = root.path("section3Vaccines");
+        if (v.isArray()) {
+            for (JsonNode item : v) {
+                if (!item.isObject()) {
+                    continue;
+                }
+                String vaccine = cleanActionSheetText(item.path("vaccine").asText(""));
+                String status = cleanActionSheetText(item.path("status").asText(""));
+                String action = cleanActionSheetText(item.path("action").asText(""));
+                if (!StringUtils.hasText(vaccine) && !StringUtils.hasText(status) && !StringUtils.hasText(action)) {
+                    continue;
+                }
+                ObjectNode row = vaccines.addObject();
+                row.put("vaccine", vaccine);
+                row.put("status", status);
+                row.put("action", action);
+            }
+        }
+        root.set("section3Vaccines", vaccines);
+
+        ArrayNode s4 = objectMapper.createArrayNode();
+        JsonNode a4 = root.path("section4PackAndRoutine");
+        if (a4.isArray()) {
+            for (JsonNode item : a4) {
+                if (s4.size() >= 8) {
+                    break;
+                }
+                addTextIfUsable(s4, item);
+            }
+        }
+        root.set("section4PackAndRoutine", s4);
+
+        ObjectNode s5 = objectMapper.createObjectNode();
+        JsonNode raw5 = root.path("section5");
+        if (raw5.isObject()) {
+            s5.put("redFlagsLine", cleanActionSheetText(raw5.path("redFlagsLine").asText("")));
+            s5.put("localEmergencyNumber", cleanActionSheetText(raw5.path("localEmergencyNumber").asText("")));
+            s5.put("insuranceEmergencyLine", cleanActionSheetText(raw5.path("insuranceEmergencyLine").asText("")));
+            ArrayNode fac = objectMapper.createArrayNode();
+            JsonNode fl = raw5.path("facilities");
+            if (fl.isArray()) {
+                for (JsonNode f : fl) {
+                    if (fac.size() >= 2) {
+                        break;
+                    }
+                    if (!f.isObject()) {
+                        continue;
+                    }
+                    ObjectNode fo = fac.addObject();
+                    fo.put("name", cleanActionSheetText(f.path("name").asText("")));
+                    fo.put("location", cleanActionSheetText(f.path("location").asText("")));
+                }
+            }
+            s5.set("facilities", fac);
+        } else {
+            s5.put("redFlagsLine", "");
+            s5.put("localEmergencyNumber", "");
+            s5.put("insuranceEmergencyLine", "");
+            s5.set("facilities", objectMapper.createArrayNode());
+        }
+        root.set("section5", s5);
+
+        String closing = cleanActionSheetText(text(root, "closingLine"));
+        if (!CLOSING_LINE_EXACT.equals(closing)) {
+            closing = CLOSING_LINE_EXACT;
+        }
+        root.put("closingLine", closing);
+
         return root;
     }
 
-    private boolean hasUsableSummary(JsonNode summary) {
-        return summary != null
-                && summary.isObject()
-                && (hasItems(summary.path("topRisks"))
-                        || hasItems(summary.path("vaccines"))
-                        || hasItems(summary.path("medications"))
-                        || hasItems(summary.path("urgentFlags"))
-                        || hasItems(summary.path("afterReturn"))
-                        || hasItems(summary.path("emergency")));
+    private void addTextIfUsable(ArrayNode target, JsonNode item) {
+        String t = item.isTextual() ? item.asText("") : "";
+        t = cleanActionSheetText(t);
+        if (!StringUtils.hasText(t) || isInternalKey(t)) {
+            return;
+        }
+        target.add(t);
+    }
+
+    private boolean hasUsableActionSheet(JsonNode summary) {
+        if (summary == null || !summary.isObject()) {
+            return false;
+        }
+        if (hasItems(summary.path("section1CriticalBeforeDeparture"))
+                || hasItems(summary.path("section3Vaccines"))
+                || hasItems(summary.path("section4PackAndRoutine"))) {
+            return true;
+        }
+        if (StringUtils.hasText(text(summary, "section2TripSnapshot"))) {
+            return true;
+        }
+        JsonNode s5 = summary.path("section5");
+        if (s5.isObject()) {
+            return StringUtils.hasText(text(s5, "redFlagsLine"))
+                    || StringUtils.hasText(text(s5, "localEmergencyNumber"))
+                    || StringUtils.hasText(text(s5, "insuranceEmergencyLine"))
+                    || hasItems(s5.path("facilities"));
+        }
+        return false;
     }
 
     private boolean hasItems(JsonNode node) {
         return node != null && node.isArray() && !node.isEmpty();
     }
 
-    private void normalizeTextField(ObjectNode root, String field) {
-        root.put(field, cleanText(text(root, field)));
-    }
-
-    private void normalizeObjectArray(ObjectNode root, String field, int maxItems) {
-        JsonNode source = root.path(field);
-        ArrayNode normalized = objectMapper.createArrayNode();
-        if (source.isArray()) {
-            for (JsonNode item : source) {
-                if (normalized.size() >= maxItems) {
-                    break;
-                }
-                if (!item.isObject()) {
-                    continue;
-                }
-                ObjectNode row = normalized.addObject();
-                if ("topRisks".equals(field)) {
-                    row.put("topic", cleanText(item.path("topic").asText("")));
-                    row.put("level", levelClass(item.path("level").asText(""), null));
-                    row.put("action", cleanText(item.path("action").asText("")));
-                } else {
-                    row.put("name", cleanText(item.path("name").asText("")));
-                    row.put("action", cleanText(item.path("action").asText("")));
-                }
-            }
-        }
-        root.set(field, normalized);
-    }
-
-    private void normalizeTextArray(ObjectNode root, String field, int maxItems) {
-        JsonNode source = root.path(field);
-        ArrayNode normalized = objectMapper.createArrayNode();
-        if (source.isArray()) {
-            for (JsonNode item : source) {
-                if (normalized.size() >= maxItems) {
-                    break;
-                }
-                String text = item.isTextual() ? item.asText("").trim() : "";
-                if (StringUtils.hasText(text) && !isInternalKey(text)) {
-                    normalized.add(cleanText(text));
-                }
-            }
-        }
-        root.set(field, normalized);
-    }
-
     private boolean isInternalKey(String value) {
         return value != null && value.matches("TREE_\\d+_[A-Z_]+");
     }
 
-    private String buildHtml(TravelPlan plan, JsonNode summary) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
-        appendStyles(sb);
-        sb.append("</head><body>");
-        appendHero(sb, plan, summary);
-        sb.append("<main>");
-        appendRiskGrid(sb, summary.path("topRisks"));
-        appendTwoColumnList(sb, "Vaccination actions", summary.path("vaccines"), "name", "action");
-        appendTwoColumnList(sb, "Medication and prevention", summary.path("medications"), "name", "action");
-        appendBullets(sb, "Urgent clinical flags", summary.path("urgentFlags"), true);
-        appendBullets(sb, "After return", summary.path("afterReturn"), false);
-        appendBullets(sb, "Emergency contacts", summary.path("emergency"), false);
-        sb.append("<section class=\"disclaimer\">").append(escape(DISCLAIMER)).append("</section>");
-        sb.append("</main></body></html>");
-        return sb.toString();
-    }
-
     private void appendStyles(StringBuilder sb) {
         sb.append("<style>");
-        sb.append("@page{size:A4;margin:0 0 12mm 0}");
-        sb.append("@page{@bottom-left{content:'Travel Medicine Advisory Global';font-family:'Hanken Grotesk',Arial,sans-serif;font-size:7pt;color:#9a8a7a;padding-left:14mm}}");
-        sb.append("@page{@bottom-right{content:'Page ' counter(page);font-family:'Hanken Grotesk',Arial,sans-serif;font-size:7pt;color:#9a8a7a;padding-right:14mm}}");
+        sb.append("@page{size:A4;margin:10mm 12mm 12mm 12mm}");
+        sb.append("@page{@bottom-left{content:'Travel Medicine Advisory Global';font-family:'Hanken Grotesk',Arial,sans-serif;font-size:7pt;color:#9a8a7a}}");
+        sb.append("@page{@bottom-right{content:'Page ' counter(page);font-family:'Hanken Grotesk',Arial,sans-serif;font-size:7pt;color:#9a8a7a}}");
         sb.append("*{box-sizing:border-box}body{margin:0;background:").append(BG_PAGE).append(";color:").append(BODY)
-                .append(";font-family:'Hanken Grotesk',Arial,sans-serif;font-size:8.4pt;line-height:1.32}");
-        sb.append(".hero{background:").append(TEAL_DEEP).append(";color:white;padding:18px 14mm 14px;border-bottom:3px solid ")
+                .append(";font-family:'Hanken Grotesk',Arial,sans-serif;font-size:11pt;line-height:1.28}");
+        sb.append(".hero{background:").append(TEAL_DEEP).append(";color:white;padding:14px 0 12px;border-bottom:3px solid ")
                 .append(TEAL_MID).append("}");
-        sb.append(".brand{font-size:6.5pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px}");
-        sb.append("h1{font-family:'Fraunces',Georgia,serif;font-size:18pt;line-height:1.08;margin:0 0 7px}");
-        sb.append(".meta{font-size:8pt;color:#dff2ee}.badges{margin-top:9px}.badge{display:inline-block;border-radius:3px;padding:4px 8px;margin-right:5px;font-size:7pt;font-weight:700;text-transform:uppercase}");
-        sb.append(".low{background:").append(GREEN_SOFT).append(";color:").append(GREEN).append("}.medium{background:")
-                .append(GOLD_SOFT).append(";color:").append(GOLD).append("}.high{background:").append(RED_SOFT)
-                .append(";color:").append(RED).append("}.unknown{background:white;color:#333}");
-        sb.append("main{padding:10pt 14mm 0;min-height:520mm}.sec{width:100%;border-collapse:collapse;margin:0 0 8pt;border:1px solid ")
-                .append(BORDER).append(";border-left:3px solid ").append(TEAL_MID).append(";page-break-inside:auto}");
+        sb.append(".hero-inner{padding:0 12mm}");
+        sb.append(".brand{font-size:6.5pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}");
+        sb.append("h1{font-family:'Fraunces',Georgia,serif;font-size:16pt;line-height:1.08;margin:0 0 6px}");
+        sb.append(".meta{font-size:9pt;color:#dff2ee}");
+        sb.append("main{padding:8pt 12mm 10pt}");
+        sb.append(".sec-head{font-size:9.5pt;font-weight:700;color:").append(TEAL_DEEP).append(";margin:10pt 0 5pt;border-bottom:1px solid ")
+                .append(BORDER).append(";padding-bottom:3px}");
+        sb.append(".snap{font-size:11pt;margin:0 0 8pt;color:").append(DARK).append("}");
+        sb.append(".list{margin:0 0 8pt;padding-left:18px}.list li{margin:0 0 4px}");
+        sb.append(".sec{width:100%;border-collapse:collapse;margin:0 0 8pt;border:1px solid ").append(BORDER)
+                .append(";border-left:3px solid ").append(TEAL_MID).append(";page-break-inside:avoid}");
         sb.append(".cap{background:").append(BG_SUBTLE).append(";color:").append(TEAL_DEEP)
-                .append(";font-size:7.2pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;border-bottom:1px solid ")
+                .append(";font-size:8pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid ")
                 .append(BORDER).append(";text-align:left}");
         sb.append(".h{background:").append(TEAL_LIGHT).append(";color:").append(TEAL_DEEP)
-                .append(";font-size:7pt;font-weight:700;text-transform:uppercase;padding:5px 8px;text-align:left}");
-        sb.append(".c{padding:5px 8px;border-top:1px solid ").append(BORDER).append(";vertical-align:top;color:")
-                .append(DARK).append(";white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.topic{width:28%;font-weight:700}.level{width:16%;font-weight:700;text-transform:uppercase}");
-        sb.append(".bull{padding:5px 8px 5px 21px;border-top:1px solid ").append(BORDER)
-                .append(";position:relative;color:").append(DARK).append("}.bull:before{content:'\\2022';position:absolute;left:9px;color:")
-                .append(TEAL_MID).append(";font-weight:700}");
-        sb.append(".alert .bull{background:").append(RED_SOFT).append("}.disclaimer{font-size:7.3pt;color:")
-                .append(MUTED).append(";padding:8px 10px;background:").append(GOLD_SOFT).append(";border:1px solid ")
-                .append(GOLD_BORDER).append(";border-left:3px solid ").append(GOLD).append(";line-height:1.35}");
+                .append(";font-size:8pt;font-weight:700;padding:4px 7px;text-align:left}");
+        sb.append(".c{padding:4px 7px;border-top:1px solid ").append(BORDER).append(";vertical-align:top;color:")
+                .append(DARK).append(";font-size:10.5pt;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}");
+        sb.append(".vac-name{width:32%;font-weight:600}.vac-status{width:24%}.vac-action{width:44%}");
+        sb.append(".s5block{font-size:10.5pt;margin:0 0 6px;color:").append(DARK).append("}");
+        sb.append(".s5label{font-weight:700;color:").append(TEAL_DEEP).append(";font-size:8.5pt;text-transform:uppercase;margin-top:6px}");
+        sb.append(".closing{margin-top:12pt;font-size:10.5pt;font-weight:600;color:").append(TEAL_DEEP).append(";line-height:1.35}");
+        sb.append(".alert5{background:").append(RED_SOFT).append(";padding:6px 8px;border-radius:3px;margin-bottom:6px}");
         sb.append("</style>");
     }
 
-    private void appendHero(StringBuilder sb, TravelPlan plan, JsonNode summary) {
-        String title = StringUtils.hasText(plan.getDestination())
-                ? "Travel health summary: " + plan.getDestination()
-                : "Travel health summary";
-        sb.append("<header class=\"hero\"><div class=\"brand\">Travel Medicine Advisory Global</div>");
-        sb.append("<h1>").append(escape(title)).append("</h1>");
+    private void appendHero(StringBuilder sb, TravelPlan plan) {
+        sb.append("<header class=\"hero\"><div class=\"hero-inner\"><div class=\"brand\">Travel Medicine Advisory Global</div>");
+        sb.append("<h1>Travel health Action Sheet</h1>");
         sb.append("<div class=\"meta\">").append(escape(nullSafe(plan.getCountry())));
+        if (StringUtils.hasText(plan.getDestination())) {
+            sb.append(SEPARATOR).append(escape(plan.getDestination()));
+        }
         if (plan.getDuration() != null) {
             sb.append(SEPARATOR).append(plan.getDuration()).append(" days");
         }
         if (StringUtils.hasText(plan.getPurpose())) {
             sb.append(SEPARATOR).append(escape(plan.getPurpose()));
         }
-        String dates = text(summary, "travelDates");
-        if (StringUtils.hasText(dates)) {
-            sb.append("<br/>").append(escape(dates));
-        }
-        String traveller = text(summary, "travellerName");
-        if (StringUtils.hasText(traveller)) {
-            sb.append("<br/>Traveller: ").append(escape(traveller));
-        }
-        sb.append("</div><div class=\"badges\"><span class=\"badge ")
-                .append(levelClass(text(summary, "overallRisk"), plan.getRiskScore())).append("\">")
-                .append(escape(riskLabel(text(summary, "overallRisk"), plan.getRiskScore()))).append(" risk</span>");
         if (plan.getCreatedAt() != null) {
-            sb.append("<span class=\"badge unknown\">")
-                    .append(plan.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM d, yyyy")))
-                    .append("</span>");
+            sb.append("<br/>").append(escape(plan.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM d, yyyy"))));
         }
-        sb.append("</div></header>");
+        sb.append("</div></div></header>");
     }
 
-    private void appendRiskGrid(StringBuilder sb, JsonNode items) {
+    private void appendSection(StringBuilder sb, String heading, JsonNode items, int maxBullets) {
+        sb.append("<h2 class=\"sec-head\">").append(escape(heading)).append("</h2>");
         if (!items.isArray() || items.isEmpty()) {
+            sb.append("<p class=\"snap\">").append(escape("Not specified in dossier.")).append("</p>");
             return;
         }
-        sb.append("<table class=\"sec\"><tr><th class=\"cap\" colspan=\"3\">Highest priority risks</th></tr>");
-        sb.append("<tr><th class=\"h\">Topic</th><th class=\"h\">Level</th><th class=\"h\">Action</th></tr>");
-        int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
-            JsonNode item = it.next();
-            sb.append("<tr><td class=\"c topic\">").append(escape(item.path("topic").asText("")))
-                    .append("</td><td class=\"c level ").append(levelClass(item.path("level").asText(""), null))
-                    .append("\">").append(escape(item.path("level").asText("unknown")))
-                    .append("</td><td class=\"c\">").append(escape(item.path("action").asText(""))).append("</td></tr>");
-        }
-        sb.append("</table>");
-    }
-
-    private void appendTwoColumnList(StringBuilder sb, String title, JsonNode items, String labelField, String valueField) {
-        if (!items.isArray() || items.isEmpty()) {
-            return;
-        }
-        sb.append("<table class=\"sec\"><tr><th class=\"cap\" colspan=\"2\">").append(escape(title)).append("</th></tr>");
-        int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
-            JsonNode item = it.next();
-            sb.append("<tr><td class=\"c topic\">").append(escape(item.path(labelField).asText("")))
-                    .append("</td><td class=\"c\">").append(escape(item.path(valueField).asText(""))).append("</td></tr>");
-        }
-        sb.append("</table>");
-    }
-
-    private void appendBullets(StringBuilder sb, String title, JsonNode items, boolean alert) {
-        if (!items.isArray() || items.isEmpty()) {
-            return;
-        }
-        sb.append("<table class=\"sec").append(alert ? " alert" : "").append("\"><tr><th class=\"cap\">")
-                .append(escape(title)).append("</th></tr>");
-        int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
+        sb.append("<ul class=\"list\">");
+        int n = 0;
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && n < maxBullets; n++) {
             JsonNode item = it.next();
             if (item.isTextual() && StringUtils.hasText(item.asText())) {
-                sb.append("<tr><td class=\"bull\">").append(escape(item.asText())).append("</td></tr>");
+                sb.append("<li>").append(escape(item.asText())).append("</li>");
             }
+        }
+        sb.append("</ul>");
+    }
+
+    private void appendSectionOneLine(StringBuilder sb, String heading, String line) {
+        sb.append("<h2 class=\"sec-head\">").append(escape(heading)).append("</h2>");
+        if (!StringUtils.hasText(line)) {
+            sb.append("<p class=\"snap\">").append(escape("Not specified in dossier.")).append("</p>");
+        } else {
+            sb.append("<p class=\"snap\">").append(escape(line)).append("</p>");
+        }
+    }
+
+    private void appendVaccineTable(StringBuilder sb, JsonNode items) {
+        sb.append("<h2 class=\"sec-head\">").append(escape(SECTION_3_HEADING)).append("</h2>");
+        if (!items.isArray() || items.isEmpty()) {
+            sb.append("<p class=\"snap\">").append(escape("No qualifying vaccines listed in dossier.")).append("</p>");
+            return;
+        }
+        sb.append("<table class=\"sec\"><tr><th class=\"h vac-name\">Vaccine</th><th class=\"h vac-status\">Status</th><th class=\"h vac-action\">Action</th></tr>");
+        for (JsonNode item : items) {
+            if (!item.isObject()) {
+                continue;
+            }
+            sb.append("<tr><td class=\"c vac-name\">").append(escape(item.path("vaccine").asText("")))
+                    .append("</td><td class=\"c vac-status\">").append(escape(item.path("status").asText("")))
+                    .append("</td><td class=\"c vac-action\">").append(escape(item.path("action").asText("")))
+                    .append("</td></tr>");
         }
         sb.append("</table>");
     }
 
-    private JsonNode fallbackSummary(TravelPlan plan, JsonNode source) {
+    private void appendSection5(StringBuilder sb, JsonNode s5) {
+        sb.append("<h2 class=\"sec-head\">").append(escape(SECTION_5_HEADING)).append("</h2>");
+        if (s5 == null || !s5.isObject()) {
+            sb.append("<p class=\"snap\">").append(escape("Not specified in dossier.")).append("</p>");
+            return;
+        }
+        String red = text(s5, "redFlagsLine");
+        if (StringUtils.hasText(red)) {
+            sb.append("<div class=\"s5block alert5\">").append(escape(red)).append("</div>");
+        }
+        JsonNode fac = s5.path("facilities");
+        if (fac.isArray() && !fac.isEmpty()) {
+            sb.append("<p class=\"s5label\">Clinical facilities</p>");
+            for (JsonNode f : fac) {
+                if (!f.isObject()) {
+                    continue;
+                }
+                String name = f.path("name").asText("");
+                String loc = f.path("location").asText("");
+                String line = StringUtils.hasText(name) ? name + (StringUtils.hasText(loc) ? ", " + loc : "") : loc;
+                if (StringUtils.hasText(line)) {
+                    sb.append("<p class=\"s5block\">").append(escape(line)).append("</p>");
+                }
+            }
+        }
+        String em = text(s5, "localEmergencyNumber");
+        if (StringUtils.hasText(em)) {
+            sb.append("<p class=\"s5label\">Local emergency number</p>");
+            sb.append("<p class=\"s5block\">").append(escape(em)).append("</p>");
+        }
+        String ins = text(s5, "insuranceEmergencyLine");
+        if (StringUtils.hasText(ins)) {
+            sb.append("<p class=\"s5label\">Insurance</p>");
+            sb.append("<p class=\"s5block\">").append(escape(ins)).append("</p>");
+        }
+    }
+
+    private JsonNode fallbackActionSheet(TravelPlan plan, JsonNode source) {
         ObjectNode root = objectMapper.createObjectNode();
-        root.put("travellerName", text(source, "travellerName"));
-        root.put("travelDates", text(source, "travelDates"));
-        root.put("overallRisk", riskFromScore(plan.getRiskScore()));
-        ArrayNode topRisks = root.putArray("topRisks");
-        copyRiskItems(topRisks, source != null ? source.path("healthRiskOverview") : null);
-        copyRecommendations(root.putArray("vaccines"), source != null ? source.path("vaccinations") : null, "vaccine",
-                "recommendation");
-        copyRecommendations(root.putArray("medications"), source != null ? source.path("recommendations") : null,
-                "title", "details");
-        copyText(root.putArray("urgentFlags"), source != null ? source.path("clinicalFlags") : null, 4);
+        ArrayNode s1 = root.putArray("section1CriticalBeforeDeparture");
+        copyNextSteps(s1, source != null ? source.path("nextSteps") : null, 4);
+        if (s1.isEmpty()) {
+            copyTextToSection1(s1, source != null ? source.path("clinicalFlags") : null, 4);
+        }
+
+        root.put("section2TripSnapshot", buildFallbackTripSnapshot(plan, source));
+
+        ArrayNode vax = root.putArray("section3Vaccines");
+        copyVaccinesForActionSheet(vax, source != null ? source.path("vaccinations") : null);
+
+        ArrayNode s4 = root.putArray("section4PackAndRoutine");
+        appendMalariaBullets(s4, source != null ? source.path("malariaPrevention") : null);
+        copyRecommendationTitles(s4, source != null ? source.path("recommendations") : null, 8 - s4.size());
+        trimArray(s4, 8);
+
+        ObjectNode s5 = root.putObject("section5");
         JsonNode afterReturn = source != null ? source.path("afterReturn") : null;
-        ArrayNode after = root.putArray("afterReturn");
         if (afterReturn != null && afterReturn.path("redFlag").isTextual()) {
-            String fullText = cleanText(afterReturn.path("redFlag").asText());
-            if (StringUtils.hasText(fullText)) {
-                after.add(fullText);
-            }
+            s5.put("redFlagsLine", cleanActionSheetText(afterReturn.path("redFlag").asText("")));
+        } else {
+            s5.put("redFlagsLine", "");
         }
-        copyText(after, afterReturn != null ? afterReturn.path("within1Week") : null, 5);
-        copyEmergency(root.putArray("emergency"), source != null ? source.path("medicalCare").path("emergencyContacts") : null);
-        return root;
+        ArrayNode fac = s5.putArray("facilities");
+        copyClinics(fac, source != null ? source.path("medicalCare").path("clinics") : null, 2);
+        s5.put("localEmergencyNumber", findEmergencyNumber(source));
+        s5.put("insuranceEmergencyLine", findInsuranceLine(source));
+        root.put("closingLine", CLOSING_LINE_EXACT);
+        return normalizeActionSheet(root);
     }
 
-    private void copyRiskItems(ArrayNode target, JsonNode items) {
-        if (items == null || !items.isArray()) {
+    private void copyNextSteps(ArrayNode target, JsonNode steps, int max) {
+        if (steps == null || !steps.isArray()) {
             return;
         }
-        int count = 0;
-        for (JsonNode item : items) {
-            if (count++ >= 8) {
+        for (JsonNode item : steps) {
+            if (target.size() >= max) {
                 return;
             }
-            ObjectNode row = target.addObject();
-            row.put("topic", cleanText(item.path("category").asText("")));
-            row.put("level", item.path("level").asText("unknown"));
-            row.put("action", cleanText(item.path("summary").asText("")));
+            if (item.isTextual()) {
+                String t = cleanActionSheetText(item.asText(""));
+                if (StringUtils.hasText(t) && !isInternalKey(t)) {
+                    target.add(t);
+                }
+            }
         }
     }
 
-    private void copyRecommendations(ArrayNode target, JsonNode items, String labelField, String actionField) {
-        if (items == null || !items.isArray()) {
-            return;
-        }
-        int count = 0;
-        for (JsonNode item : items) {
-            if (count++ >= 8) {
-                return;
-            }
-            ObjectNode row = target.addObject();
-            row.put("name", cleanText(item.path(labelField).asText("")));
-            row.put("action", cleanText(item.path(actionField).asText("")));
-        }
-    }
-
-    private void copyText(ArrayNode target, JsonNode items, int max) {
+    private void copyTextToSection1(ArrayNode target, JsonNode items, int max) {
         if (items == null || !items.isArray()) {
             return;
         }
@@ -462,33 +623,224 @@ public class TravelPlanSummaryPdfGenerator {
             if (target.size() >= max) {
                 return;
             }
-            if (item.isTextual() && StringUtils.hasText(item.asText()) && !isInternalKey(item.asText())) {
-                String fullText = cleanText(item.asText());
-                if (StringUtils.hasText(fullText)) {
-                    target.add(fullText);
+            if (item.isTextual()) {
+                String t = cleanActionSheetText(item.asText(""));
+                if (StringUtils.hasText(t) && !isInternalKey(t)) {
+                    target.add(t);
                 }
             }
         }
     }
 
-    private void copyEmergency(ArrayNode target, JsonNode items) {
+    private String buildFallbackTripSnapshot(TravelPlan plan, JsonNode source) {
+        String travelling = "";
+        if (source != null) {
+            JsonNode glance = source.path("tripAtGlance");
+            if (glance.isObject() && glance.path("travelling").isTextual()) {
+                travelling = cleanActionSheetText(glance.path("travelling").asText(""));
+            }
+        }
+        String dest = StringUtils.hasText(plan.getDestination()) ? plan.getDestination() : text(source, "destination");
+        String origin = StringUtils.hasText(plan.getCountry()) ? plan.getCountry() : "";
+        String durationPart = plan.getDuration() != null ? plan.getDuration() + " days" : "";
+        String purpose = nullSafe(plan.getPurpose());
+        String risk = source != null ? cleanActionSheetText(source.path("overallRiskLevel").asText("")) : "";
+        if (!StringUtils.hasText(risk)) {
+            risk = riskFromScore(plan.getRiskScore());
+        }
+        if (StringUtils.hasText(travelling)) {
+            String suffix = "";
+            if (StringUtils.hasText(durationPart)) {
+                suffix += ", " + durationPart;
+            }
+            if (StringUtils.hasText(purpose)) {
+                suffix += ", " + purpose;
+            }
+            if (StringUtils.hasText(risk)) {
+                suffix += ", overall risk " + risk;
+            }
+            return cleanActionSheetText(travelling + suffix);
+        }
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.hasText(origin)) {
+            sb.append(origin).append(" to ").append(dest);
+        } else {
+            sb.append(dest);
+        }
+        if (StringUtils.hasText(durationPart)) {
+            sb.append(", ").append(durationPart);
+        }
+        if (StringUtils.hasText(purpose)) {
+            sb.append(", ").append(purpose);
+        }
+        if (StringUtils.hasText(risk)) {
+            sb.append(", overall risk ").append(risk);
+        }
+        return cleanActionSheetText(sb.toString());
+    }
+
+    private void copyVaccinesForActionSheet(ArrayNode target, JsonNode items) {
         if (items == null || !items.isArray()) {
             return;
         }
         for (JsonNode item : items) {
-            if (target.size() >= 6) {
+            if (!item.isObject()) {
+                continue;
+            }
+            String status = item.path("status").asText("");
+            if (!includeVaccineStatusForTable(status)) {
+                continue;
+            }
+            ObjectNode row = target.addObject();
+            row.put("vaccine", cleanActionSheetText(item.path("vaccine").asText("")));
+            row.put("status", cleanActionSheetText(status));
+            String action = item.path("action").asText("");
+            if (!StringUtils.hasText(action)) {
+                action = item.path("recommendation").asText("");
+            }
+            row.put("action", cleanActionSheetText(action));
+        }
+    }
+
+    private boolean includeVaccineStatusForTable(String status) {
+        if (!StringUtils.hasText(status)) {
+            return true;
+        }
+        String u = status.toUpperCase();
+        if (u.contains("NOT INDICATED") || u.contains("NOT APPLICABLE") || u.contains("NOT REQUIRED")
+                || u.contains("NOT RECOMMENDED")) {
+            return false;
+        }
+        boolean required = u.contains("REQUIRED");
+        boolean strongly = u.contains("STRONGLY");
+        boolean recommended = u.contains("RECOMMENDED");
+        if (u.contains("CONSIDER") && !required && !strongly && !recommended) {
+            return false;
+        }
+        return required || strongly || recommended;
+    }
+
+    private void appendMalariaBullets(ArrayNode target, JsonNode malaria) {
+        if (malaria == null || !malaria.isObject() || malaria.isNull()) {
+            return;
+        }
+        String agent = malaria.path("recommendedAgent").asText("");
+        if (!StringUtils.hasText(agent)) {
+            return;
+        }
+        StringBuilder line = new StringBuilder();
+        line.append("Malaria prophylaxis: ").append(cleanActionSheetText(agent));
+        String rationale = malaria.path("rationale").asText("");
+        if (StringUtils.hasText(rationale) && target.size() < 8) {
+            line.append(". ").append(cleanActionSheetText(rationale));
+        }
+        target.add(cleanActionSheetText(line.toString()));
+    }
+
+    private void copyRecommendationTitles(ArrayNode target, JsonNode items, int maxAdd) {
+        if (items == null || !items.isArray() || maxAdd <= 0) {
+            return;
+        }
+        for (JsonNode item : items) {
+            if (target.size() >= 8) {
                 return;
             }
-            String label = item.path("label").asText("").trim();
-            String value = item.path("value").asText("").trim();
-            String line = StringUtils.hasText(label) ? label + ": " + value : value;
-            if (StringUtils.hasText(line)) {
-                String fullText = cleanText(line);
-                if (StringUtils.hasText(fullText)) {
-                    target.add(fullText);
+            if (!item.isObject()) {
+                continue;
+            }
+            String title = cleanActionSheetText(item.path("title").asText(""));
+            String details = cleanActionSheetText(item.path("details").asText(""));
+            if (!StringUtils.hasText(title) && !StringUtils.hasText(details)) {
+                continue;
+            }
+            String line = StringUtils.hasText(details) ? title + ": " + details : title;
+            target.add(cleanActionSheetText(line));
+        }
+    }
+
+    private void trimArray(ArrayNode arr, int max) {
+        while (arr.size() > max) {
+            arr.remove(arr.size() - 1);
+        }
+    }
+
+    private void copyClinics(ArrayNode target, JsonNode clinics, int max) {
+        if (clinics == null || !clinics.isArray()) {
+            return;
+        }
+        for (JsonNode c : clinics) {
+            if (target.size() >= max) {
+                return;
+            }
+            if (!c.isObject()) {
+                continue;
+            }
+            String name = cleanActionSheetText(c.path("name").asText(""));
+            String address = cleanActionSheetText(c.path("address").asText(""));
+            if (!StringUtils.hasText(name) && !StringUtils.hasText(address)) {
+                continue;
+            }
+            ObjectNode row = target.addObject();
+            row.put("name", name);
+            row.put("location", address);
+        }
+    }
+
+    private String findEmergencyNumber(JsonNode source) {
+        if (source == null) {
+            return "";
+        }
+        JsonNode contacts = source.path("medicalCare").path("emergencyContacts");
+        if (!contacts.isArray()) {
+            return "";
+        }
+        for (JsonNode c : contacts) {
+            if (!c.isObject()) {
+                continue;
+            }
+            String label = c.path("label").asText("").toLowerCase();
+            String value = c.path("value").asText("");
+            if ((label.contains("emergency") && label.contains("number")) || label.equals("local emergency")) {
+                return cleanActionSheetText(value);
+            }
+        }
+        for (JsonNode c : contacts) {
+            if (!c.isObject()) {
+                continue;
+            }
+            String label = c.path("label").asText("").toLowerCase();
+            if (label.contains("ambulance") || label.contains("police") || label.contains("112")
+                    || label.contains("999") || label.contains("911")) {
+                return cleanActionSheetText(c.path("value").asText(""));
+            }
+        }
+        return "";
+    }
+
+    private String findInsuranceLine(JsonNode source) {
+        if (source == null) {
+            return "";
+        }
+        JsonNode glance = source.path("tripAtGlance");
+        if (glance.isObject() && glance.path("insurance").isTextual()) {
+            String ins = cleanActionSheetText(glance.path("insurance").asText(""));
+            if (StringUtils.hasText(ins)) {
+                return "Insurance: " + ins;
+            }
+        }
+        JsonNode contacts = source.path("medicalCare").path("emergencyContacts");
+        if (contacts.isArray()) {
+            for (JsonNode c : contacts) {
+                if (!c.isObject()) {
+                    continue;
+                }
+                String label = c.path("label").asText("").toLowerCase();
+                if (label.contains("insurance")) {
+                    return cleanActionSheetText(c.path("value").asText(""));
                 }
             }
         }
+        return "";
     }
 
     private JsonNode parsePlanJson(GeneratedPlan generatedPlan) {
@@ -532,13 +884,17 @@ public class TravelPlanSummaryPdfGenerator {
         return trimmed;
     }
 
-    private String cleanText(String value) {
+    private String cleanActionSheetText(String value) {
         if (!StringUtils.hasText(value)) {
-            return value == null ? "" : value;
+            return value == null ? "" : "";
         }
-        return value.trim().replaceAll("\\s+", " ");
+        String t = value.trim().replaceAll("\\s+", " ");
+        t = t.replace('-', ' ')
+                .replace('_', ' ')
+                .replace('\u2013', ' ')
+                .replace('\u2014', ' ');
+        return t.trim().replaceAll("\\s+", " ");
     }
-
 
     private String text(JsonNode node, String field) {
         if (node != null && node.path(field).isTextual()) {
@@ -547,36 +903,17 @@ public class TravelPlanSummaryPdfGenerator {
         return "";
     }
 
-    private String levelClass(String level, Integer riskScore) {
-        String normalized = StringUtils.hasText(level) ? level.trim().toLowerCase() : riskFromScore(riskScore);
-        if (normalized.contains("high")) {
-            return "high";
-        }
-        if (normalized.contains("medium") || normalized.contains("moderate")) {
-            return "medium";
-        }
-        if (normalized.contains("low")) {
-            return "low";
-        }
-        return "unknown";
-    }
-
-    private String riskLabel(String level, Integer riskScore) {
-        String normalized = levelClass(level, riskScore);
-        return "unknown".equals(normalized) ? "Not specified" : normalized;
-    }
-
     private String riskFromScore(Integer riskScore) {
         if (riskScore == null) {
-            return "unknown";
+            return "UNKNOWN";
         }
         if (riskScore >= 70) {
-            return "high";
+            return "HIGH";
         }
         if (riskScore >= 40) {
-            return "medium";
+            return "MEDIUM";
         }
-        return "low";
+        return "LOW";
     }
 
     private String nullSafe(String value) {
