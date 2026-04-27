@@ -49,6 +49,7 @@ public class TravelPlanService {
     private final PlanGenerationService planGenerationService;
     private final GeneratedPlanRepository generatedPlanRepository;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
+    private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final ObjectMapper objectMapper;
 
@@ -58,6 +59,7 @@ public class TravelPlanService {
             PlanGenerationService planGenerationService,
             GeneratedPlanRepository generatedPlanRepository,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
+            TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             ObjectMapper objectMapper) {
         this.repository = repository;
@@ -68,6 +70,7 @@ public class TravelPlanService {
         this.planGenerationService = planGenerationService;
         this.generatedPlanRepository = generatedPlanRepository;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
+        this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.objectMapper = objectMapper;
     }
@@ -133,7 +136,7 @@ public class TravelPlanService {
                     "Travel plan summary PDF is only available for standard and premium plans");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
-        byte[] pdf = travelPlanPdfGenerator.generateSummary(plan, generated);
+        byte[] pdf = travelPlanSummaryPdfGenerator.generate(plan, generated);
         return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
     }
 

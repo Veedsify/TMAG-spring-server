@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="TravelMedicineAdvisoryServer"/>
+    <springProperty scope="context" name="ERROR_FILE_ENABLED" source="app.logging.error-file.enabled" defaultValue="false"/>
+    <springProperty scope="context" name="ERROR_FILE_PATH" source="app.logging.error-file.path" defaultValue="logs/error.log"/>
+    <springProperty scope="context" name="ERROR_FILE_MAX_SIZE" source="app.logging.error-file.max-size" defaultValue="10MB"/>
+    <springProperty scope="context" name="ERROR_FILE_MAX_HISTORY" source="app.logging.error-file.max-history" defaultValue="14"/>
+
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"/>
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level ${APP_NAME} [%thread] %logger{40} : %msg%n%ex"/>
+
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ERROR_FILE_PATH}</file>
+        <append>true</append>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ERROR_FILE_PATH}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>${ERROR_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${ERROR_FILE_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <logger name="com.TravelMedicineAdvisory" level="${LOGGING_LEVEL_COM_TRAVELMEDICINEADVISORY:-DEBUG}"/>
+    <logger name="org.hibernate.SQL" level="${LOGGING_LEVEL_ORG_HIBERNATE_SQL:-DEBUG}"/>
+
+    <if condition='property("ERROR_FILE_ENABLED").equalsIgnoreCase("true")'>
+        <then>
+            <root level="${LOGGING_LEVEL_ROOT:-INFO}">
+                <appender-ref ref="CONSOLE"/>
+                <appender-ref ref="ERROR_FILE"/>
+            </root>
+        </then>
+        <else>
+            <root level="${LOGGING_LEVEL_ROOT:-INFO}">
+                <appender-ref ref="CONSOLE"/>
+            </root>
+        </else>
+    </if>
+</configuration>

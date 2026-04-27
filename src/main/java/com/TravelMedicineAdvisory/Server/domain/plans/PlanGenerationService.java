@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.plans;
 
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
+import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationProperties;
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
@@ -13,6 +14,7 @@ import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenera
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
@@ -64,6 +66,7 @@ public class PlanGenerationService {
     private final UserOnboardingRepository userOnboardingRepository;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final AiGenerationClient aiGenerationClient;
+    private final AiGenerationProperties aiGenerationProperties;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
     private final QueueService queueService;
@@ -72,6 +75,7 @@ public class PlanGenerationService {
     private final ClinicalContextExtractor clinicalContextExtractor;
     private final SystemPromptBuilder systemPromptBuilder;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
+    private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final StorageService storageService;
 
     public PlanGenerationService(
@@ -81,6 +85,7 @@ public class PlanGenerationService {
             UserOnboardingRepository userOnboardingRepository,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             AiGenerationClient aiGenerationClient,
+            AiGenerationProperties aiGenerationProperties,
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
             QueueService queueService,
@@ -89,6 +94,7 @@ public class PlanGenerationService {
             ClinicalContextExtractor clinicalContextExtractor,
             SystemPromptBuilder systemPromptBuilder,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
+            TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
             StorageService storageService) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
@@ -96,6 +102,7 @@ public class PlanGenerationService {
         this.userOnboardingRepository = userOnboardingRepository;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.aiGenerationClient = aiGenerationClient;
+        this.aiGenerationProperties = aiGenerationProperties;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
         this.queueService = queueService;
@@ -104,6 +111,7 @@ public class PlanGenerationService {
         this.clinicalContextExtractor = clinicalContextExtractor;
         this.systemPromptBuilder = systemPromptBuilder;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
+        this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.storageService = storageService;
     }
 
@@ -179,7 +187,9 @@ public class PlanGenerationService {
                     clinicalContext.triggeredTrees().size(),
                     clinicalContext.overallRiskLevel());
 
-            AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt);
+            AiModelSelection modelSelection = modelForTier(travelPlan.getPlanTier());
+            AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt,
+                    modelSelection.provider(), modelSelection.model());
             JsonNode structuredOutput = parseJson(result.content());
 
             long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
@@ -292,10 +302,46 @@ public class PlanGenerationService {
         if (travelPlan.getPlanTier() != PlanTier.STANDARD && travelPlan.getPlanTier() != PlanTier.PREMIUM) {
             return;
         }
-        byte[] summaryPdf = travelPlanPdfGenerator.generateSummary(travelPlan, generatedPlan);
-        String filename = "summary-plan-" + travelPlan.getId() + "-" + UUID.randomUUID() + ".pdf";
-        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename, "application/pdf");
-        generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
+        try {
+            byte[] summaryPdf = travelPlanSummaryPdfGenerator.generate(travelPlan, generatedPlan);
+            String filename = "summary-plan-" + travelPlan.getId() + "-" + UUID.randomUUID() + ".pdf";
+            String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename,
+                    "application/pdf");
+            generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
+        } catch (Exception ex) {
+            log.error("Summary PDF attachment failed: travelPlanId={} generatedPlanId={} destination=\"{}\"",
+                    travelPlan.getId(),
+                    generatedPlan.getId(),
+                    travelPlan.getDestination(),
+                    ex);
+        }
+    }
+
+    private AiModelSelection modelForTier(PlanTier tier) {
+        if (tier == PlanTier.STANDARD || tier == PlanTier.PREMIUM) {
+            return new AiModelSelection(
+                    firstNonBlank(aiGenerationProperties.getStandardPremiumProvider(),
+                            aiGenerationProperties.getMainProvider(), aiGenerationProperties.getProvider()),
+                    firstNonBlank(aiGenerationProperties.getStandardPremiumModel(), aiGenerationProperties.getMainModel(),
+                            aiGenerationProperties.getDefaultModel()));
+        }
+        return new AiModelSelection(
+                firstNonBlank(aiGenerationProperties.getFreeProvider(), aiGenerationProperties.getMainProvider(),
+                        aiGenerationProperties.getProvider()),
+                firstNonBlank(aiGenerationProperties.getFreeModel(), aiGenerationProperties.getMainModel(),
+                        aiGenerationProperties.getDefaultModel()));
+    }
+
+    private record AiModelSelection(String provider, String model) {
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private void sendReadyEmail(TravelPlan travelPlan) {

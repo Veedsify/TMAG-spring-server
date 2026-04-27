@@ -6,9 +6,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AiGenerationProperties {
 
     private String provider = "vertex";
+    private String mainProvider = "";
+    private String summaryProvider = "";
+    private String freeProvider = "";
+    private String standardPremiumProvider = "";
     private String defaultModel = "gemini-2.5-pro";
+    private String mainModel = "";
+    private String summaryModel = "gemini-3-flash-preview";
+    private String freeModel = "";
+    private String standardPremiumModel = "";
     private double temperature = 0.2d;
     private int maxOutputTokens = 8192;
+    private int summaryMaxOutputTokens = 2048;
 
     private final Vertex vertex = new Vertex();
     private final OpenAi openai = new OpenAi();
@@ -22,12 +31,76 @@ public class AiGenerationProperties {
         this.provider = provider;
     }
 
+    public String getMainProvider() {
+        return mainProvider;
+    }
+
+    public void setMainProvider(String mainProvider) {
+        this.mainProvider = mainProvider;
+    }
+
+    public String getSummaryProvider() {
+        return summaryProvider;
+    }
+
+    public void setSummaryProvider(String summaryProvider) {
+        this.summaryProvider = summaryProvider;
+    }
+
+    public String getFreeProvider() {
+        return freeProvider;
+    }
+
+    public void setFreeProvider(String freeProvider) {
+        this.freeProvider = freeProvider;
+    }
+
+    public String getStandardPremiumProvider() {
+        return standardPremiumProvider;
+    }
+
+    public void setStandardPremiumProvider(String standardPremiumProvider) {
+        this.standardPremiumProvider = standardPremiumProvider;
+    }
+
     public String getDefaultModel() {
         return defaultModel;
     }
 
     public void setDefaultModel(String defaultModel) {
         this.defaultModel = defaultModel;
+    }
+
+    public String getMainModel() {
+        return mainModel;
+    }
+
+    public void setMainModel(String mainModel) {
+        this.mainModel = mainModel;
+    }
+
+    public String getSummaryModel() {
+        return summaryModel;
+    }
+
+    public void setSummaryModel(String summaryModel) {
+        this.summaryModel = summaryModel;
+    }
+
+    public String getFreeModel() {
+        return freeModel;
+    }
+
+    public void setFreeModel(String freeModel) {
+        this.freeModel = freeModel;
+    }
+
+    public String getStandardPremiumModel() {
+        return standardPremiumModel;
+    }
+
+    public void setStandardPremiumModel(String standardPremiumModel) {
+        this.standardPremiumModel = standardPremiumModel;
     }
 
     public double getTemperature() {
@@ -44,6 +117,14 @@ public class AiGenerationProperties {
 
     public void setMaxOutputTokens(int maxOutputTokens) {
         this.maxOutputTokens = maxOutputTokens;
+    }
+
+    public int getSummaryMaxOutputTokens() {
+        return summaryMaxOutputTokens;
+    }
+
+    public void setSummaryMaxOutputTokens(int summaryMaxOutputTokens) {
+        this.summaryMaxOutputTokens = summaryMaxOutputTokens;
     }
 
     public Vertex getVertex() {

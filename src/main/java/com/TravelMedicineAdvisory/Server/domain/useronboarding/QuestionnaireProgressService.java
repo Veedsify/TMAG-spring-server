@@ -1,11 +1,11 @@
 package com.TravelMedicineAdvisory.Server.domain.useronboarding;
 
+import java.time.Duration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.time.Duration;
 
 /**
  * Stores questionnaire progress in Redis with a 7-day TTL.
