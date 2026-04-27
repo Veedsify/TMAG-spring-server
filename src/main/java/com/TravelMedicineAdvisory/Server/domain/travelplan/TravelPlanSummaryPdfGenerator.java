@@ -89,29 +89,19 @@ public class TravelPlanSummaryPdfGenerator {
                 Do NOT copy sentences from the source. Synthesize and rewrite in your own words.
                 Preserve clinically important warnings, contraindications, and referral advice.
                 Do not invent facts absent from the source.
-                The PDF must fit on two A4 pages — brevity is a hard requirement.
+                The PDF must be detailed enough to span at least two A4 pages.
+                Prefer preserving clinically useful detail over brevity.
                 IMPORTANT: Skip any value matching the pattern TREE_<digits>_<UPPERCASE> entirely.
-
-                STRICT character and word limits per field (stay under; do not truncate with "..."):
-                - topRisks[].topic   : ≤ 32 characters, ≤ 5 words
-                - topRisks[].action  : ≤ 140 characters, ≤ 22 words
-                - vaccines[].name    : ≤ 32 characters, ≤ 5 words
-                - vaccines[].action  : ≤ 120 characters, ≤ 18 words
-                - medications[].name : ≤ 32 characters, ≤ 5 words
-                - medications[].action : ≤ 120 characters, ≤ 18 words
-                - urgentFlags[]      : ≤ 120 characters, ≤ 18 words per item
-                - afterReturn[]      : ≤ 120 characters, ≤ 18 words per item
-                - emergency[]        : ≤ 100 characters, ≤ 15 words per item
-                Write to fit these limits naturally — do not pad and do not cut off mid-sentence.
+                Never truncate any recommendation mid-sentence.
                 """;
         String userPrompt = """
                 Create a compact travel-health summary from the curated source below.
 
                 Required writing style:
                 - Write each action as a traveller instruction: prefer "Book...", "Confirm...", "Carry...", "Seek care if..."
-                - Select only the highest clinical priority items when the source is detailed.
+                - Include high-priority and practical supporting details; do not over-compress.
                 - Plain language; keep medical meaning precise.
-                - Every string must fit within the character and word limits stated in the system prompt.
+                - Keep each item concise but complete, and avoid clipped wording.
 
                 Return exactly this JSON shape:
                 {
@@ -126,8 +116,8 @@ public class TravelPlanSummaryPdfGenerator {
                   "emergency": ["string"]
                 }
 
-                Array size limits (hard): topRisks ≤ 4, vaccines ≤ 4, medications ≤ 3,
-                urgentFlags ≤ 4, afterReturn ≤ 3, emergency ≤ 3.
+                Array size limits (hard): topRisks ≤ 8, vaccines ≤ 8, medications ≤ 8,
+                urgentFlags ≤ 8, afterReturn ≤ 6, emergency ≤ 6.
 
                 Curated source:
                 """ + createSummarySource(plan, source).toString();
@@ -198,15 +188,15 @@ public class TravelPlanSummaryPdfGenerator {
         }
 
         ObjectNode root = (ObjectNode) summary.deepCopy();
-        normalizeTextField(root, "travellerName", 80);
-        normalizeTextField(root, "travelDates", 80);
+        normalizeTextField(root, "travellerName");
+        normalizeTextField(root, "travelDates");
         root.put("overallRisk", levelClass(text(root, "overallRisk"), null));
-        normalizeObjectArray(root, "topRisks", 4, 32, 140);
-        normalizeObjectArray(root, "vaccines", 4, 32, 120);
-        normalizeObjectArray(root, "medications", 3, 32, 120);
-        normalizeTextArray(root, "urgentFlags", 4, 120);
-        normalizeTextArray(root, "afterReturn", 3, 120);
-        normalizeTextArray(root, "emergency", 3, 100);
+        normalizeObjectArray(root, "topRisks", 8);
+        normalizeObjectArray(root, "vaccines", 8);
+        normalizeObjectArray(root, "medications", 8);
+        normalizeTextArray(root, "urgentFlags", 8);
+        normalizeTextArray(root, "afterReturn", 6);
+        normalizeTextArray(root, "emergency", 6);
         return root;
     }
 
@@ -225,11 +215,11 @@ public class TravelPlanSummaryPdfGenerator {
         return node != null && node.isArray() && !node.isEmpty();
     }
 
-    private void normalizeTextField(ObjectNode root, String field, int maxChars) {
-        root.put(field, truncateClean(text(root, field), maxChars));
+    private void normalizeTextField(ObjectNode root, String field) {
+        root.put(field, cleanText(text(root, field)));
     }
 
-    private void normalizeObjectArray(ObjectNode root, String field, int maxItems, int labelMaxChars, int actionMaxChars) {
+    private void normalizeObjectArray(ObjectNode root, String field, int maxItems) {
         JsonNode source = root.path(field);
         ArrayNode normalized = objectMapper.createArrayNode();
         if (source.isArray()) {
@@ -242,19 +232,19 @@ public class TravelPlanSummaryPdfGenerator {
                 }
                 ObjectNode row = normalized.addObject();
                 if ("topRisks".equals(field)) {
-                    row.put("topic", truncateClean(item.path("topic").asText(""), labelMaxChars));
+                    row.put("topic", cleanText(item.path("topic").asText("")));
                     row.put("level", levelClass(item.path("level").asText(""), null));
-                    row.put("action", fitToLimit(item.path("action").asText("").trim(), actionMaxChars));
+                    row.put("action", cleanText(item.path("action").asText("")));
                 } else {
-                    row.put("name", truncateClean(item.path("name").asText(""), labelMaxChars));
-                    row.put("action", fitToLimit(item.path("action").asText("").trim(), actionMaxChars));
+                    row.put("name", cleanText(item.path("name").asText("")));
+                    row.put("action", cleanText(item.path("action").asText("")));
                 }
             }
         }
         root.set(field, normalized);
     }
 
-    private void normalizeTextArray(ObjectNode root, String field, int maxItems, int maxChars) {
+    private void normalizeTextArray(ObjectNode root, String field, int maxItems) {
         JsonNode source = root.path(field);
         ArrayNode normalized = objectMapper.createArrayNode();
         if (source.isArray()) {
@@ -263,8 +253,8 @@ public class TravelPlanSummaryPdfGenerator {
                     break;
                 }
                 String text = item.isTextual() ? item.asText("").trim() : "";
-                if (StringUtils.hasText(text) && !isInternalKey(text) && text.length() <= maxChars) {
-                    normalized.add(text);
+                if (StringUtils.hasText(text) && !isInternalKey(text)) {
+                    normalized.add(cleanText(text));
                 }
             }
         }
@@ -308,15 +298,15 @@ public class TravelPlanSummaryPdfGenerator {
         sb.append(".low{background:").append(GREEN_SOFT).append(";color:").append(GREEN).append("}.medium{background:")
                 .append(GOLD_SOFT).append(";color:").append(GOLD).append("}.high{background:").append(RED_SOFT)
                 .append(";color:").append(RED).append("}.unknown{background:white;color:#333}");
-        sb.append("main{padding:10pt 14mm 0}.sec{width:100%;border-collapse:collapse;margin:0 0 8pt;border:1px solid ")
-                .append(BORDER).append(";border-left:3px solid ").append(TEAL_MID).append(";page-break-inside:avoid}");
+        sb.append("main{padding:10pt 14mm 0;min-height:520mm}.sec{width:100%;border-collapse:collapse;margin:0 0 8pt;border:1px solid ")
+                .append(BORDER).append(";border-left:3px solid ").append(TEAL_MID).append(";page-break-inside:auto}");
         sb.append(".cap{background:").append(BG_SUBTLE).append(";color:").append(TEAL_DEEP)
                 .append(";font-size:7.2pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;border-bottom:1px solid ")
                 .append(BORDER).append(";text-align:left}");
         sb.append(".h{background:").append(TEAL_LIGHT).append(";color:").append(TEAL_DEEP)
                 .append(";font-size:7pt;font-weight:700;text-transform:uppercase;padding:5px 8px;text-align:left}");
         sb.append(".c{padding:5px 8px;border-top:1px solid ").append(BORDER).append(";vertical-align:top;color:")
-                .append(DARK).append(";white-space:pre-wrap}.topic{width:28%;font-weight:700}.level{width:16%;font-weight:700;text-transform:uppercase}");
+                .append(DARK).append(";white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.topic{width:28%;font-weight:700}.level{width:16%;font-weight:700;text-transform:uppercase}");
         sb.append(".bull{padding:5px 8px 5px 21px;border-top:1px solid ").append(BORDER)
                 .append(";position:relative;color:").append(DARK).append("}.bull:before{content:'\\2022';position:absolute;left:9px;color:")
                 .append(TEAL_MID).append(";font-weight:700}");
@@ -365,7 +355,7 @@ public class TravelPlanSummaryPdfGenerator {
         sb.append("<table class=\"sec\"><tr><th class=\"cap\" colspan=\"3\">Highest priority risks</th></tr>");
         sb.append("<tr><th class=\"h\">Topic</th><th class=\"h\">Level</th><th class=\"h\">Action</th></tr>");
         int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 4; count++) {
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
             JsonNode item = it.next();
             sb.append("<tr><td class=\"c topic\">").append(escape(item.path("topic").asText("")))
                     .append("</td><td class=\"c level ").append(levelClass(item.path("level").asText(""), null))
@@ -381,7 +371,7 @@ public class TravelPlanSummaryPdfGenerator {
         }
         sb.append("<table class=\"sec\"><tr><th class=\"cap\" colspan=\"2\">").append(escape(title)).append("</th></tr>");
         int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 4; count++) {
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
             JsonNode item = it.next();
             sb.append("<tr><td class=\"c topic\">").append(escape(item.path(labelField).asText("")))
                     .append("</td><td class=\"c\">").append(escape(item.path(valueField).asText(""))).append("</td></tr>");
@@ -396,7 +386,7 @@ public class TravelPlanSummaryPdfGenerator {
         sb.append("<table class=\"sec").append(alert ? " alert" : "").append("\"><tr><th class=\"cap\">")
                 .append(escape(title)).append("</th></tr>");
         int count = 0;
-        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 4; count++) {
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext() && count < 8; count++) {
             JsonNode item = it.next();
             if (item.isTextual() && StringUtils.hasText(item.asText())) {
                 sb.append("<tr><td class=\"bull\">").append(escape(item.asText())).append("</td></tr>");
@@ -420,12 +410,12 @@ public class TravelPlanSummaryPdfGenerator {
         JsonNode afterReturn = source != null ? source.path("afterReturn") : null;
         ArrayNode after = root.putArray("afterReturn");
         if (afterReturn != null && afterReturn.path("redFlag").isTextual()) {
-            String fitted = fitToLimit(afterReturn.path("redFlag").asText().trim(), 120);
-            if (StringUtils.hasText(fitted)) {
-                after.add(fitted);
+            String fullText = cleanText(afterReturn.path("redFlag").asText());
+            if (StringUtils.hasText(fullText)) {
+                after.add(fullText);
             }
         }
-        copyText(after, afterReturn != null ? afterReturn.path("within1Week") : null, 2);
+        copyText(after, afterReturn != null ? afterReturn.path("within1Week") : null, 5);
         copyEmergency(root.putArray("emergency"), source != null ? source.path("medicalCare").path("emergencyContacts") : null);
         return root;
     }
@@ -436,13 +426,13 @@ public class TravelPlanSummaryPdfGenerator {
         }
         int count = 0;
         for (JsonNode item : items) {
-            if (count++ >= 4) {
+            if (count++ >= 8) {
                 return;
             }
             ObjectNode row = target.addObject();
-            row.put("topic", truncateClean(item.path("category").asText(""), 32));
+            row.put("topic", cleanText(item.path("category").asText("")));
             row.put("level", item.path("level").asText("unknown"));
-            row.put("action", fitToLimit(item.path("summary").asText("").trim(), 140));
+            row.put("action", cleanText(item.path("summary").asText("")));
         }
     }
 
@@ -452,12 +442,12 @@ public class TravelPlanSummaryPdfGenerator {
         }
         int count = 0;
         for (JsonNode item : items) {
-            if (count++ >= 4) {
+            if (count++ >= 8) {
                 return;
             }
             ObjectNode row = target.addObject();
-            row.put("name", truncateClean(item.path(labelField).asText(""), 32));
-            row.put("action", fitToLimit(item.path(actionField).asText("").trim(), 120));
+            row.put("name", cleanText(item.path(labelField).asText("")));
+            row.put("action", cleanText(item.path(actionField).asText("")));
         }
     }
 
@@ -470,9 +460,9 @@ public class TravelPlanSummaryPdfGenerator {
                 return;
             }
             if (item.isTextual() && StringUtils.hasText(item.asText()) && !isInternalKey(item.asText())) {
-                String fitted = fitToLimit(item.asText().trim(), 120);
-                if (StringUtils.hasText(fitted)) {
-                    target.add(fitted);
+                String fullText = cleanText(item.asText());
+                if (StringUtils.hasText(fullText)) {
+                    target.add(fullText);
                 }
             }
         }
@@ -483,16 +473,16 @@ public class TravelPlanSummaryPdfGenerator {
             return;
         }
         for (JsonNode item : items) {
-            if (target.size() >= 3) {
+            if (target.size() >= 6) {
                 return;
             }
             String label = item.path("label").asText("").trim();
             String value = item.path("value").asText("").trim();
             String line = StringUtils.hasText(label) ? label + ": " + value : value;
             if (StringUtils.hasText(line)) {
-                String fitted = fitToLimit(line, 100);
-                if (StringUtils.hasText(fitted)) {
-                    target.add(fitted);
+                String fullText = cleanText(line);
+                if (StringUtils.hasText(fullText)) {
+                    target.add(fullText);
                 }
             }
         }
@@ -539,33 +529,11 @@ public class TravelPlanSummaryPdfGenerator {
         return trimmed;
     }
 
-    private String truncateClean(String value, int maxChars) {
+    private String cleanText(String value) {
         if (!StringUtils.hasText(value)) {
             return value == null ? "" : value;
         }
-        String v = value.trim();
-        if (v.length() <= maxChars) {
-            return v;
-        }
-        int lastSpace = v.lastIndexOf(' ', maxChars);
-        return lastSpace > maxChars / 2 ? v.substring(0, lastSpace).trim() : v.substring(0, maxChars).trim();
-    }
-
-    private String fitToLimit(String value, int maxChars) {
-        if (!StringUtils.hasText(value)) {
-            return value;
-        }
-        String v = value.trim();
-        if (v.length() <= maxChars) {
-            return v;
-        }
-        // Try to return the first complete sentence
-        int dot = v.indexOf(". ");
-        if (dot > 0 && dot + 1 <= maxChars) {
-            return v.substring(0, dot + 1).trim();
-        }
-        // No sentence boundary found within limit — skip (return empty so caller can omit)
-        return "";
+        return value.trim().replaceAll("\\s+", " ");
     }
 
 
