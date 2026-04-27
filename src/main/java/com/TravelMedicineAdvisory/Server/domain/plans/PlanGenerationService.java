@@ -1,5 +1,20 @@
 package com.TravelMedicineAdvisory.Server.domain.plans;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationProperties;
 import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
@@ -9,37 +24,22 @@ import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
 import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
-import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding;
 import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.UUID;
 
 /**
  * AI generation pipeline for travel health plans created by end users
@@ -74,7 +74,6 @@ public class PlanGenerationService {
     private final UserRepository userRepository;
     private final ClinicalContextExtractor clinicalContextExtractor;
     private final SystemPromptBuilder systemPromptBuilder;
-    private final TravelPlanPdfGenerator travelPlanPdfGenerator;
     private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final StorageService storageService;
 
@@ -93,7 +92,6 @@ public class PlanGenerationService {
             UserRepository userRepository,
             ClinicalContextExtractor clinicalContextExtractor,
             SystemPromptBuilder systemPromptBuilder,
-            TravelPlanPdfGenerator travelPlanPdfGenerator,
             TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
             StorageService storageService) {
         this.travelPlanRepository = travelPlanRepository;
@@ -110,7 +108,6 @@ public class PlanGenerationService {
         this.userRepository = userRepository;
         this.clinicalContextExtractor = clinicalContextExtractor;
         this.systemPromptBuilder = systemPromptBuilder;
-        this.travelPlanPdfGenerator = travelPlanPdfGenerator;
         this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.storageService = storageService;
     }
@@ -259,14 +256,14 @@ public class PlanGenerationService {
     }
 
     private AiRequestLog buildAiLog(TravelPlan travelPlan) {
-        AiRequestLog log = new AiRequestLog();
-        log.setDestination(travelPlan.getDestination());
-        log.setPromptSummary("Generate structured travel health report (current trip + onboarding health JSON)");
-        log.setRiskLevel((travelPlan.getRiskScore() != null && travelPlan.getRiskScore() >= 60) ? "high" : "medium");
-        log.setCreditConsumed(BigDecimal.ONE);
-        log.setCompany(travelPlan.getCompany());
-        log.setUser(travelPlan.getUser());
-        return log;
+        AiRequestLog aiLog = new AiRequestLog();
+        aiLog.setDestination(travelPlan.getDestination());
+        aiLog.setPromptSummary("Generate structured travel health report (current trip + onboarding health JSON)");
+        aiLog.setRiskLevel((travelPlan.getRiskScore() != null && travelPlan.getRiskScore() >= 60) ? "high" : "medium");
+        aiLog.setCreditConsumed(BigDecimal.ONE);
+        aiLog.setCompany(travelPlan.getCompany());
+        aiLog.setUser(travelPlan.getUser());
+        return aiLog;
     }
 
     private void handlePostGeneration(TravelPlan travelPlan) {
@@ -620,7 +617,7 @@ public class PlanGenerationService {
                 .append("trip duration, purpose, and dates in the report JSON)\n");
         builder.append("Destination: ").append(nullSafe(travelPlan.getDestination())).append("\n");
         builder.append("Country: ").append(nullSafe(travelPlan.getCountry())).append("\n");
-        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)
+        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)   
                 .append("\n");
         builder.append("Purpose: ").append(nullSafe(travelPlan.getPurpose())).append("\n");
         builder.append("Trip Type: ").append(resolveTripType(travelPlan.getTripType())).append("\n");
