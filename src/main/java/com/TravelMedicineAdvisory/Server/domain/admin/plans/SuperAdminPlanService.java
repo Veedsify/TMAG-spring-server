@@ -92,12 +92,12 @@ public class SuperAdminPlanService {
         plan.setValidatedAt(LocalDateTime.now());
         travelPlanRepository.save(plan);
 
-        // Notify traveller
-        User traveller = plan.getUser();
-        if (traveller != null && traveller.getEmail() != null) {
-            String html = emailTemplates.planApprovedEmail(firstName(traveller), plan.getDestination());
+        User recipient = notificationUser(plan, generated);
+        String recipientEmail = notificationEmail(plan, generated);
+        if (recipientEmail != null) {
+            String html = emailTemplates.planApprovedEmail(firstName(recipient), plan.getDestination());
             emailService.sendEmailWithAttachment(
-                    traveller.getEmail(),
+                    recipientEmail,
                     "Your Travel Health Plan for " + plan.getDestination() + " Has Been Approved",
                     html,
                     signedPdf,
@@ -124,12 +124,13 @@ public class SuperAdminPlanService {
         plan.setRejectionReason(reason);
         travelPlanRepository.save(plan);
 
-        // Notify traveller
-        User traveller = plan.getUser();
-        if (traveller != null && traveller.getEmail() != null) {
-            String html = emailTemplates.planRejectedEmail(firstName(traveller), plan.getDestination(), reason);
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
+        User recipient = notificationUser(plan, generated);
+        String recipientEmail = notificationEmail(plan, generated);
+        if (recipientEmail != null) {
+            String html = emailTemplates.planRejectedEmail(firstName(recipient), plan.getDestination(), reason);
             emailService.sendHtmlEmail(
-                    traveller.getEmail(),
+                    recipientEmail,
                     "Update on Your Travel Health Plan for " + plan.getDestination(),
                     html);
         }
@@ -137,7 +138,60 @@ public class SuperAdminPlanService {
         log.info("Elevated plan rejected by super admin: planId={} reason={}", planId, reason);
     }
 
+    @Transactional(readOnly = true)
+    public byte[] previewPlanPdf(Long planId) {
+        TravelPlan plan = findElevatedPlan(planId);
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
+        return pdfGenerator.generate(plan, generated);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] previewSummaryPdf(Long planId) {
+        findElevatedPlan(planId);
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId)
+                .orElseThrow(() -> new NoSuchElementException("Generated plan not found"));
+        if (generated.getSummaryPdfUrl() == null || generated.getSummaryPdfUrl().isBlank()) {
+            throw new IllegalArgumentException("Stored summary PDF is not available for this plan");
+        }
+        return storageService.readBytes(generated.getSummaryPdfUrl());
+    }
+
+    private TravelPlan findElevatedPlan(Long planId) {
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new NoSuchElementException("Travel plan not found"));
+        if (plan.getDoctorValidationStatus() != DoctorValidationStatus.ELEVATED) {
+            throw new IllegalArgumentException("Plan is not in elevated status");
+        }
+        return plan;
+    }
+
+    private User notificationUser(TravelPlan plan, GeneratedPlan generated) {
+        if (plan.getUser() != null) {
+            return plan.getUser();
+        }
+        if (generated != null && generated.getUser() != null) {
+            return generated.getUser();
+        }
+        return null;
+    }
+
+    private String notificationEmail(TravelPlan plan, GeneratedPlan generated) {
+        if (plan.getUser() != null && plan.getUser().getEmail() != null) {
+            return plan.getUser().getEmail();
+        }
+        if (plan.getEmployee() != null && plan.getEmployee().getEmail() != null) {
+            return plan.getEmployee().getEmail();
+        }
+        if (generated != null && generated.getUser() != null) {
+            return generated.getUser().getEmail();
+        }
+        return null;
+    }
+
     private String firstName(User user) {
+        if (user == null) {
+            return "there";
+        }
         if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
             return user.getFirstName();
         }

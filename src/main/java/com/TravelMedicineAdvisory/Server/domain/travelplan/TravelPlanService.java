@@ -49,7 +49,6 @@ public class TravelPlanService {
     private final PlanGenerationService planGenerationService;
     private final GeneratedPlanRepository generatedPlanRepository;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
-    private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final ObjectMapper objectMapper;
 
@@ -59,7 +58,6 @@ public class TravelPlanService {
             PlanGenerationService planGenerationService,
             GeneratedPlanRepository generatedPlanRepository,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
-            TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             ObjectMapper objectMapper) {
         this.repository = repository;
@@ -70,7 +68,6 @@ public class TravelPlanService {
         this.planGenerationService = planGenerationService;
         this.generatedPlanRepository = generatedPlanRepository;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
-        this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.objectMapper = objectMapper;
     }
@@ -109,10 +106,9 @@ public class TravelPlanService {
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        String status = plan.getStatus();
-        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+        if (!isUserPdfAvailable(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan PDF is only available when the plan is completed");
+                    "Travel plan PDF is only available after required doctor approval");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
         byte[] pdf = travelPlanPdfGenerator.generate(plan, generated);
@@ -120,24 +116,27 @@ public class TravelPlanService {
     }
 
     @Transactional(readOnly = true)
-    public TravelPlanPdfExport exportSummaryPdfForUser(Long planId, Long currentUserId) {
+    public String exportSummaryPdfUrlForUser(Long planId, Long currentUserId) {
         TravelPlan plan = repository.findById(planId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Travel plan not found"));
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        String status = plan.getStatus();
-        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+        if (!isUserPdfAvailable(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan summary PDF is only available when the plan is completed");
+                    "Travel plan summary PDF is only available after required doctor approval");
         }
         if (plan.getPlanTier() == null || plan.getPlanTier() == PlanTier.FREE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Travel plan summary PDF is only available for standard and premium plans");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
-        byte[] pdf = travelPlanSummaryPdfGenerator.generate(plan, generated);
-        return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
+        String url = generated != null ? generated.getSummaryPdfUrl() : null;
+        if (!StringUtils.hasText(url)) {
+            throw new ResponseStatusException(HttpStatus.ACCEPTED,
+                    "Summary PDF is still being generated, please try again shortly");
+        }
+        return url;
     }
 
     private static String slugifyFilename(String destination) {
@@ -150,6 +149,17 @@ public class TravelPlanService {
             return "travel-health-plan";
         }
         return s.length() > 48 ? s.substring(0, 48) : s;
+    }
+
+    private boolean isUserPdfAvailable(TravelPlan plan) {
+        String status = plan.getStatus();
+        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+            return false;
+        }
+        DoctorValidationStatus validationStatus = plan.getDoctorValidationStatus();
+        return validationStatus == null
+                || validationStatus == DoctorValidationStatus.NOT_REQUIRED
+                || validationStatus == DoctorValidationStatus.APPROVED;
     }
 
     private boolean canAccessPlan(TravelPlan plan, Long currentUserId) {

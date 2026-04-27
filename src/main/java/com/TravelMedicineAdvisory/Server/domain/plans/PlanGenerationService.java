@@ -302,19 +302,30 @@ public class PlanGenerationService {
         if (travelPlan.getPlanTier() != PlanTier.STANDARD && travelPlan.getPlanTier() != PlanTier.PREMIUM) {
             return;
         }
-        try {
-            byte[] summaryPdf = travelPlanSummaryPdfGenerator.generate(travelPlan, generatedPlan);
-            String filename = "summary-plan-" + travelPlan.getId() + "-" + UUID.randomUUID() + ".pdf";
-            String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename,
-                    "application/pdf");
-            generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
-        } catch (Exception ex) {
-            log.error("Summary PDF attachment failed: travelPlanId={} generatedPlanId={} destination=\"{}\"",
-                    travelPlan.getId(),
-                    generatedPlan.getId(),
-                    travelPlan.getDestination(),
-                    ex);
-        }
+        queueService.dispatch(JobType.GENERATE_SUMMARY_PDF, Map.of(
+                "travelPlanId", travelPlan.getId(),
+                "generatedPlanId", generatedPlan.getId()));
+        log.info("Summary PDF generation queued: travelPlanId={} generatedPlanId={}",
+                travelPlan.getId(), generatedPlan.getId());
+    }
+
+    @Transactional
+    public void processSummaryPdf(Long travelPlanId, Long generatedPlanId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(travelPlanId)
+                .orElseThrow(() -> new NoSuchElementException("Travel plan not found: " + travelPlanId));
+        GeneratedPlan generatedPlan = generatedPlanRepository.findById(generatedPlanId)
+                .orElseThrow(() -> new NoSuchElementException("Generated plan not found: " + generatedPlanId));
+
+        log.info("Summary PDF generation starting: travelPlanId={} generatedPlanId={} destination=\"{}\"",
+                travelPlanId, generatedPlanId, travelPlan.getDestination());
+
+        byte[] summaryPdf = travelPlanSummaryPdfGenerator.generate(travelPlan, generatedPlan);
+        String filename = "summary-plan-" + travelPlanId + "-" + UUID.randomUUID() + ".pdf";
+        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename, "application/pdf");
+        generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
+        generatedPlanRepository.save(generatedPlan);
+
+        log.info("Summary PDF generation completed: travelPlanId={} generatedPlanId={}", travelPlanId, generatedPlanId);
     }
 
     private AiModelSelection modelForTier(PlanTier tier) {

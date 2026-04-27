@@ -2,15 +2,23 @@ package com.TravelMedicineAdvisory.Server.domain.admin.plans;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -19,12 +27,15 @@ import java.util.NoSuchElementException;
 public class SuperAdminPlanController {
 
     private final TravelPlanRepository travelPlanRepository;
+    private final GeneratedPlanRepository generatedPlanRepository;
     private final SuperAdminPlanService superAdminPlanService;
 
     public SuperAdminPlanController(
             TravelPlanRepository travelPlanRepository,
+            GeneratedPlanRepository generatedPlanRepository,
             SuperAdminPlanService superAdminPlanService) {
         this.travelPlanRepository = travelPlanRepository;
+        this.generatedPlanRepository = generatedPlanRepository;
         this.superAdminPlanService = superAdminPlanService;
     }
 
@@ -32,8 +43,11 @@ public class SuperAdminPlanController {
      * Get all elevated plans
      */
     @GetMapping("/elevated")
+    @Transactional(readOnly = true)
     public ResponseEntity<SuccessResponse> getElevatedPlans(Pageable pageable) {
-        Page<TravelPlan> elevatedPlans = travelPlanRepository.findByDoctorValidationStatus(DoctorValidationStatus.ELEVATED, pageable);
+        Page<ElevatedPlanResponse> elevatedPlans = travelPlanRepository
+                .findByDoctorValidationStatus(DoctorValidationStatus.ELEVATED, pageable)
+                .map(this::toElevatedPlanResponse);
         return ResponseEntity.ok(new SuccessResponse("Elevated plans retrieved successfully", elevatedPlans));
     }
 
@@ -69,5 +83,56 @@ public class SuperAdminPlanController {
         }
     }
 
+    @GetMapping("/{planId}/preview-pdf")
+    public ResponseEntity<byte[]> previewElevatedPlanPdf(@PathVariable Long planId) {
+        byte[] pdf = superAdminPlanService.previewPlanPdf(planId);
+        return pdfResponse(pdf, "elevated-plan-" + planId + ".pdf");
+    }
+
+    @GetMapping("/{planId}/preview-summary")
+    public ResponseEntity<byte[]> previewElevatedPlanSummary(@PathVariable Long planId) {
+        byte[] pdf = superAdminPlanService.previewSummaryPdf(planId);
+        return pdfResponse(pdf, "elevated-plan-" + planId + "-summary.pdf");
+    }
+
     public record ElevatedPlanDecisionRequest(String reason) {}
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        ContentDisposition disposition = ContentDisposition.inline()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    private ElevatedPlanResponse toElevatedPlanResponse(TravelPlan plan) {
+        User traveller = plan.getUser();
+        User doctor = plan.getValidatedBy();
+        GeneratedPlan generatedPlan = generatedPlanRepository.findByTravelPlanId(plan.getId()).orElse(null);
+        return new ElevatedPlanResponse(
+                plan.getId(),
+                plan.getDestination(),
+                plan.getDuration(),
+                plan.getPurpose(),
+                plan.getRiskScore(),
+                fullName(traveller),
+                traveller != null ? traveller.getEmail() : "",
+                fullName(doctor),
+                plan.getRejectionReason(),
+                generatedPlan != null ? generatedPlan.getSignedPdfUrl() : null,
+                generatedPlan != null ? generatedPlan.getSummaryPdfUrl() : null,
+                plan.getValidatedAt());
+    }
+
+    private String fullName(User user) {
+        if (user == null) {
+            return "";
+        }
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "";
+        String lastName = user.getLastName() != null ? user.getLastName() : "";
+        String name = (firstName + " " + lastName).trim();
+        return name.isBlank() && user.getName() != null ? user.getName() : name;
+    }
 }

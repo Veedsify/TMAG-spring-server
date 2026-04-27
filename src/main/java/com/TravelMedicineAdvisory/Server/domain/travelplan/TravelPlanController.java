@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,20 +73,14 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}/summary-pdf")
-    public ResponseEntity<byte[]> downloadSummaryPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
-
+    public ResponseEntity<Void> downloadSummaryPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        TravelPlanPdfExport exp = service.exportSummaryPdfForUser(id, user.getUserId());
-        ContentDisposition disposition = ContentDisposition.attachment()
-                .filename(exp.filenameBase() + "-travel-health-summary.pdf", StandardCharsets.UTF_8)
+        String url = service.exportSummaryPdfUrlForUser(id, user.getUserId());
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, url)
                 .build();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(exp.pdfBytes());
     }
 
     @GetMapping("/{id}")
