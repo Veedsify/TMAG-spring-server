@@ -119,6 +119,9 @@ public class TravelPlanSummaryPdfGenerator {
                 Array size limits (hard): topRisks ≤ 8, vaccines ≤ 8, medications ≤ 8,
                 urgentFlags ≤ 8, afterReturn ≤ 6, emergency ≤ 6.
 
+                IMPORTANT:
+                Remove all "-" hyphens and "_" underscore characters from the provided response.
+
                 Curated source:
                 """ + createSummarySource(plan, source).toString();
 
