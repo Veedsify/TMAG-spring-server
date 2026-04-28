@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.companyadmin.credits;
 import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.cache.CacheNames;
 import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
+import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
@@ -40,14 +41,6 @@ public class CompanyAdminCreditPurchaseService {
 
     private static final Logger logger = LoggerFactory.getLogger(CompanyAdminCreditPurchaseService.class);
 
-    private static final int TIER_1_MAX = 49;
-    private static final int TIER_2_MAX = 99;
-    private static final int TIER_3_MAX = 499;
-
-    private static final BigDecimal TIER_1_MULTIPLIER = BigDecimal.ONE;
-    private static final BigDecimal TIER_2_MULTIPLIER = new BigDecimal("0.90");
-    private static final BigDecimal TIER_3_MULTIPLIER = new BigDecimal("0.80");
-
     private final CompanyRepository companyRepository;
     private final CompanySettingRepository settingRepository;
     private final CreditRepository creditRepository;
@@ -59,6 +52,7 @@ public class CompanyAdminCreditPurchaseService {
     private final CreditPlanRepository userCreditPlanRepository;
     private final CacheManager cacheManager;
     private final CallbackRegistry callbackRegistry;
+    private final VolumePricingService volumePricingService;
 
     public CompanyAdminCreditPurchaseService(
             CompanyRepository companyRepository,
@@ -71,7 +65,8 @@ public class CompanyAdminCreditPurchaseService {
             ExchangeRateService exchangeRateService,
             CreditPlanRepository userCreditPlanRepository,
             CacheManager cacheManager,
-            CallbackRegistry callbackRegistry) {
+            CallbackRegistry callbackRegistry,
+            VolumePricingService volumePricingService) {
         this.companyRepository = companyRepository;
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
@@ -83,6 +78,7 @@ public class CompanyAdminCreditPurchaseService {
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.cacheManager = cacheManager;
         this.callbackRegistry = callbackRegistry;
+        this.volumePricingService = volumePricingService;
     }
 
     public record CompanyPricingResult(
@@ -93,11 +89,12 @@ public class CompanyAdminCreditPurchaseService {
             BigDecimal pricePerCredit,
             String appliedTier,
             boolean qualifiesForContactSales,
-            Integer historicalCreditsPurchased,
-            BigDecimal basePricePerCreditUsd,
-            BigDecimal pricePerCreditTier1,
-            BigDecimal pricePerCreditTier2,
-            BigDecimal pricePerCreditTier3,
+            BigDecimal standardTier1Price,
+            BigDecimal standardTier2Price,
+            BigDecimal standardTier3Price,
+            BigDecimal premiumTier1Price,
+            BigDecimal premiumTier2Price,
+            BigDecimal premiumTier3Price,
             Integer tier1MaxCredits,
             Integer tier2MaxCredits,
             Integer tier3MaxCredits) {
@@ -111,29 +108,51 @@ public class CompanyAdminCreditPurchaseService {
 
         BillingCurrency currency = resolveBillingCurrency(company);
         CreditPlan plan = resolveCreditPlan(company);
-        int historicalPurchased = company.getHistoricalCreditsPurchased();
-
-        BigDecimal baseUsd = plan.getBasePriceUsd();
+        String serviceLevel = plan.getServiceLevel() != null ? plan.getServiceLevel() : "STANDARD";
         String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
 
-        TierPricing tier = computeTierPricing(historicalPurchased, baseUsd, currency, currencySymbol);
+        VolumePricingService.FullPricing fullPricing = volumePricingService.getFullPricing();
+
+        BigDecimal standardTier1, standardTier2, standardTier3;
+        BigDecimal premiumTier1, premiumTier2, premiumTier3;
+
+        if (currency == BillingCurrency.NGN) {
+            standardTier1 = fullPricing.standardTier1Ngn();
+            standardTier2 = fullPricing.standardTier2Ngn();
+            standardTier3 = fullPricing.standardTier3Ngn();
+            premiumTier1 = fullPricing.premiumTier1Ngn();
+            premiumTier2 = fullPricing.premiumTier2Ngn();
+            premiumTier3 = fullPricing.premiumTier3Ngn();
+        } else {
+            standardTier1 = fullPricing.standardTier1Usd();
+            standardTier2 = fullPricing.standardTier2Usd();
+            standardTier3 = fullPricing.standardTier3Usd();
+            premiumTier1 = fullPricing.premiumTier1Usd();
+            premiumTier2 = fullPricing.premiumTier2Usd();
+            premiumTier3 = fullPricing.premiumTier3Usd();
+        }
+
+        // Default price per credit (no specific quantity context, show tier 1)
+        boolean isPremium = "PREMIUM".equalsIgnoreCase(serviceLevel);
+        BigDecimal defaultPrice = isPremium ? premiumTier1 : standardTier1;
 
         return new CompanyPricingResult(
                 company.getId(),
                 company.getName(),
                 currency,
                 currencySymbol,
-                tier.pricePerCredit(),
-                tier.appliedTier(),
-                tier.qualifiesForContactSales(),
-                historicalPurchased,
-                baseUsd,
-                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_1_MULTIPLIER), currency.name()),
-                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_2_MULTIPLIER), currency.name()),
-                exchangeRateService.convertFromUsd(baseUsd.multiply(TIER_3_MULTIPLIER), currency.name()),
-                TIER_1_MAX,
-                TIER_2_MAX,
-                TIER_3_MAX);
+                defaultPrice,
+                "TIER_1",
+                false,
+                standardTier1,
+                standardTier2,
+                standardTier3,
+                premiumTier1,
+                premiumTier2,
+                premiumTier3,
+                fullPricing.tier1MaxCredits(),
+                fullPricing.tier2MaxCredits(),
+                fullPricing.tier3MaxCredits());
     }
 
     public record PurchaseQuoteResult(
@@ -155,33 +174,33 @@ public class CompanyAdminCreditPurchaseService {
 
         BillingCurrency currency = resolveBillingCurrency(company);
         CreditPlan plan = resolveCreditPlan(company);
-        int historicalPurchased = company.getHistoricalCreditsPurchased();
+        String serviceLevel = plan.getServiceLevel() != null ? plan.getServiceLevel() : "STANDARD";
         String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
 
-        TierPricing tier = computeTierPricing(historicalPurchased, plan.getBasePriceUsd(), currency, currencySymbol);
+        VolumePricingService.TierPrice tier = volumePricingService.computePrice(credits, serviceLevel, currency);
 
-        if (tier.qualifiesForContactSales()) {
+        if (tier.contactSales()) {
             return new PurchaseQuoteResult(
                     companyId,
                     company.getName(),
                     credits,
-                    tier.pricePerCredit().multiply(BigDecimal.valueOf(credits)),
-                    tier.pricePerCredit().multiply(BigDecimal.valueOf(credits)),
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
                     currency,
                     currencySymbol,
-                    tier.pricePerCredit(),
+                    BigDecimal.ZERO,
                     tier.appliedTier(),
                     true);
         }
 
-        BigDecimal basePrice = tier.pricePerCredit().multiply(BigDecimal.valueOf(credits));
+        BigDecimal totalAmount = tier.pricePerCredit().multiply(BigDecimal.valueOf(credits));
 
         return new PurchaseQuoteResult(
                 companyId,
                 company.getName(),
                 credits,
-                basePrice,
-                basePrice,
+                totalAmount,
+                totalAmount,
                 currency,
                 currencySymbol,
                 tier.pricePerCredit(),
@@ -213,13 +232,13 @@ public class CompanyAdminCreditPurchaseService {
 
         BillingCurrency currency = resolveBillingCurrency(company);
         CreditPlan plan = resolveCreditPlan(company);
-        int historicalPurchased = company.getHistoricalCreditsPurchased();
+        String serviceLevel = plan.getServiceLevel() != null ? plan.getServiceLevel() : "STANDARD";
         String currencySymbol = exchangeRateService.getCurrencySymbol(currency.name());
 
-        TierPricing tier = computeTierPricing(historicalPurchased, plan.getBasePriceUsd(), currency, currencySymbol);
+        VolumePricingService.TierPrice tier = volumePricingService.computePrice(credits, serviceLevel, currency);
 
-        if (tier.qualifiesForContactSales()) {
-            throw new IllegalStateException("Companies with 500+ historical credits must contact sales for custom pricing.");
+        if (tier.contactSales()) {
+            throw new IllegalStateException("Companies purchasing 500+ credits must contact sales for custom pricing.");
         }
 
         BigDecimal pricePerCredit = tier.pricePerCredit();
@@ -409,44 +428,6 @@ public class CompanyAdminCreditPurchaseService {
         CreditPurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found"));
         return CreditPurchaseResponse.from(purchase);
-    }
-
-    private record TierPricing(
-            BigDecimal pricePerCredit,
-            String appliedTier,
-            boolean qualifiesForContactSales
-    ) {}
-
-    private TierPricing computeTierPricing(int historicalCredits, BigDecimal basePriceUsd,
-            BillingCurrency currency, String currencySymbol) {
-        BigDecimal priceInCurrency;
-        String tier;
-        boolean contactSales;
-
-        if (historicalCredits >= 500) {
-            tier = "TIER_3";
-            contactSales = true;
-        } else if (historicalCredits >= 100) {
-            tier = "TIER_3";
-            contactSales = false;
-        } else if (historicalCredits >= 50) {
-            tier = "TIER_2";
-            contactSales = false;
-        } else {
-            tier = "TIER_1";
-            contactSales = false;
-        }
-
-        BigDecimal multiplier = switch (tier) {
-            case "TIER_3" -> TIER_3_MULTIPLIER;
-            case "TIER_2" -> TIER_2_MULTIPLIER;
-            default -> TIER_1_MULTIPLIER;
-        };
-
-        BigDecimal tierBaseUsd = basePriceUsd.multiply(multiplier);
-        priceInCurrency = exchangeRateService.convertFromUsd(tierBaseUsd, currency.name());
-
-        return new TierPricing(priceInCurrency, tier, contactSales);
     }
 
     private CreditPlan resolveCreditPlan(Company company) {

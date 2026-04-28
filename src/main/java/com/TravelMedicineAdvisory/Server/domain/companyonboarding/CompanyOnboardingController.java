@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
+import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,10 +32,13 @@ public class CompanyOnboardingController {
 
     private final CompanyOnboardingService service;
     private final CallbackRegistry callbackRegistry;
+    private final VolumePricingService volumePricingService;
 
-    public CompanyOnboardingController(CompanyOnboardingService service, CallbackRegistry callbackRegistry) {
+    public CompanyOnboardingController(CompanyOnboardingService service, CallbackRegistry callbackRegistry,
+            VolumePricingService volumePricingService) {
         this.service = service;
         this.callbackRegistry = callbackRegistry;
+        this.volumePricingService = volumePricingService;
     }
 
     // ============ PUBLIC ENDPOINTS ============
@@ -88,6 +92,12 @@ public class CompanyOnboardingController {
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse(e.getMessage(), null));
         }
+    }
+
+    @GetMapping("/public/company-onboarding/pricing")
+    public ResponseEntity<SuccessResponse> getPricingPreview(@RequestParam int credits) {
+        var previews = volumePricingService.getPublicPricingPreviews(credits);
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", previews));
     }
 
     @GetMapping("/public/company-onboarding/callback")

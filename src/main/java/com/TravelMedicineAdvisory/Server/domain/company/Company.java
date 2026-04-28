@@ -120,11 +120,6 @@ public class Company extends BaseEntity {
         this.totalCreditsPurchased = totalCreditsPurchased;
     }
 
-    @Transient
-    public int getHistoricalCreditsPurchased() {
-        return totalCreditsPurchased != null ? totalCreditsPurchased : 0;
-    }
-
     public Boolean getHasApiAccess() {
         return hasApiAccess;
     }

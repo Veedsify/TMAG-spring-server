@@ -5,6 +5,7 @@ import com.TravelMedicineAdvisory.Server.core.currency.ExchangeRateService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
+import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
@@ -71,6 +72,7 @@ public class CompanyOnboardingService {
     private final ObjectMapper objectMapper;
     private final ExchangeRateService exchangeRateService;
     private final CallbackRegistry callbackRegistry;
+    private final VolumePricingService volumePricingService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -94,7 +96,8 @@ public class CompanyOnboardingService {
             RandomNumberGenerator randomNumberGenerator,
             ObjectMapper objectMapper,
             ExchangeRateService exchangeRateService,
-            CallbackRegistry callbackRegistry) {
+            CallbackRegistry callbackRegistry,
+            VolumePricingService volumePricingService) {
         this.onboardingRepository = onboardingRepository;
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
@@ -111,6 +114,7 @@ public class CompanyOnboardingService {
         this.objectMapper = objectMapper;
         this.exchangeRateService = exchangeRateService;
         this.callbackRegistry = callbackRegistry;
+        this.volumePricingService = volumePricingService;
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req) {
@@ -182,9 +186,18 @@ public class CompanyOnboardingService {
                 .orElseThrow(() -> new NoSuchElementException("Plan not found: " + entity.getSelectedPlanCode()));
 
         int creditCount = entity.getCreditCount() != null ? entity.getCreditCount() : 0;
-        String currencyCode = entity.getBillingCurrency().name();
-        BigDecimal pricePerCredit = exchangeRateService.convertFromUsd(plan.getBasePriceUsd(), currencyCode);
+        BillingCurrency currency = entity.getBillingCurrency();
+        String serviceLevel = plan.getServiceLevel() != null ? plan.getServiceLevel() : "STANDARD";
+
+        VolumePricingService.TierPrice tier = volumePricingService.computePrice(creditCount, serviceLevel, currency);
+
+        if (tier.contactSales()) {
+            throw new IllegalArgumentException("Companies purchasing 500+ credits must contact sales for custom pricing.");
+        }
+
+        BigDecimal pricePerCredit = tier.pricePerCredit();
         BigDecimal price = pricePerCredit.multiply(BigDecimal.valueOf(creditCount));
+        String currencyCode = currency.name();
 
         // Essential plan (free) — skip payment if price is zero
         if (price.compareTo(BigDecimal.ZERO) <= 0) {
