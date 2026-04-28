@@ -37,6 +37,102 @@ import org.springframework.stereotype.Component;
 @Component
 public class SystemPromptBuilder {
 
+    private static final String JSON_OUTPUT_GUARD = """
+            JSON OUTPUT GUARD (STRICT):
+            - Return exactly one top-level JSON object and nothing else.
+            - Do not add markdown fences, comments, headings, or explanatory text.
+            - Do not prepend or append any text before "{" or after "}".
+            - Use double-quoted JSON keys and string values only.
+            - Do not use trailing commas.
+            - Every schema key must be present. Use null where a section is not applicable.
+            - Ensure all arrays/objects are properly closed and syntactically valid.
+            - Before finalizing, self-check that the response can be parsed by a strict JSON parser.
+            """;
+
+    private static final String CRITICAL_INSTRUCTIONS = """
+            CRITICAL INSTRUCTIONS:
+
+            1. The user prompt has a "Current trip" section: that is the ONLY authoritative source for
+               destination, country, trip length, purpose, and travel dates in your JSON output.
+
+            2. For RETURN trips, when Departure date and Return date appear in that section, set travelDates
+               to a clear human-readable range using those exact dates, and set tripAtGlance.durationDays
+               to the inclusive calendar day count (must match "Trip length" in the user prompt).
+
+            3. A separate "Traveller health context" block contains questionnaire JSON for medical
+               personalisation only; never infer this trip's destination or itinerary from it
+               (server still treats the Current trip block as sole truth).
+
+            4. Use concise, practical medical-travel guidance. Do not include markdown fences.
+
+            5. Pre-computed clinical context above provides:
+               - overallRiskLevel: Use this value in your JSON output
+               - clinicalFlags: Copy the "Triggered Decision Trees" list to this field
+               - contraindications: Copy the "Active Contraindications" list to this field
+               - specialistReferrals: Copy the "Specialist Referrals Required" list to this field
+               - hardStop: If "HARD STOP TRIGGERED" appears above, populate this object; otherwise null
+
+            6. MANDATORY — Apply all 14 decision trees (Part 5 above) to this traveller:
+               - Evaluate each tree against the questionnaire responses in the user prompt.
+               - Apply cross-links between trees — no tree operates in isolation.
+               - Where trees produce conflicting risk levels, take the HIGHEST level.
+               - Multiple risk factors converging → escalate recommendations proportionally.
+
+            7. MANDATORY — healthRiskOverview must include EXACTLY one object per category
+               (even if risk is minimal — use level LOW and a brief explanation):
+               • "Food and water safety"
+               • "Vector-borne diseases"
+               • "Respiratory infections"
+               • "Environmental health (heat, sun, air quality)"
+               • "Injuries and road traffic safety"
+               • "Rabies and animal contact"
+               • "Blood-borne and sexual health"
+               • "Altitude-related illness"
+
+            8. MANDATORY — vaccinations must include one object per topic (even if not indicated):
+               • "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
+               • "Influenza"
+               • "COVID-19"
+               • "Hepatitis A"
+               • "Hepatitis B"
+               • "Typhoid"
+               • "Yellow fever"
+               • "Japanese encephalitis"
+               • "Meningococcal"
+               • "Rabies pre-exposure"
+               • "Cholera (oral vaccine)"
+
+            9. MANDATORY — recommendations must include at least one object per topic:
+               • "Pre-travel review & vaccination records"
+               • "Food and water hygiene"
+               • "Vector bite prevention"
+               • "Sun, heat, and environmental precautions"
+               • "Injury and road safety"
+               • "Sexual health and blood exposure"
+               • "Jet lag, sleep, and mental wellbeing"
+               • "Malaria and other chemoprophylaxis (state if not indicated)"
+               • "Traveller-specific considerations (from health context)"
+
+            10. Optional sections (set to null if not applicable):
+                - malariaPrevention: if destination is not malaria-risk
+                - flightHealth: if flight profile is not clinically significant
+                - sexualHealth: if Section 9 responses indicate no risk behaviours
+                - pregnancyGuidance: if Q28 = No AND Q29 = No
+
+            11. itineraryGuidance requirements:
+                - tripType must exactly mirror the Current trip "Trip Type" value.
+                - routeAdvice:
+                  • ONE_WAY: include exactly one stop guidance row.
+                  • RETURN: include outbound stop guidance and include practical return-phase reminders in returnGuidance.
+                  • MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in listed order.
+                - returnGuidance:
+                  • RETURN: include at least 4 actionable bullets for the return leg and immediate post-return period.
+                  • ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is explicit return information.
+
+            12. Remove all "-" hyphens and "_" underscore characters from the provided response.
+            13. medicalDisclaimer: Copy the exact disclaimer text from Part 11 above.
+            """;
+
     public String build(ClinicalContext context) {
         StringBuilder prompt = new StringBuilder();
 
@@ -186,7 +282,9 @@ public class SystemPromptBuilder {
         prompt.append(ClinicalRules.OUTPUT_FORMAT).append("\n\n");
 
         prompt.append("Return ONLY valid JSON matching this exact schema:\n");
-        prompt.append(buildJsonSchema(context)).append("\n\n");
+        prompt.append(buildJsonSchema()).append("\n\n");
+        prompt.append(CRITICAL_INSTRUCTIONS).append("\n\n");
+        prompt.append(JSON_OUTPUT_GUARD).append("\n\n");
 
         // ================================================================
         // PART 9 — MANDATORY COVERAGE REQUIREMENTS
@@ -235,7 +333,7 @@ public class SystemPromptBuilder {
         return prompt.toString();
     }
 
-    private String buildJsonSchema(ClinicalContext context) {
+    private String buildJsonSchema() {
         return """
                 {
                   "reportTitle": "string",
@@ -323,88 +421,6 @@ public class SystemPromptBuilder {
                   "nextSteps": ["string"],
                   "medicalDisclaimer":"string"
                 }
-
-                CRITICAL INSTRUCTIONS:
-
-                1. The user prompt has a "Current trip" section: that is the ONLY authoritative source for
-                   destination, country, trip length, purpose, and travel dates in your JSON output.
-
-                2. For RETURN trips, when Departure date and Return date appear in that section, set travelDates
-                   to a clear human-readable range using those exact dates, and set tripAtGlance.durationDays
-                   to the inclusive calendar day count (must match "Trip length" in the user prompt).
-
-                3. A separate "Traveller health context" block contains questionnaire JSON for medical
-                   personalisation only; never infer this trip's destination or itinerary from it
-                   (server still treats the Current trip block as sole truth).
-
-                4. Use concise, practical medical-travel guidance. Do not include markdown fences.
-
-                5. Pre-computed clinical context above provides:
-                   - overallRiskLevel: Use this value in your JSON output
-                   - clinicalFlags: Copy the "Triggered Decision Trees" list to this field
-                   - contraindications: Copy the "Active Contraindications" list to this field
-                   - specialistReferrals: Copy the "Specialist Referrals Required" list to this field
-                   - hardStop: If "HARD STOP TRIGGERED" appears above, populate this object; otherwise null
-
-                6. MANDATORY — Apply all 14 decision trees (Part 5 above) to this traveller:
-                   - Evaluate each tree against the questionnaire responses in the user prompt.
-                   - Apply cross-links between trees — no tree operates in isolation.
-                   - Where trees produce conflicting risk levels, take the HIGHEST level.
-                   - Multiple risk factors converging → escalate recommendations proportionally.
-
-                7. MANDATORY — healthRiskOverview must include EXACTLY one object per category
-                   (even if risk is minimal — use level LOW and a brief explanation):
-                   • "Food and water safety"
-                   • "Vector-borne diseases"
-                   • "Respiratory infections"
-                   • "Environmental health (heat, sun, air quality)"
-                   • "Injuries and road traffic safety"
-                   • "Rabies and animal contact"
-                   • "Blood-borne and sexual health"
-                   • "Altitude-related illness"
-
-                8. MANDATORY — vaccinations must include one object per topic (even if not indicated):
-                   • "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
-                   • "Influenza"
-                   • "COVID-19"
-                   • "Hepatitis A"
-                   • "Hepatitis B"
-                   • "Typhoid"
-                   • "Yellow fever"
-                   • "Japanese encephalitis"
-                   • "Meningococcal"
-                   • "Rabies pre-exposure"
-                   • "Cholera (oral vaccine)"
-
-                9. MANDATORY — recommendations must include at least one object per topic:
-                   • "Pre-travel review & vaccination records"
-                   • "Food and water hygiene"
-                   • "Vector bite prevention"
-                   • "Sun, heat, and environmental precautions"
-                   • "Injury and road safety"
-                   • "Sexual health and blood exposure"
-                   • "Jet lag, sleep, and mental wellbeing"
-                   • "Malaria and other chemoprophylaxis (state if not indicated)"
-                   • "Traveller-specific considerations (from health context)"
-
-                10. Optional sections (set to null if not applicable):
-                    - malariaPrevention: if destination is not malaria-risk
-                    - flightHealth: if flight profile is not clinically significant
-                    - sexualHealth: if Section 9 responses indicate no risk behaviours
-                    - pregnancyGuidance: if Q28 = No AND Q29 = No
-
-                11. itineraryGuidance requirements:
-                    - tripType must exactly mirror the Current trip "Trip Type" value.
-                    - routeAdvice:
-                      • ONE_WAY: include exactly one stop guidance row.
-                      • RETURN: include outbound stop guidance and include practical return-phase reminders in returnGuidance.
-                      • MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in listed order.
-                    - returnGuidance:
-                      • RETURN: include at least 4 actionable bullets for the return leg and immediate post-return period.
-                      • ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is explicit return information.
-
-                12. Remove all "-" hyphens and "_" underscore characters from the provided response.
-                13. medicalDisclaimer: Copy the exact disclaimer text from Part 11 above.
                 """;
     }
 }
