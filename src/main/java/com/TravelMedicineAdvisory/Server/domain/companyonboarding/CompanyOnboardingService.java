@@ -8,6 +8,7 @@ import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
 import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingStatus;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
@@ -41,7 +42,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -49,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -73,6 +77,7 @@ public class CompanyOnboardingService {
     private final ExchangeRateService exchangeRateService;
     private final CallbackRegistry callbackRegistry;
     private final VolumePricingService volumePricingService;
+    private final StorageService storageService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -97,7 +102,8 @@ public class CompanyOnboardingService {
             ObjectMapper objectMapper,
             ExchangeRateService exchangeRateService,
             CallbackRegistry callbackRegistry,
-            VolumePricingService volumePricingService) {
+            VolumePricingService volumePricingService,
+            StorageService storageService) {
         this.onboardingRepository = onboardingRepository;
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
@@ -115,9 +121,10 @@ public class CompanyOnboardingService {
         this.exchangeRateService = exchangeRateService;
         this.callbackRegistry = callbackRegistry;
         this.volumePricingService = volumePricingService;
+        this.storageService = storageService;
     }
 
-    public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req) {
+    public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {
         // Validate plan code
         CreditPlanCode planCode;
         try {
@@ -128,7 +135,8 @@ public class CompanyOnboardingService {
         userCreditPlanRepository.findByCode(planCode)
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + req.selectedPlanCode()));
 
-        if (req.teamMembers() == null || req.teamMembers().isEmpty()) {
+        List<TeamMemberRequest> normalizedTeamMembers = normalizeTeamMembers(req.teamMembers());
+        if (normalizedTeamMembers.isEmpty()) {
             throw new IllegalArgumentException("At least one team member is required");
         }
 
@@ -143,7 +151,7 @@ public class CompanyOnboardingService {
 
         String teamMembersJson;
         try {
-            teamMembersJson = objectMapper.writeValueAsString(req.teamMembers());
+            teamMembersJson = objectMapper.writeValueAsString(normalizedTeamMembers);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Invalid team members data");
         }
@@ -159,8 +167,26 @@ public class CompanyOnboardingService {
         entity.setBillingCurrency(currency);
         entity.setSelectedPlanCode(planCode.name());
         entity.setCreditCount(creditCount);
-        entity.setSampleRequest(req.sampleRequest());
+        entity.setSampleRequest(req.sampleRequest() == null || req.sampleRequest().isBlank() ? null : req.sampleRequest());
         entity.setTeamMembers(teamMembersJson);
+        if (teamMembersCsv != null && !teamMembersCsv.isEmpty()) {
+            if (teamMembersCsv.getOriginalFilename() == null || !teamMembersCsv.getOriginalFilename().toLowerCase().endsWith(".csv")) {
+                throw new IllegalArgumentException("Team members upload must be a CSV file");
+            }
+            String fileName = UUID.randomUUID() + "_" + teamMembersCsv.getOriginalFilename();
+            try {
+                String path = storageService.storeBytes(
+                        teamMembersCsv.getBytes(),
+                        "company-onboarding/team-members",
+                        fileName,
+                        teamMembersCsv.getContentType() != null ? teamMembersCsv.getContentType() : "text/csv");
+                entity.setTeamMembersCsvFileName(teamMembersCsv.getOriginalFilename());
+                entity.setTeamMembersCsvPath(path);
+                entity.setTeamMembersCsvContentType(teamMembersCsv.getContentType());
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Failed to store team members CSV");
+            }
+        }
         entity.setTxRef(txRef);
         entity.setStatus(OnboardingStatus.PENDING_PAYMENT);
         entity.setPaymentStatus(OnboardingPaymentStatus.PENDING);
@@ -450,9 +476,6 @@ public class CompanyOnboardingService {
         logger.info("Company created from onboarding: id={}, code={}, plan={}, credits={}",
                 company.getId(), companyCode, planCode, creditCount);
 
-        int creditsPerMember = teamMembers.size() > 0 ? creditCount / teamMembers.size() : 0;
-        int totalCreditsAllocated = 0;
-
         for (TeamMemberRequest member : teamMembers) {
             if (userRepository.findByEmail(member.email()).isPresent()) {
                 logger.warn("User already exists with email: {}, skipping", member.email());
@@ -492,7 +515,7 @@ public class CompanyOnboardingService {
             user.setInvitationToken(invitationToken);
             user.setInvitationTokenExpiry(LocalDateTime.now().plusDays(7));
             user.setType("COMPANY");
-            user.setCredits(creditsPerMember);
+            user.setCredits(0);
             user.setRole(role);
             user.setBillingCurrency(entity.getBillingCurrency());
             user.setCreditPlan(plan);
@@ -502,7 +525,7 @@ public class CompanyOnboardingService {
             employee.setName(member.name());
             employee.setEmail(member.email());
             employee.setDepartment(department);
-            employee.setCreditsAllocated(creditsPerMember);
+            employee.setCreditsAllocated(0);
             employee.setCreditsUsed(0);
             employee.setPlansGenerated(0);
             employee.setStatus("active");
@@ -512,24 +535,11 @@ public class CompanyOnboardingService {
 
             CompanyUser companyUser = new CompanyUser();
             companyUser.setRole(roleName);
-            companyUser.setCreditsAllocated(creditsPerMember);
+            companyUser.setCreditsAllocated(0);
             companyUser.setCreditsUsed(0);
             companyUser.setCompany(company);
             companyUser.setUser(user);
             companyUserRepository.save(companyUser);
-
-            if (creditsPerMember > 0) {
-                Credit credit = new Credit();
-                credit.setAmount(creditsPerMember);
-                credit.setType("signup_allocation");
-                credit.setReference("Onboarding signup: " + member.email());
-                credit.setBalanceAfter(creditsPerMember);
-                credit.setUser(user);
-                credit.setCompany(company);
-                creditRepository.save(credit);
-            }
-
-            totalCreditsAllocated += creditsPerMember;
 
             String inviteLink = frontendUrl + "/accept-invitation?token=" + invitationToken;
             queueService.dispatch(JobType.EMAIL_EMPLOYEE_INVITATION, Map.of(
@@ -545,7 +555,7 @@ public class CompanyOnboardingService {
                     member.email(), roleName, company.getName());
         }
 
-        company.setUsedCredits(totalCreditsAllocated);
+        company.setUsedCredits(0);
         companyRepository.save(company);
 
         // Only create the signup CreditPurchase if it doesn't already exist
@@ -592,6 +602,27 @@ public class CompanyOnboardingService {
         }
     }
 
+    private List<TeamMemberRequest> normalizeTeamMembers(List<TeamMemberRequest> teamMembers) {
+        if (teamMembers == null) return new ArrayList<>();
+
+        List<TeamMemberRequest> normalized = new ArrayList<>();
+        for (TeamMemberRequest member : teamMembers) {
+            if (member == null) continue;
+            String name = member.name() != null ? member.name().trim() : "";
+            String email = member.email() != null ? member.email().trim().toLowerCase() : "";
+            if (name.isBlank() || email.isBlank()) {
+                throw new IllegalArgumentException("Each team member must include a name and email");
+            }
+
+            String role = member.role() != null ? member.role().trim().toLowerCase() : "hr";
+            if (!"admin".equals(role) && !"hr".equals(role)) {
+                role = "hr";
+            }
+            normalized.add(new TeamMemberRequest(name, email, role));
+        }
+        return normalized;
+    }
+
     private String generateToken(int byteLength) {
         byte[] bytes = new byte[byteLength];
         new SecureRandom().nextBytes(bytes);
@@ -621,6 +652,8 @@ public class CompanyOnboardingService {
                 entity.getCreditCount(),
                 entity.getSampleRequest(),
                 teamMembers,
+                entity.getTeamMembersCsvFileName(),
+                entity.getTeamMembersCsvPath() != null ? storageService.getUrl(entity.getTeamMembersCsvPath()) : null,
                 entity.getTxRef(),
                 entity.getPaymentStatus() != null ? entity.getPaymentStatus().name().toLowerCase() : "pending",
                 entity.getPaymentAmount(),

@@ -16,6 +16,8 @@ public record CompanyOnboardingResponse(
         Integer creditCount,
         String sampleRequest,
         List<TeamMemberResponse> teamMembers,
+        String teamMembersCsvFileName,
+        String teamMembersCsvUrl,
         String txRef,
         String paymentStatus,
         BigDecimal paymentAmount,
