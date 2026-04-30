@@ -1,25 +1,30 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.doctor;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorInvitationRequest;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationService;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/admin/doctors")
@@ -137,7 +142,7 @@ public class SuperAdminDoctorController {
                 })
                 .toList();
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", Map.of(
-                "data", dtos,
+                "doctors", dtos,
                 "pagination", Map.of(
                         "total", dtos.size(),
                         "page", 1,
