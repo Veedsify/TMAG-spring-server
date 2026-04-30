@@ -45,7 +45,7 @@ Full access to every resource and action.
 
 ---
 
-### Administrator (105 permissions)
+### Administrator (155 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
@@ -53,27 +53,37 @@ Full access to every resource and action.
 | authorization  | ✅      | ✅    | ✅      | ✅      | ✅    |
 | media          | ✅      | ✅    | ✅      | ✅      | ✅    |
 | profile        | ✅      | ✅    | ✅      | ✅      | ✅    |
-| company        | ✅      | ✅    | ✅      | ✅      | ✅    |
-| employee       | ✅      | ✅    | ✅      | ✅      | ✅    |
-| country        | ✅      | ✅    | ✅      | ✅      | ✅    |
-| blog_post      | ✅      | ✅    | ✅      | ✅      | ✅    |
-| faq_item       | ✅      | ✅    | ✅      | ✅      | ✅    |
-| credit         | ✅      | ✅    | ✅      | ✅      | ✅    |
-| pricing_plan   | ✅      | ✅    | ✅      | ✅      | ✅    |
-| system_setting | ✅      | ✅    | ✅      | ✅      | ✅    |
-| notification   | ✅      | ✅    | ✅      | ✅      | ✅    |
-| system_log     | ✅      | ✅    | ✅      | ✅      | ✅    |
-| travel_plan    | ✅      | ✅    | ✅      | ✅      | ✅    |
+| abuse_flag     | ✅      | ✅    | ✅      | ✅      | ✅    |
+| ai_request_log | ✅      | ✅    | ✅      | ✅      | ✅    |
 | api_key        | ✅      | ✅    | ✅      | ✅      | ✅    |
+| blog_post      | ✅      | ✅    | ✅      | ✅      | ✅    |
+| company        | ✅      | ✅    | ✅      | ✅      | ✅    |
+| company_user   | ✅      | ✅    | ✅      | ✅      | ✅    |
+| country        | ✅      | ✅    | ✅      | ✅      | ✅    |
+| country_accommodation | ✅ | ✅ | ✅ | ✅ | ✅ |
+| country_health_alert | ✅ | ✅ | ✅ | ✅ | ✅ |
+| credit         | ✅      | ✅    | ✅      | ✅      | ✅    |
 | data_export    | ✅      | ✅    | ✅      | ✅      | ✅    |
 | doctor         | ✅      | ✅    | ✅      | ✅      | ✅    |
 | ebook          | ✅      | ✅    | ✅      | ✅      | ✅    |
+| employee       | ✅      | ✅    | ✅      | ✅      | ✅    |
+| faq_item       | ✅      | ✅    | ✅      | ✅      | ✅    |
+| health_profile | ✅      | ✅    | ✅      | ✅      | ✅    |
+| invoice        | ✅      | ✅    | ✅      | ✅      | ✅    |
+| notification   | ✅      | ✅    | ✅      | ✅      | ✅    |
 | plan_generation_context | ✅ | ✅ | ✅ | ✅ | ✅ |
+| plan_usage_ledger | ✅   | ✅    | ✅      | ✅      | ✅    |
+| pricing_plan   | ✅      | ✅    | ✅      | ✅      | ✅    |
 | report         | ✅      | ✅    | ✅      | ✅      | ✅    |
+| system_log     | ✅      | ✅    | ✅      | ✅      | ✅    |
+| system_setting | ✅      | ✅    | ✅      | ✅      | ✅    |
+| travel_plan    | ✅      | ✅    | ✅      | ✅      | ✅    |
+| travel_request | ✅      | ✅    | ✅      | ✅      | ✅    |
+| user_onboarding | ✅     | ✅    | ✅      | ✅      | ✅    |
 
 ---
 
-### HR (33 permissions)
+### HR (36 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
@@ -89,10 +99,12 @@ Full access to every resource and action.
 | pricing_plan   | ❌      | ✅    | ❌      | ❌      | ✅    |
 | report         | ❌      | ✅    | ❌      | ❌      | ✅    |
 | user_onboarding | ❌     | ✅    | ✅      | ❌      | ❌    |
+| health_profile | ❌      | ✅    | ❌      | ❌      | ❌    |
+| notification   | ❌      | ✅    | ❌      | ❌      | ✅    |
 
 ---
 
-### CustomerSupport (19 permissions)
+### CustomerSupport (22 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
@@ -107,6 +119,8 @@ Full access to every resource and action.
 | notification   | ❌      | ✅    | ❌      | ❌      | ✅    |
 | report         | ❌      | ✅    | ❌      | ❌      | ❌    |
 | user_onboarding | ❌     | ✅    | ❌      | ❌      | ❌    |
+| health_profile | ❌      | ✅    | ❌      | ❌      | ❌    |
+| pricing_plan   | ❌      | ✅    | ❌      | ❌      | ✅    |
 
 ---
 

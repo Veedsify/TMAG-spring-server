@@ -223,10 +223,12 @@ public class DataSeeder implements CommandLineRunner {
         // Administrator
         Role administrator = roleMap.get("Administrator");
         String[] adminResources = {
-                "user", "authorization", "media", "profile", "company", "employee",
-                "country", "blog_post", "faq_item", "credit", "pricing_plan", "system_setting",
-                "notification", "system_log", "travel_plan", "api_key", "data_export", "doctor", "ebook",
-                "plan_generation_context", "report"
+                "user", "authorization", "media", "profile", "abuse_flag", "ai_request_log",
+                "api_key", "blog_post", "company", "company_user", "country", "country_accommodation",
+                "country_health_alert", "credit", "data_export", "doctor", "ebook", "employee",
+                "faq_item", "health_profile", "invoice", "notification", "plan_generation_context",
+                "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
+                "travel_plan", "travel_request", "user_onboarding"
         };
 
         for (String resource : adminResources) {
@@ -251,6 +253,8 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, hr, permMap, "pricing_plan", "read", "list");
         addPermissions(assignments, hr, permMap, "report", "read", "list");
         addPermissions(assignments, hr, permMap, "user_onboarding", "read", "update");
+        addPermissions(assignments, hr, permMap, "health_profile", "read");
+        addPermissions(assignments, hr, permMap, "notification", "read", "list");
 
         // CustomerSupport
         Role customerSupport = roleMap.get("CustomerSupport");
@@ -266,6 +270,8 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, customerSupport, permMap, "notification", "read", "list");
         addPermissions(assignments, customerSupport, permMap, "report", "read");
         addPermissions(assignments, customerSupport, permMap, "user_onboarding", "read");
+        addPermissions(assignments, customerSupport, permMap, "health_profile", "read");
+        addPermissions(assignments, customerSupport, permMap, "pricing_plan", "read", "list");
 
         // Individual
         Role individual = roleMap.get("Individual");
