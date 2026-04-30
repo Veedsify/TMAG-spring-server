@@ -9,6 +9,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,7 @@ public class CreditPurchaseController {
     }
 
     @PostMapping("/initiate")
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> initiatePurchase(
             @AuthenticationPrincipal AppUserDetails userDetails,
             @Valid @RequestBody CreditPurchaseRequest request) {
@@ -65,6 +67,7 @@ public class CreditPurchaseController {
     }
 
     @GetMapping("/verify/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> verifyPurchase(
             @PathVariable String txRef,
             @RequestParam(required = false) String transaction_id) {
@@ -131,6 +134,7 @@ public class CreditPurchaseController {
     }
 
     @GetMapping("/history")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getPurchaseHistory(
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromUserDetails(userDetails);
@@ -138,6 +142,7 @@ public class CreditPurchaseController {
     }
 
     @GetMapping("/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getPurchase(@PathVariable String txRef) {
         try {
             return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getPurchaseByTxRef(txRef)));

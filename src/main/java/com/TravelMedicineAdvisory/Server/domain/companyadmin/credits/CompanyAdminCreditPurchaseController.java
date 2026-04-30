@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +46,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/pricing")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'pricing_plan:read', 'credit:read')")
     public ResponseEntity<SuccessResponse> getCompanyPricing(@RequestParam Long companyId) {
         try {
             var pricing = service.getCompanyPricing(companyId);
@@ -55,6 +57,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @PostMapping("/quote")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'credit:read')")
     public ResponseEntity<SuccessResponse> getQuote(
             @RequestParam Long companyId,
             @RequestParam Integer credits) {
@@ -69,6 +72,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @PostMapping("/purchase")
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> initiatePurchase(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
@@ -108,6 +112,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @PostMapping("/purchase/hr")
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> initiateHrPurchase(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
@@ -180,6 +185,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/verify/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> verifyPurchase(
             @PathVariable String txRef,
             @RequestParam(required = false) String transaction_id) {
@@ -195,6 +201,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/history")
+    @PreAuthorize("@perm.has(authentication, 'credit:read', 'credit:list')")
     public ResponseEntity<SuccessResponse> getPurchaseHistory(
             @RequestParam(required = false) Long companyId) {
         var history = service.getPurchaseHistory(companyId);
@@ -202,6 +209,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getPurchase(@PathVariable String txRef) {
         try {
             return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getPurchaseByTxRef(txRef)));

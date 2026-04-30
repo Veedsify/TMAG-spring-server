@@ -6,6 +6,7 @@ import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -123,6 +124,7 @@ public class EbookController {
     // ─── Authenticated: My ebooks ────────────────────────────────────────────
 
     @GetMapping("/ebooks/my-orders")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SuccessResponse> myOrders(
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = requireUserId(userDetails);
@@ -132,11 +134,13 @@ public class EbookController {
     // ─── Admin ────────────────────────────────────────────────────────────────
 
     @GetMapping("/admin/ebooks")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:list', 'ebook:read')")
     public ResponseEntity<SuccessResponse> adminListEbooks() {
         return ResponseEntity.ok(new SuccessResponse("Ebooks", ebookService.listAllForAdmin()));
     }
 
     @PostMapping("/admin/ebooks")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:create')")
     public ResponseEntity<SuccessResponse> adminCreateEbook(@RequestBody EbookDto.CreateEbookRequest request) {
         try {
             return ResponseEntity.ok(new SuccessResponse("Ebook created", ebookService.createEbook(request)));
@@ -146,6 +150,7 @@ public class EbookController {
     }
 
     @PutMapping("/admin/ebooks/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:update')")
     public ResponseEntity<SuccessResponse> adminUpdateEbook(
             @PathVariable Long id, @RequestBody EbookDto.UpdateEbookRequest request) {
         try {
@@ -156,6 +161,7 @@ public class EbookController {
     }
 
     @DeleteMapping("/admin/ebooks/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:delete')")
     public ResponseEntity<SuccessResponse> adminDeleteEbook(@PathVariable Long id) {
         try {
             ebookService.deleteEbook(id);
@@ -166,6 +172,7 @@ public class EbookController {
     }
 
     @PostMapping("/admin/ebooks/{id}/versions")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:create')")
     public ResponseEntity<SuccessResponse> adminAddVersion(
             @PathVariable Long id, @RequestBody EbookDto.CreateVersionRequest request) {
         try {
@@ -176,6 +183,7 @@ public class EbookController {
     }
 
     @PutMapping("/admin/ebooks/{id}/versions/{versionId}")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:update')")
     public ResponseEntity<SuccessResponse> adminUpdateVersion(
             @PathVariable Long id, @PathVariable Long versionId,
             @RequestBody EbookDto.UpdateVersionRequest request) {
@@ -188,6 +196,7 @@ public class EbookController {
     }
 
     @DeleteMapping("/admin/ebooks/{id}/versions/{versionId}")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:delete')")
     public ResponseEntity<SuccessResponse> adminDeleteVersion(
             @PathVariable Long id, @PathVariable Long versionId) {
         try {
@@ -199,21 +208,25 @@ public class EbookController {
     }
 
     @GetMapping("/admin/ebooks/orders")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:list', 'ebook:read')")
     public ResponseEntity<SuccessResponse> adminListOrders() {
         return ResponseEntity.ok(new SuccessResponse("Orders", ebookService.listAllOrders()));
     }
 
     @GetMapping("/admin/ebooks/{id}/orders")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:read')")
     public ResponseEntity<SuccessResponse> adminListOrdersByEbook(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Orders", ebookService.listOrdersByEbook(id)));
     }
 
     @GetMapping("/admin/ebooks/stats")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:read')")
     public ResponseEntity<SuccessResponse> adminStats() {
         return ResponseEntity.ok(new SuccessResponse("Stats", ebookService.getStats()));
     }
 
     @PostMapping(value = "/admin/ebooks/upload-pdf", consumes = "multipart/form-data")
+    @PreAuthorize("@perm.admin(authentication, 'ebook:create', 'ebook:update')")
     public ResponseEntity<SuccessResponse> uploadPdf(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new SuccessResponse("File is required", null));

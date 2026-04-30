@@ -12,7 +12,6 @@ import java.util.Map;
 @Tag(name = "Admin · Credit ledger")
 @RestController
 @RequestMapping("/api/v1/admin/ledger")
-@PreAuthorize("hasAuthority('all')")
 public class AdminCreditController {
 
     private final AdminCreditService service;
@@ -22,6 +21,7 @@ public class AdminCreditController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.admin(authentication, 'credit:list', 'credit:read')")
     public ResponseEntity<SuccessResponse> getLedger(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long companyId) {
@@ -30,6 +30,7 @@ public class AdminCreditController {
     }
 
     @PostMapping("/adjust")
+    @PreAuthorize("@perm.admin(authentication, 'credit:update')")
     public ResponseEntity<SuccessResponse> adjustCredits(@RequestBody Map<String, Object> body) {
         service.adjustCredits(body);
         return ResponseEntity.ok(new SuccessResponse("Credits adjusted", null));

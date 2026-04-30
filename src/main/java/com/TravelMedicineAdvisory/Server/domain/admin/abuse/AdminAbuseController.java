@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Admin · Abuse")
 @RestController
 @RequestMapping("/api/v1/admin/abuse")
-@PreAuthorize("hasAuthority('all')")
 public class AdminAbuseController {
 
     private final AdminAbuseService service;
@@ -20,11 +19,13 @@ public class AdminAbuseController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.admin(authentication, 'abuse_flag:list')")
     public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Boolean resolved) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAll(resolved)));
     }
 
     @PostMapping("/{id}/resolve")
+    @PreAuthorize("@perm.admin(authentication, 'abuse_flag:update')")
     public ResponseEntity<SuccessResponse> resolve(@PathVariable Long id) {
         service.resolve(id);
         return ResponseEntity.ok(new SuccessResponse("Abuse flag resolved", null));

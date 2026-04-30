@@ -1,6 +1,6 @@
 # RBAC Permissions Reference
 
-## Roles (5)
+## Roles (6)
 
 | ID | Role Name       | Description                                         |
 |----|-----------------|-----------------------------------------------------|
@@ -9,10 +9,11 @@
 | 3  | HR              | Manage employees, view company data                 |
 | 4  | CustomerSupport | Read-only on users/companies, manage FAQ            |
 | 5  | Individual      | Personal profile, travel plans, read public content |
+| 6  | Doctor          | Review travel plans and health information          |
 
 ---
 
-## Resources (25) × Actions (5) = 125 Permissions
+## Resources (31) × Actions (5) = 155 Permissions
 
 ### Actions
 
@@ -26,10 +27,11 @@
 
 ### Resources
 
-`user`, `authorization`, `media`, `profile`, `abuse_flag`, `ai_request_log`, `blog_post`, `company`, `company_user`,
-`country`, `country_accommodation`, `country_health_alert`, `credit`, `employee`, `faq_item`, `health_profile`,
-`invoice`, `notification`, `plan_usage_ledger`, `pricing_plan`, `system_log`, `system_setting`, `travel_plan`,
-`travel_request`, `user_onboarding`
+`user`, `authorization`, `media`, `profile`, `abuse_flag`, `ai_request_log`, `api_key`, `blog_post`, `company`,
+`company_user`, `country`, `country_accommodation`, `country_health_alert`, `credit`, `data_export`, `doctor`,
+`ebook`, `employee`, `faq_item`, `health_profile`, `invoice`, `notification`, `plan_generation_context`,
+`plan_usage_ledger`, `pricing_plan`, `report`, `system_log`, `system_setting`, `travel_plan`, `travel_request`,
+`user_onboarding`
 
 ### Permission format: `resource:action` (e.g. `user:read`, `company:delete`)
 
@@ -37,13 +39,13 @@
 
 ## Permissions by Role
 
-### SuperAdmin — ALL 125 permissions
+### SuperAdmin — ALL 155 permissions
 
 Full access to every resource and action.
 
 ---
 
-### Administrator (65 permissions)
+### Administrator (105 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
@@ -56,40 +58,59 @@ Full access to every resource and action.
 | country        | ✅      | ✅    | ✅      | ✅      | ✅    |
 | blog_post      | ✅      | ✅    | ✅      | ✅      | ✅    |
 | faq_item       | ✅      | ✅    | ✅      | ✅      | ✅    |
+| credit         | ✅      | ✅    | ✅      | ✅      | ✅    |
 | pricing_plan   | ✅      | ✅    | ✅      | ✅      | ✅    |
 | system_setting | ✅      | ✅    | ✅      | ✅      | ✅    |
 | notification   | ✅      | ✅    | ✅      | ✅      | ✅    |
 | system_log     | ✅      | ✅    | ✅      | ✅      | ✅    |
+| travel_plan    | ✅      | ✅    | ✅      | ✅      | ✅    |
+| api_key        | ✅      | ✅    | ✅      | ✅      | ✅    |
+| data_export    | ✅      | ✅    | ✅      | ✅      | ✅    |
+| doctor         | ✅      | ✅    | ✅      | ✅      | ✅    |
+| ebook          | ✅      | ✅    | ✅      | ✅      | ✅    |
+| plan_generation_context | ✅ | ✅ | ✅ | ✅ | ✅ |
+| report         | ✅      | ✅    | ✅      | ✅      | ✅    |
 
 ---
 
-### HR (12 permissions)
+### HR (33 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
 | company        | ❌      | ✅    | ✅      | ❌      | ❌    |
 | employee       | ✅      | ✅    | ✅      | ✅      | ✅    |
-| travel_request | ❌      | ✅    | ❌      | ❌      | ❌    |
-| travel_plan    | ❌      | ✅    | ❌      | ❌      | ❌    |
-| invoice        | ❌      | ✅    | ❌      | ❌      | ❌    |
-| credit         | ❌      | ✅    | ❌      | ❌      | ❌    |
+| travel_request | ❌      | ✅    | ❌      | ❌      | ✅    |
+| travel_plan    | ❌      | ✅    | ❌      | ❌      | ✅    |
+| invoice        | ❌      | ✅    | ❌      | ❌      | ✅    |
+| credit         | ✅      | ✅    | ❌      | ❌      | ✅    |
+| company_user   | ✅      | ✅    | ✅      | ✅      | ✅    |
+| data_export    | ❌      | ✅    | ❌      | ❌      | ✅    |
+| plan_usage_ledger | ❌   | ✅    | ❌      | ❌      | ✅    |
+| pricing_plan   | ❌      | ✅    | ❌      | ❌      | ✅    |
+| report         | ❌      | ✅    | ❌      | ❌      | ✅    |
+| user_onboarding | ❌     | ✅    | ✅      | ❌      | ❌    |
 
 ---
 
-### CustomerSupport (8 permissions)
+### CustomerSupport (19 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
 | user           | ❌      | ✅    | ✅      | ❌      | ❌    |
 | company        | ❌      | ✅    | ❌      | ❌      | ❌    |
 | employee       | ❌      | ✅    | ❌      | ❌      | ❌    |
-| travel_plan    | ❌      | ✅    | ❌      | ❌      | ❌    |
-| travel_request | ❌      | ✅    | ❌      | ❌      | ❌    |
+| travel_plan    | ❌      | ✅    | ❌      | ❌      | ✅    |
+| travel_request | ❌      | ✅    | ❌      | ❌      | ✅    |
 | faq_item       | ❌      | ✅    | ✅      | ❌      | ❌    |
+| credit         | ❌      | ✅    | ❌      | ❌      | ✅    |
+| invoice        | ❌      | ✅    | ❌      | ❌      | ✅    |
+| notification   | ❌      | ✅    | ❌      | ❌      | ✅    |
+| report         | ❌      | ✅    | ❌      | ❌      | ❌    |
+| user_onboarding | ❌     | ✅    | ❌      | ❌      | ❌    |
 
 ---
 
-### Individual (17 permissions)
+### Individual (32 permissions)
 
 | Resource       | create | read | update | delete | list |
 |----------------|--------|------|--------|--------|------|
@@ -100,8 +121,30 @@ Full access to every resource and action.
 | country        | ❌      | ✅    | ❌      | ❌      | ❌    |
 | blog_post      | ❌      | ✅    | ❌      | ❌      | ❌    |
 | faq_item       | ❌      | ✅    | ❌      | ❌      | ❌    |
-| pricing_plan   | ❌      | ✅    | ❌      | ❌      | ❌    |
+| pricing_plan   | ❌      | ✅    | ❌      | ❌      | ✅    |
+| report         | ❌      | ✅    | ❌      | ❌      | ❌    |
 | notification   | ❌      | ✅    | ❌      | ❌      | ❌    |
+| credit         | ✅      | ✅    | ❌      | ❌      | ✅    |
+| ebook          | ❌      | ✅    | ❌      | ❌      | ✅    |
+| user_onboarding | ✅     | ✅    | ✅      | ❌      | ❌    |
+
+---
+
+### Doctor (20 permissions)
+
+| Resource       | create | read | update | delete | list |
+|----------------|--------|------|--------|--------|------|
+| profile        | ❌      | ✅    | ✅      | ❌      | ❌    |
+| doctor         | ✅      | ✅    | ✅      | ❌      | ❌    |
+| travel_plan    | ❌      | ✅    | ✅      | ❌      | ✅    |
+| health_profile | ❌      | ✅    | ❌      | ❌      | ❌    |
+| country        | ❌      | ✅    | ❌      | ❌      | ❌    |
+| blog_post      | ❌      | ✅    | ❌      | ❌      | ❌    |
+| ebook          | ❌      | ✅    | ❌      | ❌      | ✅    |
+| faq_item       | ❌      | ✅    | ❌      | ❌      | ❌    |
+| notification   | ❌      | ✅    | ❌      | ❌      | ✅    |
+| pricing_plan   | ❌      | ✅    | ❌      | ❌      | ✅    |
+| user_onboarding | ❌     | ✅    | ❌      | ❌      | ❌    |
 
 ---
 

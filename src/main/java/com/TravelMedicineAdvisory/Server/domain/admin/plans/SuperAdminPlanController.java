@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/v1/admin/plans")
-@PreAuthorize("hasRole('SUPERADMIN')")
+@PreAuthorize("@perm.has(authentication, 'travel_plan:read', 'travel_plan:update')")
 public class SuperAdminPlanController {
 
     private final TravelPlanRepository travelPlanRepository;

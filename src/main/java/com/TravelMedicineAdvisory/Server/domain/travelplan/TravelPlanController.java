@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +41,7 @@ public class TravelPlanController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:list', 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable,
             @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
@@ -56,6 +58,7 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}/pdf")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:read')")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
 
         if (user == null) {
@@ -73,6 +76,7 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}/summary-pdf")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:read')")
     public ResponseEntity<Void> downloadSummaryPdf(@PathVariable Long id, @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -84,6 +88,7 @@ public class TravelPlanController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id,
             @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
@@ -93,17 +98,20 @@ public class TravelPlanController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody TravelPlanRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody TravelPlanRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

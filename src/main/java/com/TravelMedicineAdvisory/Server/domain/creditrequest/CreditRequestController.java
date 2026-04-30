@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,7 @@ public class CreditRequestController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'credit:list', 'credit:read')")
     public ResponseEntity<SuccessResponse> getAll(@RequestParam(required = false) Long companyId, Pageable pageable) {
         Page<CreditRequestResponse> page = service.findAll(companyId, pageable);
         Pagination pagination = new Pagination(
@@ -47,11 +49,13 @@ public class CreditRequestController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody CreditRequestRequest request, @AuthenticationPrincipal AppUserDetails user) {
 
         Long userId = user.getUserId();
@@ -61,22 +65,26 @@ public class CreditRequestController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'credit:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody CreditRequestRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @PostMapping("/{id}/approve")
+    @PreAuthorize("@perm.has(authentication, 'credit:update')")
     public ResponseEntity<SuccessResponse> approve(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Approved", service.approve(id)));
     }
 
     @PostMapping("/{id}/reject")
+    @PreAuthorize("@perm.has(authentication, 'credit:update')")
     public ResponseEntity<SuccessResponse> reject(@PathVariable Long id, @RequestBody(required = false) CreditRequestRequest request) {
         String reason = request != null ? request.reason() : null;
         return ResponseEntity.ok(new SuccessResponse("Rejected", service.reject(id, reason)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'credit:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

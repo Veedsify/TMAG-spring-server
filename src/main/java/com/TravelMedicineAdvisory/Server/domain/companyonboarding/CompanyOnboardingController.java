@@ -143,7 +143,7 @@ public class CompanyOnboardingController {
     // ============ ADMIN ENDPOINTS ============
 
     @GetMapping("/admin/company-onboarding")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:list')")
     public ResponseEntity<SuccessResponse> listRequests(
             @RequestParam(required = false) String status) {
         OnboardingStatus filterStatus = null;
@@ -158,7 +158,7 @@ public class CompanyOnboardingController {
     }
 
     @GetMapping("/admin/company-onboarding/{id}")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:read')")
     public ResponseEntity<SuccessResponse> getRequest(@PathVariable Long id) {
         try {
             var response = service.getRequestById(id);
@@ -169,7 +169,7 @@ public class CompanyOnboardingController {
     }
 
     @PostMapping("/admin/company-onboarding/{id}/approve")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:create', 'company:update', 'authorization:create')")
     public ResponseEntity<SuccessResponse> approve(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -185,7 +185,7 @@ public class CompanyOnboardingController {
     }
 
     @PostMapping("/admin/company-onboarding/{id}/reject")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:update')")
     public ResponseEntity<SuccessResponse> reject(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {

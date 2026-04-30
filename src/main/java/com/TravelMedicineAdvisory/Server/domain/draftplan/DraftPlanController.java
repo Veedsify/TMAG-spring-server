@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ public class DraftPlanController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:list', 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getAll(@AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -40,6 +42,7 @@ public class DraftPlanController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id,
             @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
@@ -49,6 +52,7 @@ public class DraftPlanController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody SaveDraftPlanRequest request,
             @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {
@@ -59,6 +63,7 @@ public class DraftPlanController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id,
             @RequestBody SaveDraftPlanRequest request,
             @AuthenticationPrincipal AppUserDetails user) {
@@ -69,6 +74,7 @@ public class DraftPlanController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'travel_plan:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id,
             @AuthenticationPrincipal AppUserDetails user) {
         if (user == null) {

@@ -17,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/doctor")
-@PreAuthorize("hasAnyRole('SUPERADMIN', 'DOCTOR')")
 public class DoctorController {
 
   private final DoctorValidationService doctorValidationService;
@@ -27,12 +26,14 @@ public class DoctorController {
   }
 
   @GetMapping("/profile")
+  @PreAuthorize("@perm.doctor(authentication, 'profile:read')")
   public ResponseEntity<SuccessResponse> getProfile(@AuthenticationPrincipal AppUserDetails user) {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getDoctorProfile(user.getUserId())));
   }
 
   @PostMapping("/onboard")
+  @PreAuthorize("@perm.doctor(authentication, 'profile:update')")
   public ResponseEntity<SuccessResponse> onboard(
       @AuthenticationPrincipal AppUserDetails user,
       @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
@@ -53,6 +54,7 @@ public class DoctorController {
   }
 
   @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("@perm.doctor(authentication, 'profile:update')")
   public ResponseEntity<SuccessResponse> updateProfile(
       @AuthenticationPrincipal AppUserDetails user,
       @RequestParam(required = false) String firstName,
@@ -68,6 +70,7 @@ public class DoctorController {
   // ─── Dashboard ────────────────────────────────────────────
 
   @GetMapping("/dashboard")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list', 'travel_plan:read')")
   public ResponseEntity<SuccessResponse> getDashboard(@AuthenticationPrincipal AppUserDetails user) {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getDashboardStats(user.getUserId())));
@@ -76,6 +79,7 @@ public class DoctorController {
   // ─── Plan Lists ───────────────────────────────────────────
 
   @GetMapping("/pending")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
   public ResponseEntity<SuccessResponse> getPendingPlans(Pageable pageable) {
     Page<DoctorValidationPlanDto> page = doctorValidationService.getPendingPlansDto(pageable);
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
@@ -89,6 +93,7 @@ public class DoctorController {
   }
 
   @GetMapping("/validated")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
   public ResponseEntity<SuccessResponse> getValidatedPlans(
       @AuthenticationPrincipal AppUserDetails user,
       Pageable pageable) {
@@ -104,18 +109,21 @@ public class DoctorController {
   }
 
   @GetMapping("/plans/pending")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
   public ResponseEntity<SuccessResponse> getPendingPlansLegacy() {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getPendingPlans()));
   }
 
   @GetMapping("/plans/approved")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
   public ResponseEntity<SuccessResponse> getApprovedPlans(@AuthenticationPrincipal AppUserDetails user) {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getApprovedPlans(user.getUserId())));
   }
 
   @GetMapping("/plans/rejected")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
   public ResponseEntity<SuccessResponse> getRejectedPlans(@AuthenticationPrincipal AppUserDetails user) {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getRejectedPlans(user.getUserId())));
@@ -124,6 +132,7 @@ public class DoctorController {
   // ─── Plan Detail ──────────────────────────────────────────
 
   @GetMapping("/plans/{id}")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:read')")
   public ResponseEntity<SuccessResponse> getPlanDetail(@PathVariable Long id) {
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         doctorValidationService.getPlanDetailDto(id)));
@@ -132,6 +141,7 @@ public class DoctorController {
   // ─── Validate (unified approve or reject) ─────────────────
 
   @PostMapping("/validate")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:update')")
   public ResponseEntity<SuccessResponse> validatePlan(
       @AuthenticationPrincipal AppUserDetails user,
       @RequestBody ValidatePlanRequest request) {
@@ -145,6 +155,7 @@ public class DoctorController {
   }
 
   @PostMapping("/plans/{id}/approve")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:update')")
   public ResponseEntity<SuccessResponse> approvePlan(
       @PathVariable Long id,
       @AuthenticationPrincipal AppUserDetails user) {
@@ -153,6 +164,7 @@ public class DoctorController {
   }
 
   @PostMapping("/plans/{id}/reject")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:update')")
   public ResponseEntity<SuccessResponse> rejectPlan(
       @PathVariable Long id,
       @AuthenticationPrincipal AppUserDetails user,
@@ -164,6 +176,7 @@ public class DoctorController {
   // ─── Signed PDF Download ──────────────────────────────────
 
   @GetMapping("/plans/{id}/signed-pdf")
+  @PreAuthorize("@perm.doctor(authentication, 'travel_plan:read')")
   public ResponseEntity<byte[]> downloadSignedPdf(
       @PathVariable Long id,
       @AuthenticationPrincipal AppUserDetails user) {

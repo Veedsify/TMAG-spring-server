@@ -28,7 +28,7 @@ import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
 
 @RestController
 @RequestMapping("/api/v1/admin/doctors")
-@PreAuthorize("hasRole('SUPERADMIN')")
+@PreAuthorize("@perm.has(authentication, 'doctor:read', 'doctor:update', 'all')")
 public class SuperAdminDoctorController {
 
     private final DoctorValidationService doctorValidationService;

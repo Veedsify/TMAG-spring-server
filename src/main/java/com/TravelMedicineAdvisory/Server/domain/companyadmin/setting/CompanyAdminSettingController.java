@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.companyadmin.setting;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
@@ -22,17 +23,20 @@ public class CompanyAdminSettingController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.company(authentication, #companyId, 'company:read')")
     public ResponseEntity<SuccessResponse> get(@RequestParam Long companyId) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getByCompany(companyId)));
     }
 
     @PutMapping
+    @PreAuthorize("@perm.company(authentication, #request.companyId(), 'company:update')")
     public ResponseEntity<SuccessResponse> update(@RequestBody CompanySettingRequest request) {
         return ResponseEntity
                 .ok(new SuccessResponse("Updated successfully", service.upsert(request.companyId(), request)));
     }
 
     @PutMapping("/billing-currency")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'company:update')")
     public ResponseEntity<SuccessResponse> updateBillingCurrency(
             @RequestParam Long companyId,
             @RequestParam BillingCurrency currency) {

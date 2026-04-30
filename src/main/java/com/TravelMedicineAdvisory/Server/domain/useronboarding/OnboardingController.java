@@ -9,6 +9,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -63,6 +64,7 @@ public class OnboardingController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:read')")
     public ResponseEntity<?> getOnboarding() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Optional<UserOnboarding> onboarding = onboardingRepository.findByUser_Email(email);
@@ -71,6 +73,7 @@ public class OnboardingController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:create', 'user_onboarding:update')")
     public ResponseEntity<?> upsertOnboarding(@RequestBody OnboardingRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -131,6 +134,7 @@ public class OnboardingController {
     }
 
     @PutMapping("/stage")
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:update')")
     public ResponseEntity<?> advanceStage(@RequestBody Map<String, Integer> body) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -148,6 +152,7 @@ public class OnboardingController {
     // ─── Questionnaire Questions ─────────────────────────────────
 
     @GetMapping("/questions")
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:read')")
     public ResponseEntity<?> getQuestions() {
         List<Map<String, Object>> result = onboardingQuestionnaireService.loadQuestionnaireStructure();
         return ResponseEntity.ok(Map.of("success", true, "data", result));
@@ -156,6 +161,7 @@ public class OnboardingController {
     // ─── Questionnaire Responses ─────────────────────────────────
 
     @PostMapping("/questionnaire")
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:update')")
     public ResponseEntity<?> saveQuestionnaireResponses(@RequestBody Map<String, Object> body) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -193,6 +199,7 @@ public class OnboardingController {
     // ─── Progress (Redis) ─────────────────────────────────────────
 
     @PostMapping("/progress")
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:update')")
     public ResponseEntity<?> saveProgress(@RequestBody Map<String, Object> body) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -206,6 +213,7 @@ public class OnboardingController {
     }
 
     @GetMapping("/progress")
+    @PreAuthorize("@perm.has(authentication, 'user_onboarding:read')")
     public ResponseEntity<?> getProgress() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 

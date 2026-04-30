@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/settings")
-@PreAuthorize("isAuthenticated()")
 public class UserSettingController {
 
     private final UserSettingService userSettingService;
@@ -22,12 +21,14 @@ public class UserSettingController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'profile:read')")
     public ResponseEntity<SuccessResponse> getSettings(@AuthenticationPrincipal AppUserDetails user) {
         UserSetting settings = userSettingService.getOrCreateByUserId(user.getUserId());
         return ResponseEntity.ok(new SuccessResponse("Settings fetched", UserSettingResponse.from(settings)));
     }
 
     @PostMapping("/questionnaire-consent")
+    @PreAuthorize("@perm.has(authentication, 'profile:update')")
     public ResponseEntity<SuccessResponse> acceptConsent(
             @AuthenticationPrincipal AppUserDetails user,
             HttpServletRequest request) {

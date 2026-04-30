@@ -12,6 +12,7 @@ import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
 import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,6 +50,7 @@ public class ProfileController {
     }
 
     @GetMapping("/companies")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getMyCompanies() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         List<Map<String, Object>> companies = companyUserService.findMyCompanies(email);
@@ -56,6 +58,7 @@ public class ProfileController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getProfile() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -64,6 +67,7 @@ public class ProfileController {
     }
 
     @PutMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request,
             @AuthenticationPrincipal AppUserDetails authUser) {
         User user = userRepository.findByEmail(authUser.getEmail())
@@ -83,6 +87,7 @@ public class ProfileController {
     }
 
     @PutMapping("/avatar")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateAvatar(@RequestParam("avatar") MultipartFile file) throws IOException {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -104,6 +109,7 @@ public class ProfileController {
     }
 
     @PutMapping("/password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
@@ -118,6 +124,7 @@ public class ProfileController {
     }
 
     @PutMapping("/upgrade-plan")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> upgradePlan(@RequestBody UpgradePlanRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)

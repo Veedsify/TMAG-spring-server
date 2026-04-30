@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class CreditController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'credit:list', 'credit:read')")
     public ResponseEntity<SuccessResponse> getAll(Integer companyId, Pageable pageable) {
         User currentUser = getCurrentUser();
         Page<CreditResponse> page = service.findAllByUser(currentUser.getId(), companyId != null ? companyId.longValue() : null, pageable);
@@ -51,6 +53,7 @@ public class CreditController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
         CreditResponse credit = service.findById(id);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", credit));

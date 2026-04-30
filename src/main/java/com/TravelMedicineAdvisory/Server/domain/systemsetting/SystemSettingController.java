@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "System settings")
@@ -41,17 +42,20 @@ public class SystemSettingController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'system_setting:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody SystemSettingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'system_setting:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody SystemSettingRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'system_setting:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

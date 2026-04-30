@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class HealthProfileController {
     }
 
     @GetMapping("/my")
+    @PreAuthorize("@perm.has(authentication, 'health_profile:read')")
     public ResponseEntity<?> getMy() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         HealthProfileResponse result = service.getMyHealthProfile(email);
@@ -33,11 +35,13 @@ public class HealthProfileController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("@perm.has(authentication, 'health_profile:list')")
     public ResponseEntity<SuccessResponse> getAllList() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAllList()));
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'health_profile:list')")
     public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
         Page<HealthProfileResponse> page = service.findAll(pageable);
         Pagination pagination = new Pagination(
@@ -51,22 +55,26 @@ public class HealthProfileController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'health_profile:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'health_profile:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody HealthProfileRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'health_profile:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody HealthProfileRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'health_profile:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

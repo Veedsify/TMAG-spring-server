@@ -6,6 +6,7 @@ import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,12 +24,14 @@ public class DataExportController {
     }
 
     @GetMapping("/employees")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'employee:list')")
     public ResponseEntity<SuccessResponse> exportEmployees(@RequestParam Long companyId) {
         List<Map<String, Object>> data = service.exportEmployees(companyId);
         return ResponseEntity.ok(new SuccessResponse("Employee data fetched successfully", data));
     }
 
     @GetMapping("/employees/csv")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'employee:list')")
     public ResponseEntity<String> exportEmployeesCsv(@RequestParam Long companyId) {
         String csv = service.exportEmployeesCsv(companyId);
         return ResponseEntity.ok()
@@ -38,12 +41,14 @@ public class DataExportController {
     }
 
     @GetMapping("/plans")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'travel_plan:list')")
     public ResponseEntity<SuccessResponse> exportPlans(@RequestParam Long companyId) {
         List<Map<String, Object>> data = service.exportPlans(companyId);
         return ResponseEntity.ok(new SuccessResponse("Travel plans data fetched successfully", data));
     }
 
     @GetMapping("/plans/csv")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'travel_plan:list')")
     public ResponseEntity<String> exportPlansCsv(@RequestParam Long companyId) {
         String csv = service.exportPlansCsv(companyId);
         return ResponseEntity.ok()
@@ -53,12 +58,14 @@ public class DataExportController {
     }
 
     @GetMapping("/requests")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'travel_request:list', 'credit:list')")
     public ResponseEntity<SuccessResponse> exportRequests(@RequestParam Long companyId) {
         List<Map<String, Object>> data = service.exportRequests(companyId);
         return ResponseEntity.ok(new SuccessResponse("Credit requests data fetched successfully", data));
     }
 
     @GetMapping("/requests/csv")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'travel_request:list', 'credit:list')")
     public ResponseEntity<String> exportRequestsCsv(@RequestParam Long companyId) {
         String csv = service.exportRequestsCsv(companyId);
         return ResponseEntity.ok()
@@ -68,12 +75,14 @@ public class DataExportController {
     }
 
     @GetMapping("/billing")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'invoice:list')")
     public ResponseEntity<SuccessResponse> exportBilling(@RequestParam Long companyId) {
         List<Map<String, Object>> data = service.exportBilling(companyId);
         return ResponseEntity.ok(new SuccessResponse("Billing data fetched successfully", data));
     }
 
     @GetMapping("/billing/csv")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'invoice:list')")
     public ResponseEntity<String> exportBillingCsv(@RequestParam Long companyId) {
         String csv = service.exportBillingCsv(companyId);
         return ResponseEntity.ok()
@@ -83,6 +92,7 @@ public class DataExportController {
     }
 
     @PostMapping("/notify")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'notification:create')")
     public ResponseEntity<SuccessResponse> notifyExport(@RequestParam Long companyId, @RequestBody List<String> dataTypes) {
         service.sendExportNotification(companyId, dataTypes);
         return ResponseEntity.ok(new SuccessResponse("Export notification sent successfully", null));
