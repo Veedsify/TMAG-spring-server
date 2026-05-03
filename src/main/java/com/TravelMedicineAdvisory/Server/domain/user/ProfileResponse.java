@@ -16,6 +16,7 @@ public record ProfileResponse(
         String phone,
         String name,
         @JsonProperty("avatar_url") String avatarUrl,
+        @JsonProperty("profile_picture_option") String profilePictureOption,
         String type,
         Boolean onboarded,
         Map<String, Object> extend,

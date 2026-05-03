@@ -8,6 +8,8 @@ public record DoctorProfileResponse(
     String lastName,
     String email,
     String phone,
+    String avatarUrl,
+    String profilePictureOption,
     String medicalLicenseNumber,
     String signatureUrl,
     String stampUrl,

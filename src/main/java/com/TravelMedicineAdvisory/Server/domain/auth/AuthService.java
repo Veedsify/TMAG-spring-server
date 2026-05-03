@@ -38,6 +38,7 @@ import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
@@ -63,6 +64,7 @@ public class AuthService {
     private final AdminNotificationService adminNotificationService;
     private final CreditPlanRepository userCreditPlanRepository;
     private final UserSettingService userSettingService;
+    private final AvatarUrlService avatarUrlService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -85,7 +87,8 @@ public class AuthService {
             CompanyUserRepository companyUserRepository,
             AdminNotificationService adminNotificationService,
             CreditPlanRepository userCreditPlanRepository,
-            UserSettingService userSettingService) {
+            UserSettingService userSettingService,
+            AvatarUrlService avatarUrlService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -98,6 +101,7 @@ public class AuthService {
         this.adminNotificationService = adminNotificationService;
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.userSettingService = userSettingService;
+        this.avatarUrlService = avatarUrlService;
 
     }
 
@@ -540,7 +544,7 @@ public class AuthService {
             response.setRoleName(user.getRole().getName());
         }
 
-        response.setAvatarUrl(user.getAvatarUrl());
+        response.setAvatarUrl(avatarUrlService.toFullUrl(user.getAvatarUrl()));
         response.setOnboardingStage(user.getOnboardingStage() != null ? user.getOnboardingStage() : 0);
         response.setIsVerified(Boolean.TRUE.equals(user.getVerified()));
         response.setLastLogin(user.getLastLogin() != null ? user.getLastLogin().toString() : null);

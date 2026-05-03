@@ -29,6 +29,7 @@ import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -46,6 +47,7 @@ public class AdminCompanyService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
+    private final AvatarUrlService avatarUrlService;
 
     public AdminCompanyService(CompanyRepository companyRepository,
             CreditPlanRepository userCreditPlanRepository,
@@ -57,7 +59,8 @@ public class AdminCompanyService {
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            QueueService queueService) {
+            QueueService queueService,
+            AvatarUrlService avatarUrlService) {
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.employeeRepository = employeeRepository;
@@ -69,6 +72,7 @@ public class AdminCompanyService {
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.queueService = queueService;
+        this.avatarUrlService = avatarUrlService;
     }
 
     public List<AdminCompanyResponse> findAll() {
@@ -205,7 +209,7 @@ public class AdminCompanyService {
             empResponse.setPlansGenerated(emp.getPlansGenerated() != null ? emp.getPlansGenerated() : 0);
             if (emp.getUser() != null) {
                 empResponse.setUserId(emp.getUser().getId());
-                empResponse.setAvatar(emp.getUser().getAvatarUrl());
+                empResponse.setAvatar(avatarUrlService.toFullUrl(emp.getUser().getAvatarUrl()));
             }
             result.add(empResponse);
         }

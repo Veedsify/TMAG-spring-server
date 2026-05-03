@@ -8,5 +8,7 @@ public record UpdateProfileRequest(
     @JsonProperty("last_name") String lastName,
     String username,
     String phone,
+    @JsonProperty("avatar_url") String avatarUrl,
+    @JsonProperty("profile_picture_option") String profilePictureOption,
     @JsonProperty("billing_currency") BillingCurrency billingCurrency
 ) {}

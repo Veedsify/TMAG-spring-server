@@ -14,6 +14,7 @@ import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.DoctorValidationPlanProjection;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
@@ -55,6 +56,7 @@ public class DoctorValidationService {
     private final EmailTemplates emailTemplates;
     private final ObjectMapper objectMapper;
     private final UserSettingService userSettingService;
+    private final AvatarUrlService avatarUrlService;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -70,7 +72,8 @@ public class DoctorValidationService {
             EmailService emailService,
             EmailTemplates emailTemplates,
             ObjectMapper objectMapper,
-            UserSettingService userSettingService) {
+            UserSettingService userSettingService,
+            AvatarUrlService avatarUrlService) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.userRepository = userRepository;
@@ -82,6 +85,7 @@ public class DoctorValidationService {
         this.emailTemplates = emailTemplates;
         this.objectMapper = objectMapper;
         this.userSettingService = userSettingService;
+        this.avatarUrlService = avatarUrlService;
     }
 
     // -------------------------------------------------------------------------
@@ -130,7 +134,8 @@ public class DoctorValidationService {
     }
 
     public DoctorProfileResponse updateDoctorProfile(Long userId, String firstName, String lastName,
-            String licenseNumber, MultipartFile signatureFile, MultipartFile stampFile) {
+            String profilePictureOption, String licenseNumber, MultipartFile signatureFile,
+            MultipartFile stampFile) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("Doctor not found"));
 
@@ -144,7 +149,9 @@ public class DoctorValidationService {
             user.setFirstName(firstName);
         if (lastName != null && !lastName.isBlank())
             user.setLastName(lastName);
-        if (firstName != null || lastName != null) {
+        if (profilePictureOption != null)
+            user.setProfilePictureOption(profilePictureOption);
+        if (firstName != null || lastName != null || profilePictureOption != null) {
             user.setName(user.getFirstName() + " " + user.getLastName());
             userRepository.save(user);
         }
@@ -533,6 +540,8 @@ public class DoctorValidationService {
                 doctor.getLastName(),
                 doctor.getEmail(),
                 doctor.getPhone(),
+                avatarUrlService.toFullUrl(doctor.getAvatarUrl()),
+                doctor.getProfilePictureOption(),
                 settings.getMedicalLicenseNumber(),
                 settings.getSignatureUrl(),
                 settings.getStampUrl(),

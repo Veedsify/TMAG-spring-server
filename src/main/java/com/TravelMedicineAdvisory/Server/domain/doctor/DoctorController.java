@@ -59,12 +59,13 @@ public class DoctorController {
       @AuthenticationPrincipal AppUserDetails user,
       @RequestParam(required = false) String firstName,
       @RequestParam(required = false) String lastName,
+      @RequestParam(required = false) String profilePictureOption,
       @RequestParam(required = false) String medicalLicenseNumber,
       @RequestParam(value = "signature", required = false) MultipartFile signature,
       @RequestParam(value = "stamp", required = false) MultipartFile stamp) {
     return ResponseEntity.ok(new SuccessResponse("Profile updated successfully",
         doctorValidationService.updateDoctorProfile(
-            user.getUserId(), firstName, lastName, medicalLicenseNumber, signature, stamp)));
+            user.getUserId(), firstName, lastName, profilePictureOption, medicalLicenseNumber, signature, stamp)));
   }
 
   // ─── Dashboard ────────────────────────────────────────────

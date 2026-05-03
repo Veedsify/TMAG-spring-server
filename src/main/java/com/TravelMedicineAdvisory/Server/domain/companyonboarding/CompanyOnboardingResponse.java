@@ -16,6 +16,7 @@ public record CompanyOnboardingResponse(
         Integer creditCount,
         String sampleRequest,
         List<TeamMemberResponse> teamMembers,
+        List<PlatformEmployeeResponse> platformEmployees,
         String teamMembersCsvFileName,
         String teamMembersCsvUrl,
         String txRef,
@@ -34,5 +35,10 @@ public record CompanyOnboardingResponse(
             String name,
             String email,
             String role) {
+    }
+
+    public record PlatformEmployeeResponse(
+            String email,
+            String name) {
     }
 }

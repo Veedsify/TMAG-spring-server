@@ -45,6 +45,9 @@ public class CompanyOnboardingEntity extends BaseEntity {
     @Column(name = "team_members", columnDefinition = "TEXT", nullable = false)
     private String teamMembers = "[]";
 
+    @Column(name = "platform_employees", columnDefinition = "TEXT")
+    private String platformEmployees = "[]";
+
     @Column(name = "team_members_csv_file_name")
     private String teamMembersCsvFileName;
 
@@ -118,6 +121,9 @@ public class CompanyOnboardingEntity extends BaseEntity {
 
     public String getTeamMembers() { return teamMembers; }
     public void setTeamMembers(String teamMembers) { this.teamMembers = teamMembers; }
+
+    public String getPlatformEmployees() { return platformEmployees; }
+    public void setPlatformEmployees(String platformEmployees) { this.platformEmployees = platformEmployees; }
 
     public String getTeamMembersCsvFileName() { return teamMembersCsvFileName; }
     public void setTeamMembersCsvFileName(String teamMembersCsvFileName) { this.teamMembersCsvFileName = teamMembersCsvFileName; }

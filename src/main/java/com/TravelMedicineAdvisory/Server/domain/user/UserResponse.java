@@ -17,6 +17,7 @@ public record UserResponse(
     Boolean isVerified,
     LocalDateTime lastLogin,
     String avatarUrl,
+    String profilePictureOption,
     Integer credits,
     String type,
     Long roleId,

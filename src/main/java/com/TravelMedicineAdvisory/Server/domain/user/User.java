@@ -92,6 +92,9 @@ public class User extends BaseEntity {
   @Column(name = "avatar_url")
   private String avatarUrl;
 
+  @Column(name = "profile_picture_option")
+  private String profilePictureOption = "upload";
+
   private Integer credits = 0;
 
   private String type;
@@ -246,6 +249,14 @@ public class User extends BaseEntity {
 
   public void setAvatarUrl(String avatarUrl) {
     this.avatarUrl = avatarUrl;
+  }
+
+  public String getProfilePictureOption() {
+    return profilePictureOption;
+  }
+
+  public void setProfilePictureOption(String profilePictureOption) {
+    this.profilePictureOption = profilePictureOption;
   }
 
   public Integer getCredits() {

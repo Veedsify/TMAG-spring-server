@@ -20,14 +20,17 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final UserOnboardingRepository onboardingRepository;
     private final QuestionnaireProgressService progressService;
+    private final AvatarUrlService avatarUrlService;
 
     public UserService(UserRepository repository, RoleRepository roleRepository,
             UserOnboardingRepository onboardingRepository,
-            QuestionnaireProgressService progressService) {
+            QuestionnaireProgressService progressService,
+            AvatarUrlService avatarUrlService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.onboardingRepository = onboardingRepository;
         this.progressService = progressService;
+        this.avatarUrlService = avatarUrlService;
     }
 
     public Page<UserResponse> findAll(Pageable pageable) {
@@ -81,7 +84,8 @@ public class UserService {
                 entity.getOnboarded(),
                 entity.getVerified(),
                 entity.getLastLogin(),
-                entity.getAvatarUrl(),
+                avatarUrlService.toFullUrl(entity.getAvatarUrl()),
+                entity.getProfilePictureOption(),
                 entity.getCredits(),
                 entity.getType(),
                 entity.getRole() != null ? entity.getRole().getId() : null,
@@ -105,6 +109,7 @@ public class UserService {
         entity.setOnboarded(request.onboarded());
         entity.setVerified(request.isVerified());
         entity.setAvatarUrl(request.avatarUrl());
+        entity.setProfilePictureOption(request.profilePictureOption());
         entity.setCredits(request.credits());
         entity.setType(request.type());
         if (request.billingCurrency() != null) {

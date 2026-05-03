@@ -23,6 +23,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Page<Employee> findAllByCompanyId(Long companyId, Pageable pageable);
     List<Employee> findAllByCompanyId(Long companyId);
     Optional<Employee> findByUserId(Long userId);
+    Optional<Employee> findByEmailAndCompanyId(String email, Long companyId);
 
     @Query("""
             SELECT new com.TravelMedicineAdvisory.Server.domain.report.UsageReportDto(
