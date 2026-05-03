@@ -280,6 +280,7 @@ public class TravelPlanSummaryPdfGenerator {
             AiGenerationResult result = aiGenerationClient.generateSummary(ACTION_SHEET_SYSTEM_PROMPT, userPrompt);
             JsonNode summary = normalizeActionSheet(objectMapper.readTree(stripJsonFences(result.content())));
             if (hasUsableActionSheet(summary)) {
+                generatedPlan.setSummaryGenerationTokensUsed(result.estimatedTokens());
                 log.info("Generated travel plan Action Sheet PDF with {} model {} for travelPlanId={} generatedPlanId={} tokens={}",
                         result.provider(),
                         result.model(),

@@ -32,13 +32,15 @@ public record CompanyOnboardingResponse(
         LocalDateTime updatedAt) {
 
     public record TeamMemberResponse(
-            String name,
+            String firstName,
+            String lastName,
             String email,
             String role) {
     }
 
     public record PlatformEmployeeResponse(
             String email,
-            String name) {
+            String firstName,
+            String lastName) {
     }
 }

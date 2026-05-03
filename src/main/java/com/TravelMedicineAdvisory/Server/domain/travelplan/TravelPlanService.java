@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.travelplan;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -20,7 +21,10 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
@@ -50,6 +54,7 @@ public class TravelPlanService {
     private final GeneratedPlanRepository generatedPlanRepository;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
     private final ObjectMapper objectMapper;
 
     public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
@@ -59,6 +64,7 @@ public class TravelPlanService {
             GeneratedPlanRepository generatedPlanRepository,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
+            TravelPlanDoctorAssignmentRepository assignmentRepository,
             ObjectMapper objectMapper) {
         this.repository = repository;
         this.companyRepository = companyRepository;
@@ -69,6 +75,7 @@ public class TravelPlanService {
         this.generatedPlanRepository = generatedPlanRepository;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
+        this.assignmentRepository = assignmentRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -235,6 +242,7 @@ public class TravelPlanService {
                 tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
 
         TravelPlan saved = repository.save(entity);
+        assignSelectedDoctors(saved, normalized.selectedDoctorIds());
         persistQuestionnaireResponses(normalized, saved);
 
         planGenerationService.enqueueGeneration(saved.getId(), user.getId());
@@ -325,6 +333,18 @@ public class TravelPlanService {
                 : null;
         String signedPdfUrl = generatedPlan != null ? generatedPlan.signedPdfUrl() : null;
         String summaryPdfUrl = generatedPlan != null ? generatedPlan.summaryPdfUrl() : null;
+        List<AssignedDoctorDto> assignedDoctors = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(entity.getId()).stream()
+                .map(a -> {
+                    User d = a.getDoctor();
+                    return new AssignedDoctorDto(
+                            d.getId(),
+                            d.getFirstName(),
+                            d.getLastName(),
+                            d.getEmail(),
+                            d.getAvatarUrl());
+                })
+                .toList();
+        Boolean openToAllDoctors = assignedDoctors.isEmpty() ? true : null;
         return new TravelPlanResponse(
                 entity.getId(),
                 entity.getDestination(),
@@ -354,7 +374,9 @@ public class TravelPlanService {
                 entity.getValidatedAt(),
                 entity.getRejectionReason(),
                 signedPdfUrl,
-                summaryPdfUrl);
+                summaryPdfUrl,
+                assignedDoctors,
+                openToAllDoctors);
     }
 
     private GeneratedPlanPayload toGeneratedPayload(GeneratedPlan g) {
@@ -488,7 +510,8 @@ public class TravelPlanService {
                     request.companyId(),
                     request.employeeId(),
                     request.userId(),
-                    request.planTier());
+                    request.planTier(),
+                    request.selectedDoctorIds());
         } catch (JsonProcessingException ex) {
             return request;
         }
@@ -499,6 +522,24 @@ public class TravelPlanService {
         return n.isTextual() ? n.asText() : "";
     }
 
+    private void assignSelectedDoctors(TravelPlan travelPlan, java.util.List<Long> selectedDoctorIds) {
+        if (selectedDoctorIds == null || selectedDoctorIds.isEmpty()) {
+            return;
+        }
+        for (Long doctorId : selectedDoctorIds.stream().distinct().toList()) {
+            User doctor = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new NoSuchElementException("Doctor not found: " + doctorId));
+            if (doctor.getRole() == null || doctor.getRole().getName() == null
+                    || !"Doctor".equalsIgnoreCase(doctor.getRole().getName())) {
+                throw new IllegalArgumentException("Selected reviewer is not a doctor: " + doctorId);
+            }
+            TravelPlanDoctorAssignment assignment = new TravelPlanDoctorAssignment();
+            assignment.setTravelPlan(travelPlan);
+            assignment.setDoctor(doctor);
+            assignmentRepository.save(assignment);
+        }
+    }
+
     private String resolvePlanTier(User user) {
         if ("company".equalsIgnoreCase(user.getType())) {
             CompanyUser companyUser = companyUserRepository.findByUser(user).orElse(null);
@@ -506,13 +547,18 @@ public class TravelPlanService {
                     companyUser.getCompany() != null &&
                     companyUser.getCompany().getCreditPlan() != null) {
                 return switch (companyUser.getCompany().getCreditPlan().getCode()) {
-                    case ENTERPRISE_SILVER -> PlanTier.STANDARD.name();
-                    case ENTERPRISE_PLUS -> PlanTier.PREMIUM.name();
-                    case ENTERPRISE_GOLD -> PlanTier.STANDARD.name();
-                    case ENTERPRISE_ELITE -> PlanTier.PREMIUM.name();
-                    case ENTERPRISE_PLATINUM -> PlanTier.STANDARD.name();
-                    case ENTERPRISE_SIGNATURE -> PlanTier.PREMIUM.name();
-                    default -> PlanTier.FREE.name();
+                    case "ENTERPRISE_SILVER" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_PLUS" -> PlanTier.PREMIUM.name();
+                    case "ENTERPRISE_GOLD" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_ELITE" -> PlanTier.PREMIUM.name();
+                    case "ENTERPRISE_PLATINUM" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_SIGNATURE" -> PlanTier.PREMIUM.name();
+                    default -> {
+                        String serviceLevel = companyUser.getCompany().getCreditPlan().getServiceLevel();
+                        yield "PREMIUM".equalsIgnoreCase(serviceLevel) ? PlanTier.PREMIUM.name()
+                                : "STANDARD".equalsIgnoreCase(serviceLevel) ? PlanTier.STANDARD.name()
+                                : PlanTier.FREE.name();
+                    }
                 };
             }
         }
@@ -522,10 +568,15 @@ public class TravelPlanService {
             return PlanTier.FREE.name();
         }
         return switch (creditPlan.getCode()) {
-            case ESSENTIAL -> PlanTier.FREE.name();
-            case STANDARD -> PlanTier.STANDARD.name();
-            case PREMIUM -> PlanTier.PREMIUM.name();
-            default -> PlanTier.FREE.name(); // enterprise plans
+            case "ESSENTIAL" -> PlanTier.FREE.name();
+            case "STANDARD" -> PlanTier.STANDARD.name();
+            case "PREMIUM" -> PlanTier.PREMIUM.name();
+            default -> {
+                String serviceLevel = creditPlan.getServiceLevel();
+                yield "PREMIUM".equalsIgnoreCase(serviceLevel) ? PlanTier.PREMIUM.name()
+                        : "STANDARD".equalsIgnoreCase(serviceLevel) ? PlanTier.STANDARD.name()
+                        : PlanTier.FREE.name();
+            }
         };
     }
 }

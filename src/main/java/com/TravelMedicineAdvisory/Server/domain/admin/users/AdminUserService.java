@@ -65,8 +65,10 @@ public class AdminUserService {
     @Transactional
     public AdminUserResponse create(Map<String, Object> body) {
         User user = new User();
-        if (body.containsKey("name"))
-            user.setName((String) body.get("name"));
+        if (body.containsKey("firstName"))
+            user.setFirstName((String) body.get("firstName"));
+        if (body.containsKey("lastName"))
+            user.setLastName((String) body.get("lastName"));
         if (body.containsKey("email"))
             user.setEmail((String) body.get("email"));
         if (body.containsKey("phone"))
@@ -92,8 +94,11 @@ public class AdminUserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (updates.containsKey("name")) {
-            user.setName((String) updates.get("name"));
+        if (updates.containsKey("firstName")) {
+            user.setFirstName((String) updates.get("firstName"));
+        }
+        if (updates.containsKey("lastName")) {
+            user.setLastName((String) updates.get("lastName"));
         }
         if (updates.containsKey("email")) {
             user.setEmail((String) updates.get("email"));

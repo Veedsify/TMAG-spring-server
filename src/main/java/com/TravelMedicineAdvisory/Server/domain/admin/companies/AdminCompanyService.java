@@ -122,7 +122,8 @@ public class AdminCompanyService {
         company = companyRepository.save(company);
 
         // Create default HR Admin user for this company
-        String adminName = body.containsKey("adminName") ? (String) body.get("adminName") : null;
+        String adminFirstName = body.containsKey("adminFirstName") ? (String) body.get("adminFirstName") : null;
+        String adminLastName = body.containsKey("adminLastName") ? (String) body.get("adminLastName") : null;
         String adminEmail = body.containsKey("adminEmail") ? (String) body.get("adminEmail") : null;
         String adminPassword = body.containsKey("adminPassword") ? (String) body.get("adminPassword") : null;
 
@@ -131,7 +132,8 @@ public class AdminCompanyService {
 
         if (adminEmail != null && adminPassword != null) {
             User adminUser = new User();
-            adminUser.setName(adminName != null ? adminName : adminEmail);
+            adminUser.setFirstName(adminFirstName != null ? adminFirstName : "");
+            adminUser.setLastName(adminLastName != null ? adminLastName : "");
             adminUser.setEmail(adminEmail);
             adminUser.setPassword(passwordEncoder.encode(adminPassword));
             adminUser.setType("COMPANY");
@@ -148,7 +150,7 @@ public class AdminCompanyService {
             adminUser = userRepository.save(adminUser);
 
             Employee adminEmployee = new Employee();
-            adminEmployee.setName(adminUser.getName());
+            adminEmployee.setName((adminUser.getFirstName() + " " + adminUser.getLastName()).trim());
             adminEmployee.setEmail(adminUser.getEmail());
             adminEmployee.setDepartment("Administration");
             adminEmployee.setStatus("active");

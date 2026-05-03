@@ -25,6 +25,8 @@ import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
@@ -76,6 +78,7 @@ public class PlanGenerationService {
     private final SystemPromptBuilder systemPromptBuilder;
     private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final StorageService storageService;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
 
     public PlanGenerationService(
             TravelPlanRepository travelPlanRepository,
@@ -93,7 +96,8 @@ public class PlanGenerationService {
             ClinicalContextExtractor clinicalContextExtractor,
             SystemPromptBuilder systemPromptBuilder,
             TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
-            StorageService storageService) {
+            StorageService storageService,
+            TravelPlanDoctorAssignmentRepository assignmentRepository) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
@@ -110,6 +114,7 @@ public class PlanGenerationService {
         this.systemPromptBuilder = systemPromptBuilder;
         this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.storageService = storageService;
+        this.assignmentRepository = assignmentRepository;
     }
 
     public void enqueueGeneration(Long travelPlanId, Long userId) {
@@ -196,6 +201,7 @@ public class PlanGenerationService {
             generatedPlan.setProvider(result.provider());
             generatedPlan.setModelUsed(result.model());
             generatedPlan.setTokensUsed(result.estimatedTokens());
+            generatedPlan.setPlanGenerationTokensUsed(result.estimatedTokens());
             generatedPlan.setProcessingTimeMs(elapsedMs);
             generatedPlan.setErrorMessage(null);
 
@@ -213,6 +219,10 @@ public class PlanGenerationService {
             aiLog.setStatus("success");
             aiLog.setOutputSummary(compactSummary(structuredOutput));
             aiLog.setTokensUsed(result.estimatedTokens());
+            aiLog.setPlanGenerationTokensUsed(result.estimatedTokens());
+            aiLog.setSummaryGenerationTokensUsed(generatedPlan.getSummaryGenerationTokensUsed());
+            aiLog.setTokensUsed((result.estimatedTokens() != null ? result.estimatedTokens() : 0)
+                    + (generatedPlan.getSummaryGenerationTokensUsed() != null ? generatedPlan.getSummaryGenerationTokensUsed() : 0));
             aiLog.setModelUsed(result.model());
             aiLog.setProcessingTimeMs(elapsedMs);
             aiRequestLogRepository.save(aiLog);
@@ -280,7 +290,10 @@ public class PlanGenerationService {
 
         doctorWebSocketService.broadcastNewPlanPending(travelPlan.getId(), travelPlan.getDestination());
 
-        List<User> doctors = userRepository.findByRoleName(Roles.Doctor.name());
+        List<TravelPlanDoctorAssignment> assignments = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(travelPlan.getId());
+        List<User> doctors = assignments.isEmpty()
+                ? userRepository.findByRoleName(Roles.Doctor.name())
+                : assignments.stream().map(TravelPlanDoctorAssignment::getDoctor).toList();
         for (User doctor : doctors) {
             if (doctor.getEmail() == null)
                 continue;

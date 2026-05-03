@@ -122,6 +122,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/contact",
+                                "/api/v1/doctor/apply",
                                 "/api/v1/newsletter/subscribe",
                                 "/api/v1/ebooks/checkout",
                                 "/api/v1/ebooks/orders/verify",

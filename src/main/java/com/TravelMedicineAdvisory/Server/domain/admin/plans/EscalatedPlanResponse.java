@@ -1,8 +1,11 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.plans;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-public record ElevatedPlanResponse(
+import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
+
+public record EscalatedPlanResponse(
         Long id,
         String destination,
         Integer duration,
@@ -14,5 +17,7 @@ public record ElevatedPlanResponse(
         String doctorFeedback,
         String pdfPreviewUrl,
         String summaryPreviewUrl,
-        LocalDateTime elevatedAt) {
+        LocalDateTime escalatedAt,
+        List<AssignedDoctorDto> assignedDoctors,
+        Boolean openToAllDoctors) {
 }

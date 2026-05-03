@@ -117,32 +117,15 @@ public class ReportController {
 
     private String generatePlanHistoryCsv(List<PlanHistoryDto> plans) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Plan ID,Destination,Country,Purpose,Trip Type,Trip Details,Duration,Risk Score,Status,Generated Plan Status,Employee Name,Medical Considerations,Vaccinations,Health Alerts,Safety Advisories,Medications,Water and Food,Emergency Contacts,Generated Plan JSON,Signed PDF URL,Summary PDF URL,Created At,Updated At\n");
+        sb.append("Plan ID,Destination trip details,Country,Purpose,Trip Type,Employees Name\n");
         for (PlanHistoryDto plan : plans) {
-            sb.append(String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+            sb.append(String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
                 plan.planId(),
-                escapeCsv(plan.destination()),
+                escapeCsv(plan.tripDetailsJson() != null && !plan.tripDetailsJson().isBlank() ? plan.tripDetailsJson() : plan.destination()),
                 escapeCsv(plan.country()),
                 escapeCsv(plan.purpose()),
                 escapeCsv(plan.tripType()),
-                escapeCsv(plan.tripDetailsJson()),
-                plan.duration() != null ? plan.duration() : 0,
-                plan.riskScore() != null ? plan.riskScore() : 0,
-                plan.status() != null ? escapeCsv(plan.status()) : "",
-                plan.generatedPlanStatus() != null ? escapeCsv(plan.generatedPlanStatus()) : "",
-                escapeCsv(plan.employeeName()),
-                escapeCsv(plan.medicalConsiderations()),
-                escapeCsv(plan.vaccinations()),
-                escapeCsv(plan.healthAlerts()),
-                escapeCsv(plan.safetyAdvisories()),
-                escapeCsv(plan.medications()),
-                escapeCsv(plan.waterFood()),
-                escapeCsv(plan.emergencyContacts()),
-                escapeCsv(plan.generatedPlanJson()),
-                escapeCsv(plan.signedPdfUrl()),
-                escapeCsv(plan.summaryPdfUrl()),
-                plan.createdAt() != null ? plan.createdAt() : "",
-                plan.updatedAt() != null ? plan.updatedAt() : ""
+                escapeCsv(plan.employeeName())
             ));
         }
         return sb.toString();

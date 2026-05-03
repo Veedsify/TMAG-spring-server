@@ -106,6 +106,7 @@ public class CreditPlanSeeder implements CommandLineRunner {
         plan.setIsCompanyPlan(isCompanyPlan);
         plan.setSignupRangeLabel(signupRangeLabel);
         plan.setServiceLevel(serviceLevel);
+        plan.setVisibility("PUBLIC");
         return plan;
     }
 }

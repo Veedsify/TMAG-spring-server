@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,6 +58,9 @@ public class DoctorValidationService {
     private final ObjectMapper objectMapper;
     private final UserSettingService userSettingService;
     private final AvatarUrlService avatarUrlService;
+    private final DoctorApplicationRepository doctorApplicationRepository;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -73,7 +77,10 @@ public class DoctorValidationService {
             EmailTemplates emailTemplates,
             ObjectMapper objectMapper,
             UserSettingService userSettingService,
-            AvatarUrlService avatarUrlService) {
+            AvatarUrlService avatarUrlService,
+            DoctorApplicationRepository doctorApplicationRepository,
+            TravelPlanDoctorAssignmentRepository assignmentRepository,
+            PasswordEncoder passwordEncoder) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.userRepository = userRepository;
@@ -86,51 +93,79 @@ public class DoctorValidationService {
         this.objectMapper = objectMapper;
         this.userSettingService = userSettingService;
         this.avatarUrlService = avatarUrlService;
+        this.doctorApplicationRepository = doctorApplicationRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // -------------------------------------------------------------------------
     // Doctor onboarding / application
     // -------------------------------------------------------------------------
 
-    public void applyToBecomeDoctor(Long userId, String licenseNumber, MultipartFile signatureFile,
-            MultipartFile stampFile) {
-        // User user = userRepository.findById(userId)
-        // .orElseThrow(() -> new NoSuchElementException("User not found"));
-
-        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
-
-        if (settings.getDoctorApplicationStatus() != null
-                && settings.getDoctorApplicationStatus() != DoctorApplicationStatus.NONE
-                && settings.getDoctorApplicationStatus() != DoctorApplicationStatus.REJECTED) {
-            throw new IllegalArgumentException("You have already applied or are already a doctor");
+    public DoctorApplication applyToBecomeDoctor(String firstName, String lastName, String email,
+            String specialty, String country, String licenseNumber, MultipartFile profilePictureFile,
+            MultipartFile signatureFile, MultipartFile stampFile,
+            boolean confidentialityAgreementAccepted, boolean conductAgreementAccepted) {
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        if (normalizedEmail.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
         }
+        if (isBlank(firstName) || isBlank(lastName) || isBlank(specialty) || isBlank(country) || isBlank(licenseNumber)) {
+            throw new IllegalArgumentException("Name, specialty, licence number, and country are required");
+        }
+        if (signatureFile == null || signatureFile.isEmpty()) {
+            throw new IllegalArgumentException("Signature is required");
+        }
+        if (!confidentialityAgreementAccepted || !conductAgreementAccepted) {
+            throw new IllegalArgumentException("Confidentiality and conduct agreements must be accepted");
+        }
+        doctorApplicationRepository
+                .findFirstByEmailIgnoreCaseAndStatusInAndDeletedAtIsNull(normalizedEmail,
+                        List.of(DoctorApplicationStatus.PENDING, DoctorApplicationStatus.APPROVED))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("You have already applied or are already a doctor");
+                });
 
-        String sigPath = storageService.storeBytes(
-                readMultipartFile(signatureFile),
-                "doctor-signatures",
-                UUID.randomUUID() + "_" + signatureFile.getOriginalFilename(),
-                signatureFile.getContentType());
+        String profilePictureUrl = null;
+        if (profilePictureFile != null && !profilePictureFile.isEmpty()) {
+            String profilePath = storeDoctorApplicationFile(profilePictureFile, "doctor-profile-pictures");
+            profilePictureUrl = storageService.getUrl(profilePath);
+        }
+        String signaturePath = storeDoctorApplicationFile(signatureFile, "doctor-signatures");
 
-        settings.setMedicalLicenseNumber(licenseNumber);
-        settings.setSignatureUrl(storageService.getUrl(sigPath));
-
+        DoctorApplication application = new DoctorApplication();
+        application.setFirstName(firstName != null ? firstName.trim() : "");
+        application.setLastName(lastName != null ? lastName.trim() : "");
+        application.setEmail(normalizedEmail);
+        application.setSpecialty(specialty.trim());
+        application.setCountry(country.trim());
+        application.setMedicalLicenseNumber(licenseNumber.trim());
+        application.setProfilePictureUrl(profilePictureUrl);
+        application.setSignatureUrl(storageService.getUrl(signaturePath));
         if (stampFile != null && !stampFile.isEmpty()) {
-            String stampPath = storageService.storeBytes(
-                    readMultipartFile(stampFile),
-                    "doctor-stamps",
-                    UUID.randomUUID() + "_" + stampFile.getOriginalFilename(),
-                    stampFile.getContentType());
-            settings.setStampUrl(storageService.getUrl(stampPath));
+            String stampPath = storeDoctorApplicationFile(stampFile, "doctor-stamps");
+            application.setStampUrl(storageService.getUrl(stampPath));
         }
+        application.setConfidentialityAgreementAccepted(confidentialityAgreementAccepted);
+        application.setConductAgreementAccepted(conductAgreementAccepted);
 
-        settings.setDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
-        userSettingService.updateDoctorFields(userId,
-                settings.getMedicalLicenseNumber(),
-                settings.getSignatureUrl(),
-                settings.getStampUrl(),
-                DoctorApplicationStatus.PENDING);
+        application.setStatus(DoctorApplicationStatus.PENDING);
+        DoctorApplication saved = doctorApplicationRepository.save(application);
 
-        log.info("Doctor application submitted: userId={}", userId);
+        log.info("Doctor application submitted: applicationId={} email={}", saved.getId(), normalizedEmail);
+        return saved;
+    }
+
+    private String storeDoctorApplicationFile(MultipartFile file, String folder) {
+        return storageService.storeBytes(
+                readMultipartFile(file),
+                folder,
+                UUID.randomUUID() + "_" + file.getOriginalFilename(),
+                file.getContentType());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     public DoctorProfileResponse updateDoctorProfile(Long userId, String firstName, String lastName,
@@ -214,56 +249,82 @@ public class DoctorValidationService {
     // Super Admin actions
     // -------------------------------------------------------------------------
 
-    public void approveDoctorApplication(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+    public void approveDoctorApplication(Long applicationId) {
+        DoctorApplication application = doctorApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Doctor application not found"));
 
-        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
-
-        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
-            throw new IllegalArgumentException("User does not have a pending doctor application");
+        if (application.getStatus() != DoctorApplicationStatus.PENDING) {
+            throw new IllegalArgumentException("Application is not pending");
         }
 
         Role doctorRole = roleRepository.findByName(Roles.Doctor.name())
                 .orElseThrow(() -> new IllegalStateException("Doctor role not found in database"));
 
-        settings.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
-        userSettingService.updateDoctorFields(userId, null, null, null, DoctorApplicationStatus.APPROVED);
-
+        User user = userRepository.findByEmail(application.getEmail()).orElseGet(User::new);
+        String invitationToken = generateToken(32);
+        user.setFirstName(application.getFirstName());
+        user.setLastName(application.getLastName());
+        user.setName(fullName(application.getFirstName(), application.getLastName(), application.getEmail()));
+        user.setUsername(application.getEmail());
+        user.setEmail(application.getEmail());
+        user.setPhone(application.getPhone());
+        user.setBio(application.getBio());
+        user.setAvatarUrl(application.getProfilePictureUrl());
+        user.setProfilePictureOption("upload");
+        user.setVerified(true);
+        user.setOnboarded(false);
+        user.setMustChangePassword(true);
+        user.setInvitationToken(invitationToken);
+        user.setInvitationTokenExpiry(LocalDateTime.now().plusDays(7));
+        user.setPassword(passwordEncoder.encode(invitationToken));
+        user.setType("INDIVIDUAL");
+        user.setCredits(user.getCredits() != null ? user.getCredits() : 0);
         user.setRole(doctorRole);
         userRepository.save(user);
+
+        userSettingService.updateDoctorFields(user.getId(),
+                application.getMedicalLicenseNumber(),
+                application.getSignatureUrl(),
+                application.getStampUrl(),
+                DoctorApplicationStatus.APPROVED);
+
+        application.setStatus(DoctorApplicationStatus.APPROVED);
+        application.setReviewedAt(LocalDateTime.now());
+        application.setCreatedUser(user);
+        doctorApplicationRepository.save(application);
 
         queueService.dispatch(JobType.EMAIL_DOCTOR_APPLICATION_APPROVED, Map.of(
                 "to", user.getEmail(),
                 "subject", "Your TMAG Doctor Application Has Been Approved",
                 "variables", Map.of(
                         "firstName", firstName(user),
-                        "onboardingLink", frontendUrl + "/doctor/onboarding")));
+                        "onboardingLink", frontendUrl + "/accept-invitation?token=" + invitationToken)));
 
-        log.info("Doctor application approved: userId={}", userId);
+        log.info("Doctor application approved: applicationId={} userId={}", applicationId, user.getId());
     }
 
-    public void rejectDoctorApplication(Long userId, String reason) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+    public void rejectDoctorApplication(Long applicationId, String reason) {
+        DoctorApplication application = doctorApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Doctor application not found"));
 
-        UserSetting settings = userSettingService.getOrCreateByUserId(userId);
-
-        if (settings.getDoctorApplicationStatus() != DoctorApplicationStatus.PENDING) {
-            throw new IllegalArgumentException("User does not have a pending doctor application");
+        if (application.getStatus() != DoctorApplicationStatus.PENDING) {
+            throw new IllegalArgumentException("Application is not pending");
         }
 
-        userSettingService.updateDoctorFields(userId, null, null, null, DoctorApplicationStatus.REJECTED);
+        application.setStatus(DoctorApplicationStatus.REJECTED);
+        application.setRejectionReason(reason);
+        application.setReviewedAt(LocalDateTime.now());
+        doctorApplicationRepository.save(application);
 
         queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
-                "to", user.getEmail(),
+                "to", application.getEmail(),
                 "subject", "Update on Your TMAG Doctor Application",
                 "variables", Map.of(
-                        "firstName", firstName(user),
+                        "firstName", application.getFirstName() != null ? application.getFirstName() : "there",
                         "content",
                         "We regret to inform you that your doctor application was not approved. Reason: " + reason)));
 
-        log.info("Doctor application rejected: userId={} reason={}", userId, reason);
+        log.info("Doctor application rejected: applicationId={} reason={}", applicationId, reason);
     }
 
     public void inviteDoctor(String email, String firstName, String lastName) {
@@ -329,6 +390,12 @@ public class DoctorValidationService {
     }
 
     @Transactional(readOnly = true)
+    public Page<DoctorValidationPlanDto> getPendingPlansDto(Long doctorId, Pageable pageable) {
+        return travelPlanRepository.findPendingDoctorValidationSummariesForDoctor(doctorId, pageable)
+                .map(this::toDoctorValidationPlanDto);
+    }
+
+    @Transactional(readOnly = true)
     public Page<DoctorValidationPlanDto> getValidatedPlansDto(Long doctorId, Pageable pageable) {
         return travelPlanRepository.findValidatedDoctorValidationSummaries(doctorId, pageable)
                 .map(this::toDoctorValidationPlanDto);
@@ -386,6 +453,18 @@ public class DoctorValidationService {
             }
         }
 
+        List<AssignedDoctorDto> assignedDoctors = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(planId).stream()
+                .map(a -> {
+                    User d = a.getDoctor();
+                    return new AssignedDoctorDto(
+                            d.getId(),
+                            d.getFirstName(),
+                            d.getLastName(),
+                            d.getEmail(),
+                            avatarUrlService.toFullUrl(d.getAvatarUrl()));
+                })
+                .toList();
+        Boolean openToAllDoctors = assignedDoctors.isEmpty() ? true : null;
         return new DoctorValidationDetailDto(
                 plan.getId(),
                 plan.getDestination(),
@@ -403,7 +482,9 @@ public class DoctorValidationService {
                 traveller != null ? traveller.getPhone() : "",
                 plan.getCreatedAt(),
                 snapshot,
-                parsedContent);
+                parsedContent,
+                assignedDoctors,
+                openToAllDoctors);
     }
 
     @Transactional(readOnly = true)
@@ -489,17 +570,17 @@ public class DoctorValidationService {
 
         User traveller = plan.getUser();
         if (traveller != null && traveller.getEmail() != null) {
-            String html = emailTemplates.planElevatedEmail(firstName(traveller), plan.getDestination());
+            String html = emailTemplates.planEscalatedEmail(firstName(traveller), plan.getDestination());
             emailService.sendHtmlEmail(
                     traveller.getEmail(),
-                    "Your Travel Health Plan Has Been Elevated for Review",
+                    "Your Travel Health Plan Has Been Escalated for Review",
                     html);
         }
 
         // Notify super admins
-        notifySuperAdminsOfElevatedPlan(plan, reason, doctor);
+        notifySuperAdminsOfEscalatedPlan(plan, reason, doctor);
 
-        log.info("Plan elevated for review: planId={} doctorId={} reason={}", planId, doctorId, reason);
+        log.info("Plan escalated for review: planId={} doctorId={} reason={}", planId, doctorId, reason);
     }
 
     // -------------------------------------------------------------------------
@@ -542,6 +623,7 @@ public class DoctorValidationService {
                 doctor.getPhone(),
                 avatarUrlService.toFullUrl(doctor.getAvatarUrl()),
                 doctor.getProfilePictureOption(),
+                doctor.getBio(),
                 settings.getMedicalLicenseNumber(),
                 settings.getSignatureUrl(),
                 settings.getStampUrl(),
@@ -564,11 +646,36 @@ public class DoctorValidationService {
         log.info("Doctor privileges revoked: userId={}", userId);
     }
 
+    @Transactional(readOnly = true)
+    public List<DoctorReviewerDto> getApprovedReviewers() {
+        return userRepository.findByRoleName(Roles.Doctor.name()).stream()
+                .map(doctor -> new DoctorReviewerDto(
+                        doctor.getId(),
+                        doctor.getFirstName(),
+                        doctor.getLastName(),
+                        doctor.getEmail(),
+                        avatarUrlService.toFullUrl(doctor.getAvatarUrl()),
+                        doctor.getBio()))
+                .toList();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
     private DoctorValidationPlanDto toDoctorValidationPlanDto(DoctorValidationPlanProjection plan) {
+        List<AssignedDoctorDto> assignedDoctors = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(plan.getPlanId()).stream()
+                .map(a -> {
+                    User d = a.getDoctor();
+                    return new AssignedDoctorDto(
+                            d.getId(),
+                            d.getFirstName(),
+                            d.getLastName(),
+                            d.getEmail(),
+                            avatarUrlService.toFullUrl(d.getAvatarUrl()));
+                })
+                .toList();
+        Boolean openToAllDoctors = assignedDoctors.isEmpty() ? true : null;
         return new DoctorValidationPlanDto(
                 plan.getPlanId(),
                 plan.getDestination(),
@@ -581,7 +688,9 @@ public class DoctorValidationService {
                 fullName(plan.getTravellerFirstName(), plan.getTravellerLastName(), plan.getTravellerName()),
                 plan.getTravellerEmail() != null ? plan.getTravellerEmail() : "",
                 plan.getCreatedAt(),
-                plan.getGeneratedPlanStatus());
+                plan.getGeneratedPlanStatus(),
+                assignedDoctors,
+                openToAllDoctors);
     }
 
     private DoctorPlanResponse toDoctorPlanResponse(TravelPlan plan) {
@@ -612,6 +721,16 @@ public class DoctorValidationService {
         return !name.isBlank() ? name : (fallbackName != null ? fallbackName : "");
     }
 
+    private String generateToken(int byteLength) {
+        byte[] bytes = new byte[byteLength];
+        new java.security.SecureRandom().nextBytes(bytes);
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
     private byte[] readMultipartFile(MultipartFile file) {
         try {
             return file.getBytes();
@@ -620,7 +739,7 @@ public class DoctorValidationService {
         }
     }
 
-    private void notifySuperAdminsOfElevatedPlan(TravelPlan plan, String reason, User doctor) {
+    private void notifySuperAdminsOfEscalatedPlan(TravelPlan plan, String reason, User doctor) {
         try {
             // Get all super admins to notify
             Role superAdminRole = roleRepository.findByName(Roles.SuperAdmin.name()).orElse(null);
@@ -636,17 +755,17 @@ public class DoctorValidationService {
 
                 for (User superAdmin : superAdmins) {
                     if (superAdmin.getEmail() != null) {
-                        String html = emailTemplates.planElevatedNotificationEmail(travellerName, plan.getDestination(),
+                        String html = emailTemplates.planEscalatedNotificationEmail(travellerName, plan.getDestination(),
                                 feedbackMessage);
                         emailService.sendHtmlEmail(
                                 superAdmin.getEmail(),
-                                "Elevated Plan Review Required - " + travellerName + " for " + plan.getDestination(),
+                                "Escalated Plan Review Required - " + travellerName + " for " + plan.getDestination(),
                                 html);
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to notify super admins of elevated plan: {}", e.getMessage());
+            log.warn("Failed to notify super admins of escalated plan: {}", e.getMessage());
         }
     }
 }

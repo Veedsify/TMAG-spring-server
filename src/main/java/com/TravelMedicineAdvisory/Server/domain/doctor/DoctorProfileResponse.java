@@ -10,6 +10,7 @@ public record DoctorProfileResponse(
     String phone,
     String avatarUrl,
     String profilePictureOption,
+    String bio,
     String medicalLicenseNumber,
     String signatureUrl,
     String stampUrl,

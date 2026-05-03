@@ -1,6 +1,9 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
+import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
 
 public record TravelPlanResponse(
     Long id,
@@ -31,5 +34,7 @@ public record TravelPlanResponse(
     LocalDateTime validatedAt,
     String rejectionReason,
     String signedPdfUrl,
-    String summaryPdfUrl
+    String summaryPdfUrl,
+    List<AssignedDoctorDto> assignedDoctors,
+    Boolean openToAllDoctors
 ) {}

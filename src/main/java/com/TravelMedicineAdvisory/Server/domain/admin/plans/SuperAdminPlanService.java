@@ -58,9 +58,9 @@ public class SuperAdminPlanService {
     }
 
     /**
-     * Approve an elevated plan (generate signed PDF and send to user)
+     * Approve an escalated plan (generate signed PDF and send to user)
      */
-    public void approveElevatedPlan(Long planId) {
+    public void approveEscalatedPlan(Long planId) {
         TravelPlan plan = travelPlanRepository.findById(planId)
                 .orElseThrow(() -> new NoSuchElementException("Travel plan not found"));
 
@@ -105,13 +105,13 @@ public class SuperAdminPlanService {
                     "application/pdf");
         }
 
-        log.info("Elevated plan approved by super admin: planId={}", planId);
+        log.info("Escalated plan approved by super admin: planId={}", planId);
     }
 
     /**
-     * Reject an elevated plan (send rejection to user)
+     * Reject an escalated plan (send rejection to user)
      */
-    public void rejectElevatedPlan(Long planId, String reason) {
+    public void rejectEscalatedPlan(Long planId, String reason) {
         TravelPlan plan = travelPlanRepository.findById(planId)
                 .orElseThrow(() -> new NoSuchElementException("Travel plan not found"));
 

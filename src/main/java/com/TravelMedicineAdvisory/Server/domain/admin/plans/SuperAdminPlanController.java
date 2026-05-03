@@ -1,10 +1,13 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.plans;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.ElevatedPlanProjection;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.EscalatedPlanProjection;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -27,35 +31,38 @@ public class SuperAdminPlanController {
     private final TravelPlanRepository travelPlanRepository;
     private final GeneratedPlanRepository generatedPlanRepository;
     private final SuperAdminPlanService superAdminPlanService;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
 
     public SuperAdminPlanController(
             TravelPlanRepository travelPlanRepository,
             GeneratedPlanRepository generatedPlanRepository,
-            SuperAdminPlanService superAdminPlanService) {
+            SuperAdminPlanService superAdminPlanService,
+            TravelPlanDoctorAssignmentRepository assignmentRepository) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.superAdminPlanService = superAdminPlanService;
+        this.assignmentRepository = assignmentRepository;
     }
 
     /**
-     * Get all elevated plans
+     * Get all escalated plans
      */
-    @GetMapping("/elevated")
+    @GetMapping("/escalated")
     @Transactional(readOnly = true)
-    public ResponseEntity<SuccessResponse> getElevatedPlans(Pageable pageable) {
-        Page<ElevatedPlanResponse> elevatedPlans = travelPlanRepository
-                .findElevatedPlanSummaries(DoctorValidationStatus.ELEVATED, pageable)
-                .map(this::toElevatedPlanResponse);
-        return ResponseEntity.ok(new SuccessResponse("Elevated plans retrieved successfully", elevatedPlans));
+    public ResponseEntity<SuccessResponse> getEscalatedPlans(Pageable pageable) {
+        Page<EscalatedPlanResponse> escalatedPlans = travelPlanRepository
+                .findEscalatedPlanSummaries(DoctorValidationStatus.ELEVATED, pageable)
+                .map(this::toEscalatedPlanResponse);
+        return ResponseEntity.ok(new SuccessResponse("Escalated plans retrieved successfully", escalatedPlans));
     }
 
     /**
-     * Approve an elevated plan (final decision by super admin)
+     * Approve an escalated plan (final decision by super admin)
      */
     @PostMapping("/{planId}/approve")
-    public ResponseEntity<SuccessResponse> approveElevatedPlan(@PathVariable Long planId) {
+    public ResponseEntity<SuccessResponse> approveEscalatedPlan(@PathVariable Long planId) {
         try {
-            superAdminPlanService.approveElevatedPlan(planId);
+            superAdminPlanService.approveEscalatedPlan(planId);
             return ResponseEntity.ok(new SuccessResponse("Plan approved successfully", null));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse("Plan not found", null));
@@ -65,14 +72,14 @@ public class SuperAdminPlanController {
     }
 
     /**
-     * Reject an elevated plan (final decision by super admin)
+     * Reject an escalated plan (final decision by super admin)
      */
     @PostMapping("/{planId}/reject")
-    public ResponseEntity<SuccessResponse> rejectElevatedPlan(
+    public ResponseEntity<SuccessResponse> rejectEscalatedPlan(
             @PathVariable Long planId,
-            @RequestBody ElevatedPlanDecisionRequest request) {
+            @RequestBody EscalatedPlanDecisionRequest request) {
         try {
-            superAdminPlanService.rejectElevatedPlan(planId, request.reason());
+            superAdminPlanService.rejectEscalatedPlan(planId, request.reason());
             return ResponseEntity.ok(new SuccessResponse("Plan rejected successfully", null));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse("Plan not found", null));
@@ -82,18 +89,18 @@ public class SuperAdminPlanController {
     }
 
     @GetMapping("/{planId}/preview-pdf")
-    public ResponseEntity<byte[]> previewElevatedPlanPdf(@PathVariable Long planId) {
+    public ResponseEntity<byte[]> previewEscalatedPlanPdf(@PathVariable Long planId) {
         byte[] pdf = superAdminPlanService.previewPlanPdf(planId);
-        return pdfResponse(pdf, "elevated-plan-" + planId + ".pdf");
+        return pdfResponse(pdf, "escalated-plan-" + planId + ".pdf");
     }
 
     @GetMapping("/{planId}/preview-summary")
-    public ResponseEntity<byte[]> previewElevatedPlanSummary(@PathVariable Long planId) {
+    public ResponseEntity<byte[]> previewEscalatedPlanSummary(@PathVariable Long planId) {
         byte[] pdf = superAdminPlanService.previewSummaryPdf(planId);
-        return pdfResponse(pdf, "elevated-plan-" + planId + "-summary.pdf");
+        return pdfResponse(pdf, "escalated-plan-" + planId + "-summary.pdf");
     }
 
-    public record ElevatedPlanDecisionRequest(String reason) {}
+    public record EscalatedPlanDecisionRequest(String reason) {}
 
     private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
         ContentDisposition disposition = ContentDisposition.inline()
@@ -105,8 +112,20 @@ public class SuperAdminPlanController {
                 .body(pdf);
     }
 
-    private ElevatedPlanResponse toElevatedPlanResponse(ElevatedPlanProjection plan) {
-        return new ElevatedPlanResponse(
+    private EscalatedPlanResponse toEscalatedPlanResponse(EscalatedPlanProjection plan) {
+        List<AssignedDoctorDto> assignedDoctors = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(plan.getId()).stream()
+                .map(a -> {
+                    User d = a.getDoctor();
+                    return new AssignedDoctorDto(
+                            d.getId(),
+                            d.getFirstName(),
+                            d.getLastName(),
+                            d.getEmail(),
+                            d.getAvatarUrl());
+                })
+                .toList();
+        Boolean openToAllDoctors = assignedDoctors.isEmpty() ? true : null;
+        return new EscalatedPlanResponse(
                 plan.getId(),
                 plan.getDestination(),
                 plan.getDuration(),
@@ -118,7 +137,9 @@ public class SuperAdminPlanController {
                 plan.getDoctorFeedback(),
                 plan.getPdfPreviewUrl(),
                 plan.getSummaryPreviewUrl(),
-                plan.getElevatedAt());
+                plan.getEscalatedAt(),
+                assignedDoctors,
+                openToAllDoctors);
     }
 
     private String fullName(String firstNameValue, String lastNameValue, String fallbackName) {

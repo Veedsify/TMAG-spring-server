@@ -16,13 +16,15 @@ public record CompanyOnboardingSubmitRequest(
         List<PlatformEmployeeRequest> platformEmployees) {
 
     public record TeamMemberRequest(
-            String name,
+            String firstName,
+            String lastName,
             String email,
             String role) {
     }
 
     public record PlatformEmployeeRequest(
             String email,
-            String name) {
+            String firstName,
+            String lastName) {
     }
 }

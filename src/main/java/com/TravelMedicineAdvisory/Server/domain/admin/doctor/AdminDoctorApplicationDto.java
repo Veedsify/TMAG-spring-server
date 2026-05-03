@@ -7,10 +7,15 @@ public record AdminDoctorApplicationDto(
         String email,
         String phone,
         String licenseNumber,
-        String specialization,
+        String specialty,
+        String country,
         String applicationStatus,
         String applicationSubmittedAt,
         String identityDocumentUrl,
         String licenseDocumentUrl,
+        String cvOrProfileUrl,
+        boolean confidentialityAgreementAccepted,
+        boolean conductAgreementAccepted,
+        String bio,
         String createdAt) {
 }

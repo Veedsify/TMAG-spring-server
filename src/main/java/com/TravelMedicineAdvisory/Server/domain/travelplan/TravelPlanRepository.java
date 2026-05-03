@@ -179,6 +179,41 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
             """)
     Page<DoctorValidationPlanProjection> findPendingDoctorValidationSummaries(Pageable pageable);
 
+    @Query("""
+            SELECT tp.id AS planId,
+                   tp.destination AS destination,
+                   tp.country AS country,
+                   tp.purpose AS purpose,
+                   tp.duration AS duration,
+                   tp.riskScore AS riskScore,
+                   tp.doctorValidationStatus AS validationStatus,
+                   tp.planTier AS planTier,
+                   u.firstName AS travellerFirstName,
+                   u.lastName AS travellerLastName,
+                   u.name AS travellerName,
+                   u.email AS travellerEmail,
+                   tp.createdAt AS createdAt,
+                   gp.status AS generatedPlanStatus
+            FROM TravelPlan tp
+            LEFT JOIN tp.user u
+            LEFT JOIN GeneratedPlan gp ON gp.travelPlan.id = tp.id AND gp.deletedAt IS NULL
+            WHERE tp.status = 'COMPLETED'
+              AND tp.doctorValidationStatus = 'PENDING'
+              AND tp.deletedAt IS NULL
+              AND (
+                NOT EXISTS (
+                    SELECT a.id FROM TravelPlanDoctorAssignment a
+                    WHERE a.travelPlan.id = tp.id AND a.deletedAt IS NULL
+                )
+                OR EXISTS (
+                    SELECT a2.id FROM TravelPlanDoctorAssignment a2
+                    WHERE a2.travelPlan.id = tp.id AND a2.doctor.id = :doctorId AND a2.deletedAt IS NULL
+                )
+              )
+            ORDER BY tp.createdAt DESC
+            """)
+    Page<DoctorValidationPlanProjection> findPendingDoctorValidationSummariesForDoctor(@Param("doctorId") Long doctorId, Pageable pageable);
+
     @Query("SELECT tp FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'APPROVED' AND tp.deletedAt IS NULL ORDER BY tp.validatedAt DESC")
     List<TravelPlan> findApprovedByDoctor(@Param("doctorId") Long doctorId);
 
@@ -241,15 +276,15 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
                    tp.rejectionReason AS doctorFeedback,
                    gp.signedPdfUrl AS pdfPreviewUrl,
                    gp.summaryPdfUrl AS summaryPreviewUrl,
-                   tp.validatedAt AS elevatedAt
-            FROM TravelPlan tp
-            LEFT JOIN tp.user traveller
-            LEFT JOIN tp.validatedBy doctor
-            LEFT JOIN GeneratedPlan gp ON gp.travelPlan.id = tp.id AND gp.deletedAt IS NULL
-            WHERE tp.doctorValidationStatus = :status AND tp.deletedAt IS NULL
-            ORDER BY tp.updatedAt DESC
-            """)
-    Page<ElevatedPlanProjection> findElevatedPlanSummaries(@Param("status") DoctorValidationStatus status, Pageable pageable);
+                    tp.validatedAt AS escalatedAt
+             FROM TravelPlan tp
+             LEFT JOIN tp.user traveller
+             LEFT JOIN tp.validatedBy doctor
+             LEFT JOIN GeneratedPlan gp ON gp.travelPlan.id = tp.id AND gp.deletedAt IS NULL
+             WHERE tp.doctorValidationStatus = :status AND tp.deletedAt IS NULL
+             ORDER BY tp.updatedAt DESC
+             """)
+     Page<EscalatedPlanProjection> findEscalatedPlanSummaries(@Param("status") DoctorValidationStatus status, Pageable pageable);
 
     @Query("SELECT COUNT(tp) FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'APPROVED' AND tp.deletedAt IS NULL")
     long countApprovedByDoctor(@Param("doctorId") Long doctorId);

@@ -188,7 +188,7 @@ public class ProfileController {
 
             // Prevent downgrade
             CreditPlan currentPlan = user.getCreditPlan();
-            if (currentPlan != null && isPlanDowngrade(currentPlan.getCode(), planCode)) {
+            if (currentPlan != null && isPlanDowngrade(currentPlan.getCodeEnum(), planCode)) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("success", false, "message", "Cannot downgrade from " + currentPlan.getCode() + " to " + planCode));
             }

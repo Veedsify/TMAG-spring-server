@@ -471,6 +471,8 @@ public class AdminAnalyticsService {
         response.setPromptSummary(log.getPromptSummary());
         response.setOutputSummary(log.getOutputSummary());
         response.setTokensUsed(log.getTokensUsed() != null ? log.getTokensUsed() : 0);
+        response.setPlanGenerationTokensUsed(log.getPlanGenerationTokensUsed() != null ? log.getPlanGenerationTokensUsed() : 0);
+        response.setSummaryGenerationTokensUsed(log.getSummaryGenerationTokensUsed() != null ? log.getSummaryGenerationTokensUsed() : 0);
         response.setProcessingTimeMs(log.getProcessingTimeMs() != null ? log.getProcessingTimeMs() : 0L);
         response.setStatus(log.getStatus() != null ? log.getStatus() : "success");
         response.setErrorMessage(log.getErrorMessage());

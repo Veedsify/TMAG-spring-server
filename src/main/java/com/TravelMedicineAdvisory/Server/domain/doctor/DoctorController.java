@@ -32,6 +32,12 @@ public class DoctorController {
         doctorValidationService.getDoctorProfile(user.getUserId())));
   }
 
+  @GetMapping("/reviewers")
+  public ResponseEntity<SuccessResponse> getReviewers() {
+    return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+        doctorValidationService.getApprovedReviewers()));
+  }
+
   @PostMapping("/onboard")
   @PreAuthorize("@perm.doctor(authentication, 'profile:update')")
   public ResponseEntity<SuccessResponse> onboard(
@@ -43,14 +49,22 @@ public class DoctorController {
   }
 
   @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<SuccessResponse> apply(
-      @AuthenticationPrincipal AppUserDetails user,
+      @RequestParam("firstName") String firstName,
+      @RequestParam("lastName") String lastName,
+      @RequestParam("email") String email,
+      @RequestParam("specialty") String specialty,
+      @RequestParam("country") String country,
       @RequestParam("medicalLicenseNumber") String medicalLicenseNumber,
+      @RequestParam(value = "profilePicture", required = false) MultipartFile profilePicture,
       @RequestParam("signature") MultipartFile signature,
-      @RequestParam(value = "stamp", required = false) MultipartFile stamp) {
-    doctorValidationService.applyToBecomeDoctor(user.getUserId(), medicalLicenseNumber, signature, stamp);
-    return ResponseEntity.ok(new SuccessResponse("Application submitted successfully", null));
+      @RequestParam(value = "stamp", required = false) MultipartFile stamp,
+      @RequestParam("confidentialityAgreementAccepted") boolean confidentialityAgreementAccepted,
+      @RequestParam("conductAgreementAccepted") boolean conductAgreementAccepted) {
+    doctorValidationService.applyToBecomeDoctor(firstName, lastName, email, specialty, country,
+        medicalLicenseNumber, profilePicture, signature, stamp,
+        confidentialityAgreementAccepted, conductAgreementAccepted);
+    return ResponseEntity.ok(new SuccessResponse("Application submitted successfully. Your application will be reviewed within 24 hours.", null));
   }
 
   @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -81,8 +95,8 @@ public class DoctorController {
 
   @GetMapping("/pending")
   @PreAuthorize("@perm.doctor(authentication, 'travel_plan:list')")
-  public ResponseEntity<SuccessResponse> getPendingPlans(Pageable pageable) {
-    Page<DoctorValidationPlanDto> page = doctorValidationService.getPendingPlansDto(pageable);
+  public ResponseEntity<SuccessResponse> getPendingPlans(@AuthenticationPrincipal AppUserDetails user, Pageable pageable) {
+    Page<DoctorValidationPlanDto> page = doctorValidationService.getPendingPlansDto(user.getUserId(), pageable);
     return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
         Map.of(
             "data", page.getContent(),

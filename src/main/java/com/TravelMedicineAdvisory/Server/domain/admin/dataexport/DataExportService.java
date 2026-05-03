@@ -97,17 +97,15 @@ public class DataExportService {
     public String exportPlansCsv(Long companyId) {
         List<TravelPlan> plans = travelPlanRepository.findAllActiveByCompanyId(companyId);
         StringBuilder sb = new StringBuilder();
-        sb.append("ID,Destination,Country,Duration,Purpose,Risk Score,Status,Created\n");
+        sb.append("Plan ID,Destination trip details,Country,Purpose,Trip Type,Employees Name\n");
         for (TravelPlan plan : plans) {
-            sb.append(String.format("%d,\"%s\",\"%s\",%d,\"%s\",%d,\"%s\",\"%s\"\n",
+            sb.append(String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
                     plan.getId(),
-                    escapeCsv(plan.getDestination()),
+                    escapeCsv(plan.getTripDetailsJson() != null && !plan.getTripDetailsJson().isBlank() ? plan.getTripDetailsJson() : plan.getDestination()),
                     escapeCsv(plan.getCountry()),
-                    plan.getDuration() != null ? plan.getDuration() : 0,
                     escapeCsv(plan.getPurpose()),
-                    plan.getRiskScore() != null ? plan.getRiskScore() : 0,
-                    escapeCsv(plan.getStatus()),
-                    plan.getCreatedAt() != null ? plan.getCreatedAt().toString() : ""));
+                    escapeCsv(plan.getTripType()),
+                    escapeCsv(plan.getEmployee() != null ? plan.getEmployee().getName() : plan.getUser() != null ? plan.getUser().getName() : "")));
         }
         return sb.toString();
     }
@@ -201,7 +199,6 @@ public class DataExportService {
                 "country", plan.getCountry() != null ? plan.getCountry() : "",
                 "duration", plan.getDuration() != null ? plan.getDuration() : 0,
                 "purpose", plan.getPurpose() != null ? plan.getPurpose() : "",
-                "riskScore", plan.getRiskScore() != null ? plan.getRiskScore() : 0,
                 "status", plan.getStatus() != null ? plan.getStatus() : "",
                 "createdAt", plan.getCreatedAt() != null ? plan.getCreatedAt().toString() : "");
     }

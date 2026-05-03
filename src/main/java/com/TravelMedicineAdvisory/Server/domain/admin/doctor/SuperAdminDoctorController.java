@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplication;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationRepository;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorInvitationRequest;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationService;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
@@ -22,6 +24,7 @@ import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
@@ -36,16 +39,22 @@ public class SuperAdminDoctorController {
     private final TravelPlanRepository travelPlanRepository;
     private final RoleRepository doctorRoleRepository;
     private final UserSettingService userSettingService;
+    private final DoctorApplicationRepository doctorApplicationRepository;
+    private final AvatarUrlService avatarUrlService;
 
     public SuperAdminDoctorController(DoctorValidationService doctorValidationService,
             UserRepository userRepository,
             TravelPlanRepository travelPlanRepository, RoleRepository doctorRoleRepository,
-            UserSettingService userSettingService) {
+            UserSettingService userSettingService,
+            DoctorApplicationRepository doctorApplicationRepository,
+            AvatarUrlService avatarUrlService) {
         this.doctorValidationService = doctorValidationService;
         this.doctorRoleRepository = doctorRoleRepository;
         this.userRepository = userRepository;
         this.travelPlanRepository = travelPlanRepository;
         this.userSettingService = userSettingService;
+        this.doctorApplicationRepository = doctorApplicationRepository;
+        this.avatarUrlService = avatarUrlService;
     }
 
     private Role getDoctorRole() {
@@ -58,23 +67,27 @@ public class SuperAdminDoctorController {
 
     @GetMapping("/applications")
     public ResponseEntity<SuccessResponse> getApplications() {
-        List<UserSetting> applications = userSettingService.findByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
+        List<DoctorApplication> applications = doctorApplicationRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(DoctorApplicationStatus.PENDING);
         List<AdminDoctorApplicationDto> dtos = applications.stream()
-                .map(s -> {
-                    User u = s.getUser();
+                .map(a -> {
                     return new AdminDoctorApplicationDto(
-                            u.getId(),
-                            valueOrEmpty(u.getFirstName()),
-                            valueOrEmpty(u.getLastName()),
-                            valueOrEmpty(u.getEmail()),
-                            valueOrEmpty(u.getPhone()),
-                            valueOrEmpty(s.getMedicalLicenseNumber()),
-                            "",
-                            s.getDoctorApplicationStatus() != null ? s.getDoctorApplicationStatus().name() : "NONE",
-                            u.getCreatedAt() != null ? u.getCreatedAt().toString() : null,
+                            a.getId(),
+                            valueOrEmpty(a.getFirstName()),
+                            valueOrEmpty(a.getLastName()),
+                            valueOrEmpty(a.getEmail()),
+                            valueOrEmpty(a.getPhone()),
+                            valueOrEmpty(a.getMedicalLicenseNumber()),
+                            valueOrEmpty(a.getSpecialty()),
+                            valueOrEmpty(a.getCountry()),
+                            a.getStatus() != null ? a.getStatus().name() : "NONE",
+                            a.getCreatedAt() != null ? a.getCreatedAt().toString() : null,
                             null,
-                            s.getSignatureUrl(),
-                            u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
+                            a.getSignatureUrl(),
+                            a.getProfilePictureUrl(),
+                            a.isConfidentialityAgreementAccepted(),
+                            a.isConductAgreementAccepted(),
+                            a.getBio(),
+                            a.getCreatedAt() != null ? a.getCreatedAt().toString() : null);
                 })
                 .toList();
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", dtos));
@@ -116,7 +129,7 @@ public class SuperAdminDoctorController {
     @GetMapping("/stats")
     public ResponseEntity<SuccessResponse> getStats() {
         long totalDoctors = userRepository.findByRole(this.getDoctorRole().getId()).size();
-        long pendingApplications = userSettingService.countByDoctorApplicationStatus(DoctorApplicationStatus.PENDING);
+        long pendingApplications = doctorApplicationRepository.countByStatusAndDeletedAtIsNull(DoctorApplicationStatus.PENDING);
         long totalValidatedPlans = travelPlanRepository.countAllActive();
         AdminDoctorStatsDto stats = new AdminDoctorStatsDto(totalDoctors, pendingApplications, 0, totalValidatedPlans);
         return ResponseEntity.ok(new SuccessResponse("Stats fetched successfully", stats));
@@ -137,6 +150,8 @@ public class SuperAdminDoctorController {
                             valueOrEmpty(u.getPhone()),
                             valueOrEmpty(settings.getMedicalLicenseNumber()),
                             "",
+                            avatarUrlService.toFullUrl(u.getAvatarUrl()),
+                            valueOrEmpty(u.getBio()),
                             validatedCount,
                             u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);
                 })

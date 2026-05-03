@@ -31,7 +31,6 @@ import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 
@@ -128,13 +127,7 @@ public class CompanyOnboardingService {
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {
-        // Validate plan code
-        CreditPlanCode planCode;
-        try {
-            planCode = CreditPlanCode.valueOf(req.selectedPlanCode().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid plan code: " + req.selectedPlanCode());
-        }
+        String planCode = req.selectedPlanCode() != null ? req.selectedPlanCode().trim().toUpperCase() : "";
         userCreditPlanRepository.findByCode(planCode)
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + req.selectedPlanCode()));
 
@@ -168,7 +161,7 @@ public class CompanyOnboardingService {
         entity.setContactPhone(req.contactPhone());
         entity.setWebsite(req.website());
         entity.setBillingCurrency(currency);
-        entity.setSelectedPlanCode(planCode.name());
+        entity.setSelectedPlanCode(planCode);
         entity.setCreditCount(creditCount);
         entity.setSampleRequest(req.sampleRequest() == null || req.sampleRequest().isBlank() ? null : req.sampleRequest());
         entity.setTeamMembers(teamMembersJson);
@@ -176,7 +169,7 @@ public class CompanyOnboardingService {
         List<PlatformEmployeeRequest> platformEmployees = req.platformEmployees() != null ? req.platformEmployees() : new ArrayList<>();
         List<PlatformEmployeeRequest> normalizedPlatformEmployees = platformEmployees.stream()
                 .filter(e -> e != null && e.email() != null && !e.email().isBlank())
-                .map(e -> new PlatformEmployeeRequest(e.email().trim().toLowerCase(), e.name() != null ? e.name().trim() : ""))
+                .map(e -> new PlatformEmployeeRequest(e.email().trim().toLowerCase(), e.firstName() != null ? e.firstName().trim() : "", e.lastName() != null ? e.lastName().trim() : ""))
                 .toList();
         try {
             entity.setPlatformEmployees(objectMapper.writeValueAsString(normalizedPlatformEmployees));
@@ -222,7 +215,7 @@ public class CompanyOnboardingService {
             throw new IllegalArgumentException("Onboarding request is not in pending payment status");
         }
 
-        CreditPlanCode planCode = CreditPlanCode.valueOf(entity.getSelectedPlanCode());
+        String planCode = entity.getSelectedPlanCode();
         CreditPlan plan = userCreditPlanRepository.findByCode(planCode)
                 .orElseThrow(() -> new NoSuchElementException("Plan not found: " + entity.getSelectedPlanCode()));
 
@@ -270,7 +263,7 @@ public class CompanyOnboardingService {
                 entity.getContactPhone(),
                 callbackRegistry.getBackendCallbackUrl("COMPANY_ONBOARDING"),
                 creditCount,
-                planCode.name(),
+                planCode,
                 null,
                 null);
 
@@ -462,7 +455,7 @@ public class CompanyOnboardingService {
     private Company createCompanyFromRequest(CompanyOnboardingEntity entity) {
         String companyCode = String.format("TMA-%s", randomNumberGenerator.generateNumber());
 
-        CreditPlanCode planCode = CreditPlanCode.valueOf(entity.getSelectedPlanCode());
+        String planCode = entity.getSelectedPlanCode();
         CreditPlan plan = userCreditPlanRepository.findByCode(planCode)
                 .orElseThrow(() -> new NoSuchElementException("Plan not found: " + entity.getSelectedPlanCode()));
 
@@ -479,7 +472,7 @@ public class CompanyOnboardingService {
         company.setTier(Tier.STANDARD);
         company.setBillingCurrency(entity.getBillingCurrency());
         company.setCreditPlan(plan);
-        company.setPlan(plan.getCode().name());
+        company.setPlan(plan.getCode());
         company.setTotalCredits(creditCount);
         company.setUsedCredits(0);
 
@@ -497,9 +490,8 @@ public class CompanyOnboardingService {
                 continue;
             }
 
-            String[] nameParts = member.name().trim().split("\\s+", 2);
-            String firstName = nameParts[0];
-            String lastName = nameParts.length > 1 ? nameParts[1] : "";
+            String firstName = member.firstName() != null ? member.firstName() : "";
+            String lastName = member.lastName() != null ? member.lastName() : "";
 
             String roleName;
             String department;
@@ -519,7 +511,8 @@ public class CompanyOnboardingService {
             User user = new User();
             user.setFirstName(firstName);
             user.setLastName(lastName);
-            user.setName(member.name());
+            String fullName = (firstName + " " + lastName).trim();
+            user.setName(fullName);
             user.setUsername(member.email());
             user.setEmail(member.email());
             user.setPassword(passwordEncoder.encode(invitationToken));
@@ -537,7 +530,7 @@ public class CompanyOnboardingService {
             user = userRepository.save(user);
 
             Employee employee = new Employee();
-            employee.setName(member.name());
+            employee.setName(fullName);
             employee.setEmail(member.email());
             employee.setDepartment(department);
             employee.setCreditsAllocated(0);
@@ -585,17 +578,19 @@ public class CompanyOnboardingService {
                 logger.info("Existing platform user linked as company employee: email={}", emp.email());
             } else {
                 // User not on platform — create with invitation flow
-                String displayNameNew = (emp.name() != null && !emp.name().isBlank()) ? emp.name() : emp.email();
-                String[] nameParts = displayNameNew.trim().split("\\s+", 2);
-                String firstName = nameParts[0];
-                String lastName = nameParts.length > 1 ? nameParts[1] : "";
+                String empFirstName = emp.firstName() != null ? emp.firstName() : "";
+                String empLastName = emp.lastName() != null ? emp.lastName() : "";
+                String displayNameNew = (empFirstName + " " + empLastName).trim();
+                if (displayNameNew.isBlank()) {
+                    displayNameNew = emp.email();
+                }
 
                 Role employeeRole = roleRepository.findByName("Individual").orElse(null);
                 String invitationToken = generateToken(32);
 
                 User newUser = new User();
-                newUser.setFirstName(firstName);
-                newUser.setLastName(lastName);
+                newUser.setFirstName(empFirstName);
+                newUser.setLastName(empLastName);
                 newUser.setName(displayNameNew);
                 newUser.setUsername(emp.email());
                 newUser.setEmail(emp.email());
@@ -617,7 +612,7 @@ public class CompanyOnboardingService {
                         "to", emp.email(),
                         "subject", "You're invited to join " + finalCompany.getName() + " on TMAG",
                         "variables", Map.of(
-                                "firstName", firstName,
+                                "firstName", empFirstName,
                                 "companyName", finalCompany.getName(),
                                 "role", "Employee",
                                 "link", inviteLink)));
@@ -630,7 +625,12 @@ public class CompanyOnboardingService {
                 continue;
             }
 
-            String displayName = (emp.name() != null && !emp.name().isBlank()) ? emp.name() : empUser.getName();
+            String empFirstName = emp.firstName() != null ? emp.firstName() : "";
+            String empLastName = emp.lastName() != null ? emp.lastName() : "";
+            String displayName = (empFirstName + " " + empLastName).trim();
+            if (displayName.isBlank()) {
+                displayName = empUser.getName();
+            }
 
             Employee employee = new Employee();
             employee.setName(displayName);
@@ -718,17 +718,18 @@ public class CompanyOnboardingService {
         List<TeamMemberRequest> normalized = new ArrayList<>();
         for (TeamMemberRequest member : teamMembers) {
             if (member == null) continue;
-            String name = member.name() != null ? member.name().trim() : "";
+            String firstName = member.firstName() != null ? member.firstName().trim() : "";
+            String lastName = member.lastName() != null ? member.lastName().trim() : "";
             String email = member.email() != null ? member.email().trim().toLowerCase() : "";
-            if (name.isBlank() || email.isBlank()) {
-                throw new IllegalArgumentException("Each team member must include a name and email");
+            if (firstName.isBlank() || email.isBlank()) {
+                throw new IllegalArgumentException("Each team member must include a first name and email");
             }
 
             String role = member.role() != null ? member.role().trim().toLowerCase() : "hr";
             if (!"admin".equals(role) && !"hr".equals(role)) {
                 role = "hr";
             }
-            normalized.add(new TeamMemberRequest(name, email, role));
+            normalized.add(new TeamMemberRequest(firstName, lastName, email, role));
         }
         return normalized;
     }
@@ -747,13 +748,13 @@ public class CompanyOnboardingService {
         List<CompanyOnboardingResponse.TeamMemberResponse> teamMembers = new ArrayList<>();
         List<TeamMemberRequest> parsed = parseTeamMembers(entity.getTeamMembers());
         for (TeamMemberRequest tm : parsed) {
-            teamMembers.add(new CompanyOnboardingResponse.TeamMemberResponse(tm.name(), tm.email(), tm.role()));
+            teamMembers.add(new CompanyOnboardingResponse.TeamMemberResponse(tm.firstName(), tm.lastName(), tm.email(), tm.role()));
         }
 
         List<CompanyOnboardingResponse.PlatformEmployeeResponse> platformEmployees = new ArrayList<>();
         List<PlatformEmployeeRequest> parsedPlatformEmployees = parsePlatformEmployees(entity.getPlatformEmployees());
         for (PlatformEmployeeRequest pe : parsedPlatformEmployees) {
-            platformEmployees.add(new CompanyOnboardingResponse.PlatformEmployeeResponse(pe.email(), pe.name()));
+            platformEmployees.add(new CompanyOnboardingResponse.PlatformEmployeeResponse(pe.email(), pe.firstName(), pe.lastName()));
         }
 
         return new CompanyOnboardingResponse(

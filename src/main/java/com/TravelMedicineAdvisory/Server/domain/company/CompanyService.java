@@ -128,7 +128,7 @@ public class CompanyService {
 
     private CompanyResponse toResponse(Company entity) {
         String resolvedPlan = entity.getCreditPlan() != null && entity.getCreditPlan().getCode() != null
-                ? entity.getCreditPlan().getCode().name()
+                ? entity.getCreditPlan().getCode()
                 : entity.getPlan();
         return new CompanyResponse(
                 entity.getId(),

@@ -75,6 +75,8 @@ public class AiRequestLogService {
             entity.getPromptSummary(),
             entity.getOutputSummary(),
             entity.getTokensUsed(),
+            entity.getPlanGenerationTokensUsed(),
+            entity.getSummaryGenerationTokensUsed(),
             entity.getProcessingTimeMs(),
             entity.getStatus(),
             entity.getErrorMessage(),
@@ -93,6 +95,8 @@ public class AiRequestLogService {
         entity.setPromptSummary(request.promptSummary());
         entity.setOutputSummary(request.outputSummary());
         entity.setTokensUsed(request.tokensUsed());
+        entity.setPlanGenerationTokensUsed(request.planGenerationTokensUsed());
+        entity.setSummaryGenerationTokensUsed(request.summaryGenerationTokensUsed());
         entity.setProcessingTimeMs(request.processingTimeMs());
         entity.setStatus(request.status());
         entity.setErrorMessage(request.errorMessage());

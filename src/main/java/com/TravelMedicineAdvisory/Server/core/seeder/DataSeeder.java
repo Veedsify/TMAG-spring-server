@@ -1166,8 +1166,8 @@ public class DataSeeder implements CommandLineRunner {
                 createSetting("stat_uptime", "99.9%", "string", "stats", "Uptime", "Platform uptime percentage", true));
         settings.add(createSetting("stat_user_rating", "4.9", "string", "stats", "User Rating",
                 "Average user rating out of 5", true));
-        settings.add(createSetting("hipaa_compliant", "true", "boolean", "compliance", "HIPAA Compliant",
-                "Whether the platform follows HIPAA-compliant data handling", true));
+        settings.add(createSetting("ndpr_compliant", "true", "boolean", "compliance", "NDPR Compliant",
+                "Whether the platform follows NDPR-aligned data handling", true));
         settings.add(createSetting("iso_31030_aligned", "true", "boolean", "compliance", "ISO 31030 Aligned",
                 "Whether the platform supports ISO 31030 travel risk management", true));
 
@@ -1232,7 +1232,7 @@ public class DataSeeder implements CommandLineRunner {
                 "Absolutely. Every plan includes a doctor-ready summary specifically formatted for healthcare providers. You can download the PDF and bring it to your appointment or share it digitally.",
                 "Plans & features", 11));
         faqs.add(createFaq("Is my health data safe?",
-                "Yes. We follow HIPAA-compliant data handling practices. Your health data is encrypted in transit and at rest, never sold to third parties, and can be fully deleted from your account settings at any time.",
+                "Yes. We follow NDPR-aligned data handling practices. Your health data is encrypted in transit and at rest, never sold to third parties, and can be fully deleted from your account settings at any time.",
                 "Privacy & security", 12));
         faqs.add(createFaq("Do you train AI on my data?",
                 "No. We do not use your personal health data to train our AI models. Your data is used solely to generate your personalized plan.",

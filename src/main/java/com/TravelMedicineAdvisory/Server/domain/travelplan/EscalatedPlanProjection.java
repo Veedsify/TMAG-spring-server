@@ -2,7 +2,7 @@ package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
 import java.time.LocalDateTime;
 
-public interface ElevatedPlanProjection {
+public interface EscalatedPlanProjection {
     Long getId();
     String getDestination();
     Integer getDuration();
@@ -18,5 +18,5 @@ public interface ElevatedPlanProjection {
     String getDoctorFeedback();
     String getPdfPreviewUrl();
     String getSummaryPreviewUrl();
-    LocalDateTime getElevatedAt();
+    LocalDateTime getEscalatedAt();
 }

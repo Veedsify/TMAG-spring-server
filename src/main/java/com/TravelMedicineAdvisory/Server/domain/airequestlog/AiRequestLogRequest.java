@@ -7,6 +7,8 @@ public record AiRequestLogRequest(
     String promptSummary,
     String outputSummary,
     Integer tokensUsed,
+    Integer planGenerationTokensUsed,
+    Integer summaryGenerationTokensUsed,
     Long processingTimeMs,
     String status,
     String errorMessage,

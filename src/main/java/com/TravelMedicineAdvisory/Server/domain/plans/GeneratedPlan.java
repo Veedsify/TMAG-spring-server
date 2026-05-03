@@ -42,6 +42,12 @@ public class GeneratedPlan extends BaseEntity {
     @Column(name = "tokens_used")
     private Integer tokensUsed;
 
+    @Column(name = "plan_generation_tokens_used")
+    private Integer planGenerationTokensUsed;
+
+    @Column(name = "summary_generation_tokens_used")
+    private Integer summaryGenerationTokensUsed;
+
     @Column(name = "processing_time_ms")
     private Long processingTimeMs;
 
@@ -146,6 +152,22 @@ public class GeneratedPlan extends BaseEntity {
 
     public void setTokensUsed(Integer tokensUsed) {
         this.tokensUsed = tokensUsed;
+    }
+
+    public Integer getPlanGenerationTokensUsed() {
+        return planGenerationTokensUsed;
+    }
+
+    public void setPlanGenerationTokensUsed(Integer planGenerationTokensUsed) {
+        this.planGenerationTokensUsed = planGenerationTokensUsed;
+    }
+
+    public Integer getSummaryGenerationTokensUsed() {
+        return summaryGenerationTokensUsed;
+    }
+
+    public void setSummaryGenerationTokensUsed(Integer summaryGenerationTokensUsed) {
+        this.summaryGenerationTokensUsed = summaryGenerationTokensUsed;
     }
 
     public Long getProcessingTimeMs() {

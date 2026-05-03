@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.travelplan;
 
+import java.util.List;
+
 public record TravelPlanRequest(
     String destination,
     String country,
@@ -20,5 +22,6 @@ public record TravelPlanRequest(
     Long companyId,
     Long employeeId,
     Long userId,
-    String planTier
+    String planTier,
+    List<Long> selectedDoctorIds
 ) {}

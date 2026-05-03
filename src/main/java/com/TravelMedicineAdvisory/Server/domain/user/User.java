@@ -95,6 +95,9 @@ public class User extends BaseEntity {
   @Column(name = "profile_picture_option")
   private String profilePictureOption = "upload";
 
+  @Column(columnDefinition = "TEXT")
+  private String bio;
+
   private Integer credits = 0;
 
   private String type;
@@ -257,6 +260,14 @@ public class User extends BaseEntity {
 
   public void setProfilePictureOption(String profilePictureOption) {
     this.profilePictureOption = profilePictureOption;
+  }
+
+  public String getBio() {
+    return bio;
+  }
+
+  public void setBio(String bio) {
+    this.bio = bio;
   }
 
   public Integer getCredits() {
