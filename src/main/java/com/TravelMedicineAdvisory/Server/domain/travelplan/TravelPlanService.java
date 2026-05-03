@@ -398,10 +398,20 @@ public class TravelPlanService {
             User user = employee.getUser();
             entity.setEmployee(employee);
             entity.setUser(user);
+            if (entity.getCompany() == null) {
+                entity.setCompany(employee.getCompany());
+            }
         } else if (request.userId() != null) {
             User user = userRepository.findById(request.userId())
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
             entity.setUser(user);
+            if (entity.getCompany() == null) {
+                companyUserRepository.findAllByUser(user).stream()
+                        .filter(companyUser -> companyUser.getDeletedAt() == null)
+                        .findFirst()
+                        .map(CompanyUser::getCompany)
+                        .ifPresent(entity::setCompany);
+            }
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either employee or user must be provided");
         }

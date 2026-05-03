@@ -72,25 +72,49 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     @Query("""
             SELECT new com.TravelMedicineAdvisory.Server.domain.report.PlanHistoryProjection(
-                tp.id, tp.destination, tp.country, tp.purpose, tp.duration, tp.riskScore, tp.status,
-                COALESCE(e.name, u.name), tp.createdAt, tp.updatedAt)
-            FROM TravelPlan tp
+                COALESCE(tp.id, gp.id), COALESCE(tp.destination, gp.destination), tp.country,
+                COALESCE(tp.purpose, gp.purpose), tp.tripType, tp.tripDetailsJson,
+                COALESCE(tp.duration, gp.duration), COALESCE(tp.riskScore, gp.riskScore),
+                COALESCE(tp.status, gp.status), COALESCE(e.name, u.name, gu.name, gu.email),
+                tp.medicalConsiderations, tp.vaccinations, tp.healthAlerts, tp.safetyAdvisories,
+                tp.medications, tp.waterFood, tp.emergencyContacts, gp.status, gp.planJson,
+                gp.signedPdfUrl, gp.summaryPdfUrl, COALESCE(tp.createdAt, gp.createdAt),
+                COALESCE(tp.updatedAt, gp.updatedAt))
+            FROM GeneratedPlan gp
+            LEFT JOIN gp.travelPlan tp
             LEFT JOIN tp.employee e
             LEFT JOIN tp.user u
-            WHERE tp.deletedAt IS NULL
-            ORDER BY tp.createdAt DESC
+            LEFT JOIN gp.user gu
+            WHERE gp.deletedAt IS NULL
+            ORDER BY COALESCE(tp.createdAt, gp.createdAt) DESC
             """)
     List<com.TravelMedicineAdvisory.Server.domain.report.PlanHistoryProjection> findPlanHistoryRows();
 
     @Query("""
             SELECT new com.TravelMedicineAdvisory.Server.domain.report.PlanHistoryProjection(
-                tp.id, tp.destination, tp.country, tp.purpose, tp.duration, tp.riskScore, tp.status,
-                COALESCE(e.name, u.name), tp.createdAt, tp.updatedAt)
-            FROM TravelPlan tp
+                COALESCE(tp.id, gp.id), COALESCE(tp.destination, gp.destination), tp.country,
+                COALESCE(tp.purpose, gp.purpose), tp.tripType, tp.tripDetailsJson,
+                COALESCE(tp.duration, gp.duration), COALESCE(tp.riskScore, gp.riskScore),
+                COALESCE(tp.status, gp.status), COALESCE(e.name, u.name, gu.name, gu.email),
+                tp.medicalConsiderations, tp.vaccinations, tp.healthAlerts, tp.safetyAdvisories,
+                tp.medications, tp.waterFood, tp.emergencyContacts, gp.status, gp.planJson,
+                gp.signedPdfUrl, gp.summaryPdfUrl, COALESCE(tp.createdAt, gp.createdAt),
+                COALESCE(tp.updatedAt, gp.updatedAt))
+            FROM GeneratedPlan gp
+            LEFT JOIN gp.travelPlan tp
             LEFT JOIN tp.employee e
             LEFT JOIN tp.user u
-            WHERE tp.company.id = :companyId AND tp.deletedAt IS NULL
-            ORDER BY tp.createdAt DESC
+            LEFT JOIN CompanyUser cu ON cu.user.id = u.id AND cu.deletedAt IS NULL
+            LEFT JOIN gp.user gu
+            LEFT JOIN CompanyUser gcu ON gcu.user.id = gu.id AND gcu.deletedAt IS NULL
+            WHERE (gp.company.id = :companyId
+                OR tp.company.id = :companyId
+                OR e.company.id = :companyId
+                OR cu.company.id = :companyId
+                OR gcu.company.id = :companyId)
+              AND gp.deletedAt IS NULL
+              AND (tp.id IS NULL OR tp.deletedAt IS NULL)
+            ORDER BY COALESCE(tp.createdAt, gp.createdAt) DESC
             """)
     List<com.TravelMedicineAdvisory.Server.domain.report.PlanHistoryProjection> findPlanHistoryRowsByCompanyId(@Param("companyId") Long companyId);
 
