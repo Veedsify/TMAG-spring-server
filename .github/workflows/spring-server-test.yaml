@@ -4,11 +4,11 @@ on:
   push:
     branches: [updates]
     paths:
-      - "spring-server/**"
+      - "src/**"
   pull_request:
     branches: [updates]
     paths:
-      - "spring-server/**"
+      - "src/**"
 
 jobs:
   test:
@@ -139,10 +139,10 @@ jobs:
           EOF
 
       - name: Compile
-        run: ./mvnw compile -B
+        run: ./mvn compile -B
 
       - name: Run tests
-        run: ./mvnw test -B
+        run: ./mvn test -B
 
       - name: Upload test results
         if: always()
