@@ -140,10 +140,10 @@ jobs:
           EOF
 
       - name: Compile
-        run: ./mvn compile -B
+        run: ./mvnw compile -B
 
       - name: Run tests
-        run: ./mvn test -B
+        run: ./mvnw test -B
 
       - name: Upload test results
         if: always()
