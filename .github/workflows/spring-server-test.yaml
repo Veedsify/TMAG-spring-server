@@ -4,18 +4,19 @@ on:
   push:
     branches: [updates]
     paths:
-      - "spring-server/**"
+      - "src/**"
+      - "pom.xml"
+      - ".github/workflows/spring-server-test.yaml"
   pull_request:
     branches: [updates]
     paths:
-      - "spring-server/**"
+      - "src/**"
+      - "pom.xml"
+      - ".github/workflows/spring-server-test.yaml"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: spring-server
 
     services:
       postgres:
@@ -51,7 +52,7 @@ jobs:
           java-version: "25"
           distribution: temurin
           cache: maven
-          cache-dependency-path: spring-server/pom.xml
+          cache-dependency-path: pom.xml
 
       - name: Create .env file
         run: |
@@ -149,5 +150,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: spring-server/target/surefire-reports/
+          path: target/surefire-reports/
           retention-days: 7
