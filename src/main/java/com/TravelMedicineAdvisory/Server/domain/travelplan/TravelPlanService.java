@@ -230,7 +230,7 @@ public class TravelPlanService {
         }
 
         validateReturnTripOrThrow(request);
-        TravelPlanRequest normalized = normalizeDurationForReturnTrip(request);
+        TravelPlanRequest normalized = normalizeDurationFromTripDetailsJson(normalizeDurationForReturnTrip(request));
 
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(normalized, entity);
@@ -271,7 +271,7 @@ public class TravelPlanService {
         TravelPlan entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
         validateReturnTripOrThrow(request);
-        TravelPlanRequest normalized = normalizeDurationForReturnTrip(request);
+        TravelPlanRequest normalized = normalizeDurationFromTripDetailsJson(normalizeDurationForReturnTrip(request));
         mapRequestToEntity(normalized, entity);
         TravelPlan saved = repository.save(entity);
         return toResponse(saved);
@@ -461,9 +461,9 @@ public class TravelPlanService {
             }
             LocalDate d0 = LocalDate.parse(dep.trim());
             LocalDate d1 = LocalDate.parse(ret.trim());
-            if (!d1.isAfter(d0)) {
+            if (d1.isBefore(d0)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Return date must be after departure date");
+                        "Return date must be on or after the departure date");
             }
         } catch (DateTimeParseException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -486,35 +486,152 @@ public class TravelPlanService {
             }
             LocalDate d0 = LocalDate.parse(dep);
             LocalDate d1 = LocalDate.parse(ret);
-            if (!d1.isAfter(d0)) {
+            if (d1.isBefore(d0)) {
                 return request;
             }
             int inclusive = (int) ChronoUnit.DAYS.between(d0, d1) + 1;
-            return new TravelPlanRequest(
-                    request.destination(),
-                    request.country(),
-                    inclusive,
-                    request.purpose(),
-                    request.tripType(),
-                    request.tripDetailsJson(),
-                    request.riskScore(),
-                    request.status(),
-                    request.medicalConsiderations(),
-                    request.vaccinations(),
-                    request.healthAlerts(),
-                    request.safetyAdvisories(),
-                    request.medications(),
-                    request.waterFood(),
-                    request.emergencyContacts(),
-                    request.questionnaireResponses(),
-                    request.companyId(),
-                    request.employeeId(),
-                    request.userId(),
-                    request.planTier(),
-                    request.selectedDoctorIds());
+            return copyRequestWithDuration(request, inclusive);
         } catch (JsonProcessingException ex) {
             return request;
         }
+    }
+
+    /**
+     * When duration is missing or non-positive, derive days from tripDetailsJson (one-way, multi,
+     * transit) so submission is not blocked.
+     */
+    private TravelPlanRequest normalizeDurationFromTripDetailsJson(TravelPlanRequest request) {
+        Integer dur = request.duration();
+        if (dur != null && dur > 0) {
+            return request;
+        }
+        if (!StringUtils.hasText(request.tripDetailsJson())) {
+            return request;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(request.tripDetailsJson());
+            Integer inferred = inferDurationDaysFromTripDetails(root);
+            if (inferred != null && inferred > 0) {
+                return copyRequestWithDuration(request, inferred);
+            }
+        } catch (JsonProcessingException ignored) {
+        }
+        return request;
+    }
+
+    private static Integer inferDurationDaysFromTripDetails(JsonNode root) {
+        String tt = tripDetailText(root, "tripType").trim();
+        if (!StringUtils.hasText(tt)) {
+            return null;
+        }
+        if ("return".equalsIgnoreCase(tt)) {
+            return inclusiveDaysBetweenOrNull(tripDetailText(root, "departureDate"),
+                    tripDetailText(root, "returnDate"));
+        }
+        if ("transit".equalsIgnoreCase(tt)) {
+            Integer span = inclusiveDaysBetweenOrNull(tripDetailText(root, "departureDate"),
+                    tripDetailText(root, "returnDate"));
+            if (span != null && span > 0) {
+                return span;
+            }
+            return transitDurationBucketDays(tripDetailText(root, "transitDuration"));
+        }
+        if ("multi".equalsIgnoreCase(tt)) {
+            JsonNode stops = root.path("stops");
+            String overall = tripDetailText(root, "overallReturnDate").trim();
+            String firstArrival = "";
+            if (stops.isArray() && stops.size() > 0) {
+                firstArrival = tripDetailText(stops.get(0), "arrivalDate").trim();
+            }
+            Integer span = inclusiveDaysBetweenOrNull(firstArrival, overall);
+            if (span != null && span > 0) {
+                return span;
+            }
+            int totalNights = 0;
+            if (stops.isArray()) {
+                for (JsonNode leg : stops) {
+                    String nightsRaw = tripDetailText(leg, "nights").trim();
+                    try {
+                        int n = Integer.parseInt(nightsRaw);
+                        if (n > 0) {
+                            totalNights += n;
+                        }
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+            return totalNights > 0 ? totalNights + 1 : null;
+        }
+        if ("one-way".equalsIgnoreCase(tt)) {
+            return lengthOfStayBucketDays(tripDetailText(root, "lengthOfStay"));
+        }
+        return null;
+    }
+
+    private static Integer inclusiveDaysBetweenOrNull(String start, String end) {
+        if (!StringUtils.hasText(start) || !StringUtils.hasText(end)) {
+            return null;
+        }
+        try {
+            LocalDate d0 = LocalDate.parse(start.trim());
+            LocalDate d1 = LocalDate.parse(end.trim());
+            if (d1.isBefore(d0)) {
+                return null;
+            }
+            return (int) ChronoUnit.DAYS.between(d0, d1) + 1;
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private static Integer lengthOfStayBucketDays(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        return switch (raw.trim()) {
+            case "<1m" -> 30;
+            case "1-3m" -> 90;
+            case "3-6m" -> 180;
+            case "6-12m" -> 365;
+            case "12m+", "open" -> 366;
+            default -> null;
+        };
+    }
+
+    private static Integer transitDurationBucketDays(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        return switch (raw.trim()) {
+            case "<12h", "12-24h" -> 1;
+            case ">24h" -> 2;
+            default -> null;
+        };
+    }
+
+    private static TravelPlanRequest copyRequestWithDuration(TravelPlanRequest request, int duration) {
+        return new TravelPlanRequest(
+                request.destination(),
+                request.country(),
+                duration,
+                request.purpose(),
+                request.tripType(),
+                request.tripDetailsJson(),
+                request.riskScore(),
+                request.status(),
+                request.medicalConsiderations(),
+                request.vaccinations(),
+                request.healthAlerts(),
+                request.safetyAdvisories(),
+                request.medications(),
+                request.waterFood(),
+                request.emergencyContacts(),
+                request.questionnaireResponses(),
+                request.companyId(),
+                request.employeeId(),
+                request.userId(),
+                request.planTier(),
+                request.selectedDoctorIds());
     }
 
     private static String tripDetailText(JsonNode root, String field) {
