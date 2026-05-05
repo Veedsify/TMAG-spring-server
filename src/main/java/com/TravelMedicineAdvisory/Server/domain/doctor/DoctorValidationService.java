@@ -1,26 +1,13 @@
 package com.TravelMedicineAdvisory.Server.domain.doctor;
 
-import com.TravelMedicineAdvisory.Server.core.email.EmailService;
-import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
-import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
-import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
-import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Roles;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.DoctorValidationPlanProjection;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
-import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,13 +19,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.UUID;
+import com.TravelMedicineAdvisory.Server.core.email.EmailService;
+import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.DoctorValidationPlanProjection;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanPdfGenerator;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @Transactional
@@ -272,7 +273,8 @@ public class DoctorValidationService {
         user.setAvatarUrl(application.getProfilePictureUrl());
         user.setProfilePictureOption("upload");
         user.setVerified(true);
-        user.setOnboarded(false);
+        user.setOnboarded(true);
+        user.setOnboardingStage(5);
         user.setMustChangePassword(true);
         user.setInvitationToken(invitationToken);
         user.setInvitationTokenExpiry(LocalDateTime.now().plusDays(7));

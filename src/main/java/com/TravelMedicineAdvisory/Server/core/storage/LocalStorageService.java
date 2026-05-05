@@ -12,10 +12,10 @@ import java.util.UUID;
 @Service
 public class LocalStorageService implements StorageService {
 
-    @Value("${storage.local.base-path:storage/uploads}")
+    @Value("${app.storage.path:storage/upload}")
     private String basePath;
 
-    @Value("${storage.local.base-url:http://localhost:8080/storage/uploads}")
+    @Value("${app.storage.base-url:http://localhost:8080/storage/upload}")
     private String baseUrl;
 
     @Override
@@ -82,6 +82,6 @@ public class LocalStorageService implements StorageService {
 
     @Override
     public String getUrl(String customPath) {
-        return baseUrl + "/" + customPath;
+        return baseUrl.replaceAll("/+$", "") + "/" + customPath;
     }
 }
