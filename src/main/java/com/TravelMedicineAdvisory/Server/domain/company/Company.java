@@ -14,6 +14,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -22,7 +23,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 @Entity
-@Table(name = "companies")
+@Table(name = "companies", indexes = {
+        @Index(name = "idx_companies_active_created", columnList = "deleted_at, created_at"),
+        @Index(name = "idx_companies_code", columnList = "company_code"),
+        @Index(name = "idx_companies_credit_plan", columnList = "credit_plan_id")
+})
 @SQLDelete(sql = "UPDATE companies SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class Company extends BaseEntity {
 
@@ -113,11 +118,6 @@ public class Company extends BaseEntity {
 
     public void setTotalCreditsPurchased(Integer totalCreditsPurchased) {
         this.totalCreditsPurchased = totalCreditsPurchased;
-    }
-
-    @Transient
-    public int getHistoricalCreditsPurchased() {
-        return totalCreditsPurchased != null ? totalCreditsPurchased : 0;
     }
 
     public Boolean getHasApiAccess() {

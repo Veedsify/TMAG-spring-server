@@ -31,6 +31,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@SuppressWarnings("deprecation")
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -95,7 +96,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/health",
                                 "/",
-                                "/storage/**")
+                                "/storage/**",
+                                "/storage/uploads/**")
                         .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/v1/countries",
@@ -110,6 +112,8 @@ public class SecurityConfig {
                                 "/api/v1/system-settings/**",
                                 "/api/v1/ebooks",
                                 "/api/v1/ebooks/*",
+                                "/storage/**",
+                                "/storage/uploads/**",
                                 "/api/v1/ebooks/orders/*",
                                 "/api/v1/exchange-rates",
                                 "/api/v1/exchange-rates/**",
@@ -118,6 +122,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/contact",
+                                "/api/v1/doctor/apply",
                                 "/api/v1/newsletter/subscribe",
                                 "/api/v1/ebooks/checkout",
                                 "/api/v1/ebooks/orders/verify",

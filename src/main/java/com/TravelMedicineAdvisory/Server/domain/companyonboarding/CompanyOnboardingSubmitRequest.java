@@ -12,11 +12,19 @@ public record CompanyOnboardingSubmitRequest(
         String selectedPlanCode,
         Integer creditCount,
         String sampleRequest,
-        List<TeamMemberRequest> teamMembers) {
+        List<TeamMemberRequest> teamMembers,
+        List<PlatformEmployeeRequest> platformEmployees) {
 
     public record TeamMemberRequest(
-            String name,
+            String firstName,
+            String lastName,
             String email,
             String role) {
+    }
+
+    public record PlatformEmployeeRequest(
+            String email,
+            String firstName,
+            String lastName) {
     }
 }

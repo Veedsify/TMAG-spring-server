@@ -13,7 +13,6 @@ import java.util.Map;
 @Tag(name = "Admin · System")
 @RestController
 @RequestMapping("/api/v1/admin/system")
-@PreAuthorize("hasAuthority('all')")
 public class AdminSystemController {
 
     private final AdminSystemService service;
@@ -25,11 +24,13 @@ public class AdminSystemController {
     }
 
     @GetMapping("/status")
+    @PreAuthorize("@perm.admin(authentication, 'system_log:read')")
     public ResponseEntity<SuccessResponse> getSystemStatus() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getSystemStatus()));
     }
 
     @GetMapping("/logs")
+    @PreAuthorize("@perm.admin(authentication, 'system_log:list', 'system_log:read')")
     public ResponseEntity<SuccessResponse> getSystemLogs(
             @RequestParam(required = false) String level,
             @RequestParam(required = false) Integer limit) {
@@ -38,11 +39,13 @@ public class AdminSystemController {
     }
 
     @GetMapping("/settings")
+    @PreAuthorize("@perm.admin(authentication, 'system_setting:read')")
     public ResponseEntity<SuccessResponse> getSettings() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getSettings()));
     }
 
     @PutMapping("/settings")
+    @PreAuthorize("@perm.admin(authentication, 'system_setting:update')")
     public ResponseEntity<SuccessResponse> updateSettings(@RequestBody Map<String, Object> updates) {
         AdminSystemSettingsResponse response = service.updateSettings(updates);
         // Refresh exchange rates after settings update
@@ -51,12 +54,14 @@ public class AdminSystemController {
     }
 
     @PostMapping("/settings/toggle-maintenance")
+    @PreAuthorize("@perm.admin(authentication, 'system_setting:update')")
     public ResponseEntity<SuccessResponse> toggleMaintenance() {
         service.toggleMaintenance();
         return ResponseEntity.ok(new SuccessResponse("Maintenance mode toggled", null));
     }
 
     @PostMapping("/settings/fetch-live-rates")
+    @PreAuthorize("@perm.admin(authentication, 'system_setting:update')")
     public ResponseEntity<SuccessResponse> fetchLiveRates() {
         exchangeRateService.fetchRates();
         return ResponseEntity.ok(new SuccessResponse("Live rates fetched", Map.of(

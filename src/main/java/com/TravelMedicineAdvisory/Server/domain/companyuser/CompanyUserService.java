@@ -82,7 +82,7 @@ public class CompanyUserService {
                 .map(cu -> {
                     Company c = cu.getCompany();
                     String resolvedPlan = c.getCreditPlan() != null && c.getCreditPlan().getCode() != null
-                            ? c.getCreditPlan().getCode().name()
+                            ? c.getCreditPlan().getCode()
                             : c.getPlan();
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", c.getId());

@@ -1,9 +1,11 @@
 package com.TravelMedicineAdvisory.Server.domain.user;
 
-import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
 import java.time.LocalDateTime;
 
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
+
+// user response for user controller
 public record UserResponse(
     Long id,
     String firstName,
@@ -17,6 +19,7 @@ public record UserResponse(
     Boolean isVerified,
     LocalDateTime lastLogin,
     String avatarUrl,
+    String profilePictureOption,
     Integer credits,
     String type,
     Long roleId,

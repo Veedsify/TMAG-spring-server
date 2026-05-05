@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Blog posts")
@@ -31,7 +32,7 @@ public class BlogPostController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<BlogPostResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<BlogPostResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
@@ -41,17 +42,20 @@ public class BlogPostController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'blog_post:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody BlogPostRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'blog_post:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody BlogPostRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'blog_post:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

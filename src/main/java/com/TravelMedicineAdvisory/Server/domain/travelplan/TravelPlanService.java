@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.travelplan;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -17,10 +18,13 @@ import org.springframework.web.server.ResponseStatusException;
 import com.TravelMedicineAdvisory.Server.core.utils.QuestionnaireResponseSanitizer;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
@@ -50,6 +54,7 @@ public class TravelPlanService {
     private final GeneratedPlanRepository generatedPlanRepository;
     private final TravelPlanPdfGenerator travelPlanPdfGenerator;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
     private final ObjectMapper objectMapper;
 
     public TravelPlanService(TravelPlanRepository repository, CompanyRepository companyRepository,
@@ -59,6 +64,7 @@ public class TravelPlanService {
             GeneratedPlanRepository generatedPlanRepository,
             TravelPlanPdfGenerator travelPlanPdfGenerator,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
+            TravelPlanDoctorAssignmentRepository assignmentRepository,
             ObjectMapper objectMapper) {
         this.repository = repository;
         this.companyRepository = companyRepository;
@@ -69,20 +75,20 @@ public class TravelPlanService {
         this.generatedPlanRepository = generatedPlanRepository;
         this.travelPlanPdfGenerator = travelPlanPdfGenerator;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
+        this.assignmentRepository = assignmentRepository;
         this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
-    public Page<TravelPlanResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
+    public Page<TravelPlanListItemResponse> findAll(Long companyId, Long currentUserId, Pageable pageable) {
         if (companyId != null) {
             if (!isUserInCompany(currentUserId, companyId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this company's plans");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "You do not have access to this company's plans");
             }
-            return repository.findAllByCompanyId(companyId, pageable)
-                    .map(this::toResponse);
+            return repository.findListItemsByCompanyId(companyId, pageable);
         }
-        return repository.findAllByUserId(currentUserId, pageable)
-                .map(this::toResponse);
+        return repository.findListItemsByUserId(currentUserId, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -105,14 +111,37 @@ public class TravelPlanService {
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        String status = plan.getStatus();
-        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+        if (!isUserPdfAvailable(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan PDF is only available when the plan is completed");
+                    "Travel plan PDF is only available after required doctor approval");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
         byte[] pdf = travelPlanPdfGenerator.generate(plan, generated);
         return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
+    }
+
+    @Transactional(readOnly = true)
+    public String exportSummaryPdfUrlForUser(Long planId, Long currentUserId) {
+        TravelPlan plan = repository.findById(planId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Travel plan not found"));
+        if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
+        }
+        if (!isUserPdfAvailable(plan)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Travel plan summary PDF is only available after required doctor approval");
+        }
+        if (plan.getPlanTier() == null || plan.getPlanTier() == PlanTier.FREE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Travel plan summary PDF is only available for standard and premium plans");
+        }
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
+        String url = generated != null ? generated.getSummaryPdfUrl() : null;
+        if (!StringUtils.hasText(url)) {
+            throw new ResponseStatusException(HttpStatus.ACCEPTED,
+                    "Summary PDF is still being generated, please try again shortly");
+        }
+        return url;
     }
 
     private static String slugifyFilename(String destination) {
@@ -127,6 +156,17 @@ public class TravelPlanService {
         return s.length() > 48 ? s.substring(0, 48) : s;
     }
 
+    private boolean isUserPdfAvailable(TravelPlan plan) {
+        String status = plan.getStatus();
+        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
+            return false;
+        }
+        DoctorValidationStatus validationStatus = plan.getDoctorValidationStatus();
+        return validationStatus == null
+                || validationStatus == DoctorValidationStatus.NOT_REQUIRED
+                || validationStatus == DoctorValidationStatus.APPROVED;
+    }
+
     private boolean canAccessPlan(TravelPlan plan, Long currentUserId) {
         if (plan.getUser() != null && plan.getUser().getId().equals(currentUserId)) {
             return true;
@@ -138,11 +178,10 @@ public class TravelPlanService {
     }
 
     private boolean isUserInCompany(Long userId, Long companyId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
-        return companyUserRepository.findAllByUser(user).stream()
-                .map(companyUser -> companyUser.getCompany().getId())
-                .anyMatch(companyId::equals);
+        if (!userRepository.existsById(userId)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found");
+        }
+        return companyUserRepository.existsActiveByUserIdAndCompanyId(userId, companyId);
     }
 
     @Transactional
@@ -191,17 +230,19 @@ public class TravelPlanService {
         }
 
         validateReturnTripOrThrow(request);
-        TravelPlanRequest normalized = normalizeDurationForReturnTrip(request);
+        TravelPlanRequest normalized = normalizeDurationFromTripDetailsJson(normalizeDurationForReturnTrip(request));
 
         TravelPlan entity = new TravelPlan();
         mapRequestToEntity(normalized, entity);
         entity.setStatus("QUEUED");
 
-        PlanTier tier = resolvePlanTier(request.planTier(), user);
-        entity.setPlanTier(tier);
-        entity.setDoctorValidationStatus(tier == PlanTier.FREE ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+        String tier = resolvePlanTier(user);
+        entity.setPlanTier(PlanTier.valueOf(tier));
+        entity.setDoctorValidationStatus(
+                tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
 
         TravelPlan saved = repository.save(entity);
+        assignSelectedDoctors(saved, normalized.selectedDoctorIds());
         persistQuestionnaireResponses(normalized, saved);
 
         planGenerationService.enqueueGeneration(saved.getId(), user.getId());
@@ -221,7 +262,8 @@ public class TravelPlanService {
         questionnaire.setEmployee(travelPlan.getEmployee());
         questionnaire.setCompany(travelPlan.getCompany());
         questionnaire.setSource("create-plan");
-        questionnaire.setResponsesJson(QuestionnaireResponseSanitizer.sanitize(request.questionnaireResponses(), objectMapper));
+        questionnaire.setResponsesJson(
+                QuestionnaireResponseSanitizer.sanitize(request.questionnaireResponses(), objectMapper));
         travelPlanQuestionnaireRepository.save(questionnaire);
     }
 
@@ -229,7 +271,7 @@ public class TravelPlanService {
         TravelPlan entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
         validateReturnTripOrThrow(request);
-        TravelPlanRequest normalized = normalizeDurationForReturnTrip(request);
+        TravelPlanRequest normalized = normalizeDurationFromTripDetailsJson(normalizeDurationForReturnTrip(request));
         mapRequestToEntity(normalized, entity);
         TravelPlan saved = repository.save(entity);
         return toResponse(saved);
@@ -255,6 +297,7 @@ public class TravelPlanService {
         entity.setTripDetailsJson(source.getTripDetailsJson());
         entity.setRiskScore(source.getRiskScore());
         entity.setStatus("QUEUED");
+        entity.setPlanTier(PlanTier.PREMIUM);
         entity.setCompany(source.getCompany());
         entity.setEmployee(source.getEmployee());
         entity.setUser(source.getUser());
@@ -286,9 +329,22 @@ public class TravelPlanService {
         User validatedBy = entity.getValidatedBy();
         String validatedByName = validatedBy != null
                 ? ((validatedBy.getFirstName() != null ? validatedBy.getFirstName() : "") + " " +
-                   (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
+                        (validatedBy.getLastName() != null ? validatedBy.getLastName() : "")).trim()
                 : null;
         String signedPdfUrl = generatedPlan != null ? generatedPlan.signedPdfUrl() : null;
+        String summaryPdfUrl = generatedPlan != null ? generatedPlan.summaryPdfUrl() : null;
+        List<AssignedDoctorDto> assignedDoctors = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(entity.getId()).stream()
+                .map(a -> {
+                    User d = a.getDoctor();
+                    return new AssignedDoctorDto(
+                            d.getId(),
+                            d.getFirstName(),
+                            d.getLastName(),
+                            d.getEmail(),
+                            d.getAvatarUrl());
+                })
+                .toList();
+        Boolean openToAllDoctors = assignedDoctors.isEmpty() ? true : null;
         return new TravelPlanResponse(
                 entity.getId(),
                 entity.getDestination(),
@@ -317,7 +373,10 @@ public class TravelPlanService {
                 validatedByName,
                 entity.getValidatedAt(),
                 entity.getRejectionReason(),
-                signedPdfUrl);
+                signedPdfUrl,
+                summaryPdfUrl,
+                assignedDoctors,
+                openToAllDoctors);
     }
 
     private GeneratedPlanPayload toGeneratedPayload(GeneratedPlan g) {
@@ -330,6 +389,7 @@ public class TravelPlanService {
                 g.getProcessingTimeMs(),
                 g.getErrorMessage(),
                 g.getSignedPdfUrl(),
+                g.getSummaryPdfUrl(),
                 g.getIsSigned());
     }
 
@@ -360,10 +420,20 @@ public class TravelPlanService {
             User user = employee.getUser();
             entity.setEmployee(employee);
             entity.setUser(user);
+            if (entity.getCompany() == null) {
+                entity.setCompany(employee.getCompany());
+            }
         } else if (request.userId() != null) {
             User user = userRepository.findById(request.userId())
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
             entity.setUser(user);
+            if (entity.getCompany() == null) {
+                companyUserRepository.findAllByUser(user).stream()
+                        .filter(companyUser -> companyUser.getDeletedAt() == null)
+                        .findFirst()
+                        .map(CompanyUser::getCompany)
+                        .ifPresent(entity::setCompany);
+            }
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either employee or user must be provided");
         }
@@ -391,9 +461,9 @@ public class TravelPlanService {
             }
             LocalDate d0 = LocalDate.parse(dep.trim());
             LocalDate d1 = LocalDate.parse(ret.trim());
-            if (!d1.isAfter(d0)) {
+            if (d1.isBefore(d0)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Return date must be after departure date");
+                        "Return date must be on or after the departure date");
             }
         } catch (DateTimeParseException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -416,34 +486,152 @@ public class TravelPlanService {
             }
             LocalDate d0 = LocalDate.parse(dep);
             LocalDate d1 = LocalDate.parse(ret);
-            if (!d1.isAfter(d0)) {
+            if (d1.isBefore(d0)) {
                 return request;
             }
             int inclusive = (int) ChronoUnit.DAYS.between(d0, d1) + 1;
-            return new TravelPlanRequest(
-                    request.destination(),
-                    request.country(),
-                    inclusive,
-                    request.purpose(),
-                    request.tripType(),
-                    request.tripDetailsJson(),
-                    request.riskScore(),
-                    request.status(),
-                    request.medicalConsiderations(),
-                    request.vaccinations(),
-                    request.healthAlerts(),
-                    request.safetyAdvisories(),
-                    request.medications(),
-                    request.waterFood(),
-                    request.emergencyContacts(),
-                    request.questionnaireResponses(),
-                    request.companyId(),
-                    request.employeeId(),
-                    request.userId(),
-                    request.planTier());
-        } catch (Exception ex) {
+            return copyRequestWithDuration(request, inclusive);
+        } catch (JsonProcessingException ex) {
             return request;
         }
+    }
+
+    /**
+     * When duration is missing or non-positive, derive days from tripDetailsJson (one-way, multi,
+     * transit) so submission is not blocked.
+     */
+    private TravelPlanRequest normalizeDurationFromTripDetailsJson(TravelPlanRequest request) {
+        Integer dur = request.duration();
+        if (dur != null && dur > 0) {
+            return request;
+        }
+        if (!StringUtils.hasText(request.tripDetailsJson())) {
+            return request;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(request.tripDetailsJson());
+            Integer inferred = inferDurationDaysFromTripDetails(root);
+            if (inferred != null && inferred > 0) {
+                return copyRequestWithDuration(request, inferred);
+            }
+        } catch (JsonProcessingException ignored) {
+        }
+        return request;
+    }
+
+    private static Integer inferDurationDaysFromTripDetails(JsonNode root) {
+        String tt = tripDetailText(root, "tripType").trim();
+        if (!StringUtils.hasText(tt)) {
+            return null;
+        }
+        if ("return".equalsIgnoreCase(tt)) {
+            return inclusiveDaysBetweenOrNull(tripDetailText(root, "departureDate"),
+                    tripDetailText(root, "returnDate"));
+        }
+        if ("transit".equalsIgnoreCase(tt)) {
+            Integer span = inclusiveDaysBetweenOrNull(tripDetailText(root, "departureDate"),
+                    tripDetailText(root, "returnDate"));
+            if (span != null && span > 0) {
+                return span;
+            }
+            return transitDurationBucketDays(tripDetailText(root, "transitDuration"));
+        }
+        if ("multi".equalsIgnoreCase(tt)) {
+            JsonNode stops = root.path("stops");
+            String overall = tripDetailText(root, "overallReturnDate").trim();
+            String firstArrival = "";
+            if (stops.isArray() && stops.size() > 0) {
+                firstArrival = tripDetailText(stops.get(0), "arrivalDate").trim();
+            }
+            Integer span = inclusiveDaysBetweenOrNull(firstArrival, overall);
+            if (span != null && span > 0) {
+                return span;
+            }
+            int totalNights = 0;
+            if (stops.isArray()) {
+                for (JsonNode leg : stops) {
+                    String nightsRaw = tripDetailText(leg, "nights").trim();
+                    try {
+                        int n = Integer.parseInt(nightsRaw);
+                        if (n > 0) {
+                            totalNights += n;
+                        }
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+            return totalNights > 0 ? totalNights + 1 : null;
+        }
+        if ("one-way".equalsIgnoreCase(tt)) {
+            return lengthOfStayBucketDays(tripDetailText(root, "lengthOfStay"));
+        }
+        return null;
+    }
+
+    private static Integer inclusiveDaysBetweenOrNull(String start, String end) {
+        if (!StringUtils.hasText(start) || !StringUtils.hasText(end)) {
+            return null;
+        }
+        try {
+            LocalDate d0 = LocalDate.parse(start.trim());
+            LocalDate d1 = LocalDate.parse(end.trim());
+            if (d1.isBefore(d0)) {
+                return null;
+            }
+            return (int) ChronoUnit.DAYS.between(d0, d1) + 1;
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private static Integer lengthOfStayBucketDays(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        return switch (raw.trim()) {
+            case "<1m" -> 30;
+            case "1-3m" -> 90;
+            case "3-6m" -> 180;
+            case "6-12m" -> 365;
+            case "12m+", "open" -> 366;
+            default -> null;
+        };
+    }
+
+    private static Integer transitDurationBucketDays(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        return switch (raw.trim()) {
+            case "<12h", "12-24h" -> 1;
+            case ">24h" -> 2;
+            default -> null;
+        };
+    }
+
+    private static TravelPlanRequest copyRequestWithDuration(TravelPlanRequest request, int duration) {
+        return new TravelPlanRequest(
+                request.destination(),
+                request.country(),
+                duration,
+                request.purpose(),
+                request.tripType(),
+                request.tripDetailsJson(),
+                request.riskScore(),
+                request.status(),
+                request.medicalConsiderations(),
+                request.vaccinations(),
+                request.healthAlerts(),
+                request.safetyAdvisories(),
+                request.medications(),
+                request.waterFood(),
+                request.emergencyContacts(),
+                request.questionnaireResponses(),
+                request.companyId(),
+                request.employeeId(),
+                request.userId(),
+                request.planTier(),
+                request.selectedDoctorIds());
     }
 
     private static String tripDetailText(JsonNode root, String field) {
@@ -451,22 +639,61 @@ public class TravelPlanService {
         return n.isTextual() ? n.asText() : "";
     }
 
-    private PlanTier resolvePlanTier(String requestTier, User user) {
-        if (requestTier != null && !requestTier.isBlank()) {
-            try {
-                return PlanTier.valueOf(requestTier.toUpperCase());
-            } catch (IllegalArgumentException ignored) {
+    private void assignSelectedDoctors(TravelPlan travelPlan, java.util.List<Long> selectedDoctorIds) {
+        if (selectedDoctorIds == null || selectedDoctorIds.isEmpty()) {
+            return;
+        }
+        for (Long doctorId : selectedDoctorIds.stream().distinct().toList()) {
+            User doctor = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new NoSuchElementException("Doctor not found: " + doctorId));
+            if (doctor.getRole() == null || doctor.getRole().getName() == null
+                    || !"Doctor".equalsIgnoreCase(doctor.getRole().getName())) {
+                throw new IllegalArgumentException("Selected reviewer is not a doctor: " + doctorId);
+            }
+            TravelPlanDoctorAssignment assignment = new TravelPlanDoctorAssignment();
+            assignment.setTravelPlan(travelPlan);
+            assignment.setDoctor(doctor);
+            assignmentRepository.save(assignment);
+        }
+    }
+
+    private String resolvePlanTier(User user) {
+        if ("company".equalsIgnoreCase(user.getType())) {
+            CompanyUser companyUser = companyUserRepository.findByUser(user).orElse(null);
+            if (companyUser != null &&
+                    companyUser.getCompany() != null &&
+                    companyUser.getCompany().getCreditPlan() != null) {
+                return switch (companyUser.getCompany().getCreditPlan().getCode()) {
+                    case "ENTERPRISE_SILVER" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_PLUS" -> PlanTier.PREMIUM.name();
+                    case "ENTERPRISE_GOLD" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_ELITE" -> PlanTier.PREMIUM.name();
+                    case "ENTERPRISE_PLATINUM" -> PlanTier.STANDARD.name();
+                    case "ENTERPRISE_SIGNATURE" -> PlanTier.PREMIUM.name();
+                    default -> {
+                        String serviceLevel = companyUser.getCompany().getCreditPlan().getServiceLevel();
+                        yield "PREMIUM".equalsIgnoreCase(serviceLevel) ? PlanTier.PREMIUM.name()
+                                : "STANDARD".equalsIgnoreCase(serviceLevel) ? PlanTier.STANDARD.name()
+                                : PlanTier.FREE.name();
+                    }
+                };
             }
         }
+
         CreditPlan creditPlan = user.getCreditPlan();
         if (creditPlan == null || creditPlan.getCode() == null) {
-            return PlanTier.FREE;
+            return PlanTier.FREE.name();
         }
         return switch (creditPlan.getCode()) {
-            case ESSENTIAL -> PlanTier.FREE;
-            case STANDARD -> PlanTier.STANDARD;
-            case PREMIUM -> PlanTier.PREMIUM;
-            default -> PlanTier.PREMIUM; // enterprise plans
+            case "ESSENTIAL" -> PlanTier.FREE.name();
+            case "STANDARD" -> PlanTier.STANDARD.name();
+            case "PREMIUM" -> PlanTier.PREMIUM.name();
+            default -> {
+                String serviceLevel = creditPlan.getServiceLevel();
+                yield "PREMIUM".equalsIgnoreCase(serviceLevel) ? PlanTier.PREMIUM.name()
+                        : "STANDARD".equalsIgnoreCase(serviceLevel) ? PlanTier.STANDARD.name()
+                        : PlanTier.FREE.name();
+            }
         };
     }
 }

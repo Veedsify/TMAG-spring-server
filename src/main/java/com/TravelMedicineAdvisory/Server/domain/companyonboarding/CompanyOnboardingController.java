@@ -14,10 +14,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
+import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,18 +34,23 @@ public class CompanyOnboardingController {
 
     private final CompanyOnboardingService service;
     private final CallbackRegistry callbackRegistry;
+    private final VolumePricingService volumePricingService;
 
-    public CompanyOnboardingController(CompanyOnboardingService service, CallbackRegistry callbackRegistry) {
+    public CompanyOnboardingController(CompanyOnboardingService service, CallbackRegistry callbackRegistry,
+            VolumePricingService volumePricingService) {
         this.service = service;
         this.callbackRegistry = callbackRegistry;
+        this.volumePricingService = volumePricingService;
     }
 
     // ============ PUBLIC ENDPOINTS ============
 
-    @PostMapping("/public/company-onboarding")
-    public ResponseEntity<SuccessResponse> submit(@RequestBody CompanyOnboardingSubmitRequest request) {
+    @PostMapping(value = "/public/company-onboarding", consumes = { "multipart/form-data" })
+    public ResponseEntity<SuccessResponse> submit(
+            @RequestPart("request") CompanyOnboardingSubmitRequest request,
+            @RequestPart(value = "teamMembersCsv", required = false) MultipartFile teamMembersCsv) {
         try {
-            var response = service.submitOnboarding(request);
+            var response = service.submitOnboarding(request, teamMembersCsv);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new SuccessResponse("Onboarding request submitted", response));
         } catch (IllegalArgumentException e) {
@@ -90,6 +98,12 @@ public class CompanyOnboardingController {
         }
     }
 
+    @GetMapping("/public/company-onboarding/pricing")
+    public ResponseEntity<SuccessResponse> getPricingPreview(@RequestParam int credits) {
+        var previews = volumePricingService.getPublicPricingPreviews(credits);
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", previews));
+    }
+
     @GetMapping("/public/company-onboarding/callback")
     public RedirectView onboardingPaymentCallback(
             @RequestParam(required = false) String tx_ref,
@@ -129,7 +143,7 @@ public class CompanyOnboardingController {
     // ============ ADMIN ENDPOINTS ============
 
     @GetMapping("/admin/company-onboarding")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:list')")
     public ResponseEntity<SuccessResponse> listRequests(
             @RequestParam(required = false) String status) {
         OnboardingStatus filterStatus = null;
@@ -144,7 +158,7 @@ public class CompanyOnboardingController {
     }
 
     @GetMapping("/admin/company-onboarding/{id}")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:read')")
     public ResponseEntity<SuccessResponse> getRequest(@PathVariable Long id) {
         try {
             var response = service.getRequestById(id);
@@ -155,7 +169,7 @@ public class CompanyOnboardingController {
     }
 
     @PostMapping("/admin/company-onboarding/{id}/approve")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:create', 'company:update', 'authorization:create')")
     public ResponseEntity<SuccessResponse> approve(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -171,7 +185,7 @@ public class CompanyOnboardingController {
     }
 
     @PostMapping("/admin/company-onboarding/{id}/reject")
-    @PreAuthorize("hasAuthority('all')")
+    @PreAuthorize("@perm.admin(authentication, 'company:update')")
     public ResponseEntity<SuccessResponse> reject(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {

@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Admin · Plan generation contexts")
 @RestController
 @RequestMapping("/api/v1/admin/plan-contexts")
-@PreAuthorize("hasAuthority('all')")
 public class AdminPlanGenerationContextController {
 
     private final PlanGenerationContextService service;
@@ -31,11 +30,13 @@ public class AdminPlanGenerationContextController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.admin(authentication, 'plan_generation_context:list', 'plan_generation_context:read', 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getAll() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAll()));
     }
 
     @PostMapping(consumes = "multipart/form-data")
+    @PreAuthorize("@perm.admin(authentication, 'plan_generation_context:create', 'media:create')")
     public ResponseEntity<SuccessResponse> upload(
             @RequestParam("title") String title,
             @RequestParam("file") MultipartFile file
@@ -44,11 +45,13 @@ public class AdminPlanGenerationContextController {
     }
 
     @PutMapping("/{id}/active")
+    @PreAuthorize("@perm.admin(authentication, 'plan_generation_context:update', 'travel_plan:update')")
     public ResponseEntity<SuccessResponse> setActive(@PathVariable Long id, @RequestParam("active") boolean active) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.updateActive(id, active)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'plan_generation_context:delete', 'media:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

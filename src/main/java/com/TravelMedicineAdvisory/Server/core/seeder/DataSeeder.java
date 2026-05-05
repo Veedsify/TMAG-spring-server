@@ -3,9 +3,11 @@ package com.TravelMedicineAdvisory.Server.core.seeder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,9 @@ import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSetting;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -66,6 +71,7 @@ public class DataSeeder implements CommandLineRunner {
     private final InvoiceRepository invoiceRepository;
     private final PasswordEncoder passwordEncoder;
     private final RandomNumberGenerator randomNumberGenerator;
+    private final UserSettingRepository userSettingRepository;
 
     public DataSeeder(UserRepository userRepository,
             RoleRepository roleRepository,
@@ -81,7 +87,8 @@ public class DataSeeder implements CommandLineRunner {
             FaqItemRepository faqItemRepository,
             InvoiceRepository invoiceRepository,
             PasswordEncoder passwordEncoder,
-            RandomNumberGenerator randomNumberGenerator) {
+            RandomNumberGenerator randomNumberGenerator,
+            UserSettingRepository userSettingRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
@@ -97,6 +104,7 @@ public class DataSeeder implements CommandLineRunner {
         this.invoiceRepository = invoiceRepository;
         this.passwordEncoder = passwordEncoder;
         this.randomNumberGenerator = randomNumberGenerator;
+        this.userSettingRepository = userSettingRepository;
     }
 
     @Override
@@ -149,27 +157,33 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final String[] RESOURCE_TYPES = {
             "user", "authorization", "media", "profile", "abuse_flag",
-            "ai_request_log", "blog_post", "company", "company_user",
+            "ai_request_log", "api_key", "blog_post", "company", "company_user",
             "country", "country_accommodation", "country_health_alert",
-            "credit", "employee", "faq_item", "health_profile",
-            "invoice", "notification", "plan_usage_ledger", "pricing_plan",
-            "system_log", "system_setting", "travel_plan", "travel_request",
-            "user_onboarding"
+            "credit", "data_export", "doctor", "ebook", "employee", "faq_item",
+            "health_profile", "invoice", "notification", "plan_generation_context",
+            "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
+            "travel_plan", "travel_request", "user_onboarding"
     };
 
     private static final String[] ACTIONS = { "create", "read", "update", "delete", "list" };
 
     @Transactional
     protected void seedPermissions() {
-        if (permissionRepository.count() > 0)
-            return;
         // logger.info("Seeding permissions...");
+
+        Set<String> existingPermissionNames = new HashSet<>();
+        permissionRepository.findAll().forEach(p -> existingPermissionNames.add(p.getName()));
 
         List<Permission> permissions = new ArrayList<>();
         for (String resource : RESOURCE_TYPES) {
             for (String action : ACTIONS) {
+                String permissionName = resource + ":" + action;
+                if (existingPermissionNames.contains(permissionName)) {
+                    continue;
+                }
+
                 Permission p = new Permission();
-                p.setName(resource + ":" + action);
+                p.setName(permissionName);
                 p.setDescription("Can " + action + " " + resource.replace('_', ' '));
                 p.setResourceType(resource);
                 p.setAction(action);
@@ -184,8 +198,6 @@ public class DataSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedRolePermissions() {
-        if (rolePermissionRepository.count() > 0)
-            return;
         // logger.info("Seeding role-permissions...");
 
         Map<String, Role> roleMap = new HashMap<>();
@@ -195,6 +207,12 @@ public class DataSeeder implements CommandLineRunner {
         permissionRepository.findAll().forEach(p -> permMap.put(p.getName(), p));
 
         List<RolePermission> assignments = new ArrayList<>();
+        Set<String> existingAssignments = new HashSet<>();
+        rolePermissionRepository.findAll().forEach(rp -> {
+            if (rp.getRole() != null && rp.getPermission() != null) {
+                existingAssignments.add(rolePermissionKey(rp.getRole(), rp.getPermission()));
+            }
+        });
 
         // SuperAdmin: ALL permissions
         Role superAdmin = roleMap.get("SuperAdmin");
@@ -205,9 +223,12 @@ public class DataSeeder implements CommandLineRunner {
         // Administrator
         Role administrator = roleMap.get("Administrator");
         String[] adminResources = {
-                "user", "authorization", "media", "profile", "company", "employee",
-                "country", "blog_post", "faq_item", "pricing_plan", "system_setting",
-                "notification", "system_log"
+                "user", "authorization", "media", "profile", "abuse_flag", "ai_request_log",
+                "api_key", "blog_post", "company", "company_user", "country", "country_accommodation",
+                "country_health_alert", "credit", "data_export", "doctor", "ebook", "employee",
+                "faq_item", "health_profile", "invoice", "notification", "plan_generation_context",
+                "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
+                "travel_plan", "travel_request", "user_onboarding"
         };
 
         for (String resource : adminResources) {
@@ -222,10 +243,18 @@ public class DataSeeder implements CommandLineRunner {
         Role hr = roleMap.get("HR");
         addPermissions(assignments, hr, permMap, "company", "read", "update");
         addPermissions(assignments, hr, permMap, "employee", "create", "read", "update", "delete", "list");
-        addPermissions(assignments, hr, permMap, "travel_request", "read");
-        addPermissions(assignments, hr, permMap, "travel_plan", "read");
-        addPermissions(assignments, hr, permMap, "invoice", "read");
-        addPermissions(assignments, hr, permMap, "credit", "read");
+        addPermissions(assignments, hr, permMap, "travel_request", "read", "list");
+        addPermissions(assignments, hr, permMap, "travel_plan", "read", "list");
+        addPermissions(assignments, hr, permMap, "invoice", "read", "list");
+        addPermissions(assignments, hr, permMap, "credit", "create", "read", "list");
+        addPermissions(assignments, hr, permMap, "company_user", "create", "read", "update", "delete", "list");
+        addPermissions(assignments, hr, permMap, "data_export", "read", "list");
+        addPermissions(assignments, hr, permMap, "plan_usage_ledger", "read", "list");
+        addPermissions(assignments, hr, permMap, "pricing_plan", "read", "list");
+        addPermissions(assignments, hr, permMap, "report", "read", "list");
+        addPermissions(assignments, hr, permMap, "user_onboarding", "read", "update");
+        addPermissions(assignments, hr, permMap, "health_profile", "read");
+        addPermissions(assignments, hr, permMap, "notification", "read", "list");
 
         // CustomerSupport
         Role customerSupport = roleMap.get("CustomerSupport");
@@ -233,9 +262,16 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, customerSupport, permMap, "user", "update");
         addPermissions(assignments, customerSupport, permMap, "company", "read");
         addPermissions(assignments, customerSupport, permMap, "employee", "read");
-        addPermissions(assignments, customerSupport, permMap, "travel_plan", "read");
-        addPermissions(assignments, customerSupport, permMap, "travel_request", "read");
+        addPermissions(assignments, customerSupport, permMap, "travel_plan", "read", "list");
+        addPermissions(assignments, customerSupport, permMap, "travel_request", "read", "list");
         addPermissions(assignments, customerSupport, permMap, "faq_item", "read", "update");
+        addPermissions(assignments, customerSupport, permMap, "credit", "read", "list");
+        addPermissions(assignments, customerSupport, permMap, "invoice", "read", "list");
+        addPermissions(assignments, customerSupport, permMap, "notification", "read", "list");
+        addPermissions(assignments, customerSupport, permMap, "report", "read");
+        addPermissions(assignments, customerSupport, permMap, "user_onboarding", "read");
+        addPermissions(assignments, customerSupport, permMap, "health_profile", "read");
+        addPermissions(assignments, customerSupport, permMap, "pricing_plan", "read", "list");
 
         // Individual
         Role individual = roleMap.get("Individual");
@@ -245,24 +281,41 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, individual, permMap, "travel_plan", "create", "read", "update", "delete", "list");
         addPermissions(assignments, individual, permMap, "travel_request", "create", "read", "update", "delete",
                 "list");
+        addPermissions(assignments, individual, permMap, "credit", "create", "read", "list");
         addPermissions(assignments, individual, permMap, "country", "read");
         addPermissions(assignments, individual, permMap, "blog_post", "read");
+        addPermissions(assignments, individual, permMap, "ebook", "read", "list");
         addPermissions(assignments, individual, permMap, "faq_item", "read");
-        addPermissions(assignments, individual, permMap, "pricing_plan", "read");
+        addPermissions(assignments, individual, permMap, "pricing_plan", "read", "list");
+        addPermissions(assignments, individual, permMap, "report", "read");
         addPermissions(assignments, individual, permMap, "notification", "read");
+        addPermissions(assignments, individual, permMap, "user_onboarding", "create", "read", "update");
 
         // Doctor
         Role doctor = roleMap.get("Doctor");
         addPermissions(assignments, doctor, permMap, "profile", "read", "update");
+        addPermissions(assignments, doctor, permMap, "doctor", "create", "read", "update");
         addPermissions(assignments, doctor, permMap, "travel_plan", "read", "update", "list");
         addPermissions(assignments, doctor, permMap, "health_profile", "read");
         addPermissions(assignments, doctor, permMap, "country", "read");
         addPermissions(assignments, doctor, permMap, "blog_post", "read");
+        addPermissions(assignments, doctor, permMap, "ebook", "read", "list");
         addPermissions(assignments, doctor, permMap, "faq_item", "read");
-        addPermissions(assignments, doctor, permMap, "notification", "read");
+        addPermissions(assignments, doctor, permMap, "notification", "read", "list");
+        addPermissions(assignments, doctor, permMap, "pricing_plan", "read", "list");
+        addPermissions(assignments, doctor, permMap, "user_onboarding", "read");
 
-        rolePermissionRepository.saveAll(assignments);
+        List<RolePermission> newAssignments = assignments.stream()
+                .filter(rp -> rp.getRole() != null && rp.getPermission() != null)
+                .filter(rp -> existingAssignments.add(rolePermissionKey(rp.getRole(), rp.getPermission())))
+                .toList();
+
+        rolePermissionRepository.saveAll(newAssignments);
         // logger.info("Seeded {} role-permission assignments.", assignments.size());
+    }
+
+    private String rolePermissionKey(Role role, Permission permission) {
+        return role.getId() + ":" + permission.getId();
     }
 
     private RolePermission createRolePermission(Role role, Permission permission) {
@@ -489,8 +542,14 @@ public class DataSeeder implements CommandLineRunner {
         doctorUser.setOnboardingStage(5);
         doctorUser.setOnboarded(true);
         doctorUser.setCredits(0);
-        doctorUser.setMedicalLicenseNumber("TMAG-DOC-001");
         userRepository.save(doctorUser);
+
+        UserSetting doctorSetting = new UserSetting();
+        doctorSetting.setUser(doctorUser);
+        doctorSetting.setMedicalLicenseNumber("TMAG-DOC-001");
+        doctorSetting.setDoctorApplicationStatus(DoctorApplicationStatus.APPROVED);
+        userSettingRepository.save(doctorSetting);
+
         logger.info("Seeded doctor user: doctor@tmag.com");
     }
 
@@ -1107,8 +1166,8 @@ public class DataSeeder implements CommandLineRunner {
                 createSetting("stat_uptime", "99.9%", "string", "stats", "Uptime", "Platform uptime percentage", true));
         settings.add(createSetting("stat_user_rating", "4.9", "string", "stats", "User Rating",
                 "Average user rating out of 5", true));
-        settings.add(createSetting("hipaa_compliant", "true", "boolean", "compliance", "HIPAA Compliant",
-                "Whether the platform follows HIPAA-compliant data handling", true));
+        settings.add(createSetting("ndpr_compliant", "true", "boolean", "compliance", "NDPR Compliant",
+                "Whether the platform follows NDPR-aligned data handling", true));
         settings.add(createSetting("iso_31030_aligned", "true", "boolean", "compliance", "ISO 31030 Aligned",
                 "Whether the platform supports ISO 31030 travel risk management", true));
 
@@ -1173,7 +1232,7 @@ public class DataSeeder implements CommandLineRunner {
                 "Absolutely. Every plan includes a doctor-ready summary specifically formatted for healthcare providers. You can download the PDF and bring it to your appointment or share it digitally.",
                 "Plans & features", 11));
         faqs.add(createFaq("Is my health data safe?",
-                "Yes. We follow HIPAA-compliant data handling practices. Your health data is encrypted in transit and at rest, never sold to third parties, and can be fully deleted from your account settings at any time.",
+                "Yes. We follow NDPR-aligned data handling practices. Your health data is encrypted in transit and at rest, never sold to third parties, and can be fully deleted from your account settings at any time.",
                 "Privacy & security", 12));
         faqs.add(createFaq("Do you train AI on my data?",
                 "No. We do not use your personal health data to train our AI models. Your data is used solely to generate your personalized plan.",

@@ -1,25 +1,28 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.analytics;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlagRepository;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
-import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
-import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.invoice.Invoice;
 import com.TravelMedicineAdvisory.Server.domain.invoice.InvoiceRepository;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
+import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.systemsetting.SystemSettingRepository;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.*;
 
 @Service
 public class AdminAnalyticsService {
@@ -117,27 +120,12 @@ public class AdminAnalyticsService {
         stats.setTotalUsers(userRepository.countAllActive());
         stats.setTotalCompanies(companyRepository.countAllActive());
 
-        long individualCredits = userRepository.findByType("INDIVIDUAL").stream()
-                .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
-                .sum();
-        long corporateCredits = companyRepository.findAllActive().stream()
-                .mapToInt(c -> c.getTotalCredits() != null ? c.getTotalCredits() : 0)
-                .sum();
+        long individualCredits = userRepository.sumCreditsByType("INDIVIDUAL");
+        long corporateCredits = companyRepository.sumTotalCreditsActive();
         stats.setTotalCreditsIssued(individualCredits + corporateCredits);
 
-        long individualUsed = userRepository.findByType("INDIVIDUAL").stream()
-                .mapToInt(u -> {
-                    List<com.TravelMedicineAdvisory.Server.domain.credit.Credit> credits = creditRepository
-                            .findLedgerByUserId(u.getId());
-                    return credits.stream()
-                            .filter(c -> "consume".equals(c.getType()))
-                            .mapToInt(c -> Math.abs(c.getAmount()))
-                            .sum();
-                })
-                .sum();
-        long corporateUsed = companyRepository.findAllActive().stream()
-                .mapToInt(c -> c.getUsedCredits() != null ? c.getUsedCredits() : 0)
-                .sum();
+        long individualUsed = creditRepository.sumConsumedByUserType("INDIVIDUAL");
+        long corporateUsed = companyRepository.sumUsedCreditsActive();
         stats.setTotalCreditsConsumed(individualUsed + corporateUsed);
 
         stats.setTotalTravelPlans(travelPlanRepository.countAllActive());
@@ -160,25 +148,19 @@ public class AdminAnalyticsService {
 
         String baseCurrency = getBaseCurrency();
         Map<String, Double> rates = getExchangeRates();
-        double revenue = invoiceRepository.findAllActiveByStatus("paid").stream()
-                .mapToDouble(inv -> convertToBase(inv.getAmount(), inv.getCurrency(), baseCurrency, rates))
+        double revenue = invoiceRepository.findRevenueFieldsByStatus("paid").stream()
+                .mapToDouble(inv -> convertToBase(inv.amount(), inv.currency(), baseCurrency, rates))
                 .sum();
         stats.setRevenueOverview(revenue);
         stats.setRevenueBaseCurrency(baseCurrency);
 
-        long failedCallsAllTime = aiRequestLogRepository.findAll().stream()
-                .filter(log -> log.getDeletedAt() == null && "error".equalsIgnoreCase(log.getStatus()))
-                .count();
+        long failedCallsAllTime = aiRequestLogRepository.countByStatusActive("error");
         stats.setFailedAICalls(failedCallsAllTime);
 
-        long activeUsersToday = userRepository.findAllActive().stream()
-                .filter(u -> u.getLastLogin() != null && u.getLastLogin().isAfter(todayStart))
-                .count();
+        long activeUsersToday = userRepository.countActiveLastLoginBetween(todayStart, todayStart.plusDays(1));
         stats.setActiveUsersToday(activeUsersToday);
 
-        long newUsersThisWeek = userRepository.findAllActive().stream()
-                .filter(u -> u.getCreatedAt() != null && u.getCreatedAt().isAfter(weekStart))
-                .count();
+        long newUsersThisWeek = userRepository.countCreatedSince(weekStart);
         stats.setNewUsersThisWeek(newUsersThisWeek);
 
         String health = "healthy";
@@ -195,32 +177,18 @@ public class AdminAnalyticsService {
     public AdminAnalyticsResponse getAnalytics() {
         AdminAnalyticsResponse analytics = new AdminAnalyticsResponse();
 
-        List<Map<String, Object>> topDestinations = new ArrayList<>();
-        List<TravelPlan> plans = travelPlanRepository.findAllActive();
-        Map<String, Long> destCounts = new HashMap<>();
-        for (TravelPlan plan : plans) {
-            String dest = plan.getDestination();
-            if (dest != null) {
-                destCounts.merge(dest, 1L, Long::sum);
-            }
-        }
-        destCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+        List<Map<String, Object>> topDestinations = travelPlanRepository.countActiveByDestination().stream()
                 .limit(10)
-                .forEach(e -> {
+                .map(row -> {
                     Map<String, Object> entry = new HashMap<>();
-                    entry.put("name", e.getKey());
-                    entry.put("count", e.getValue());
-                    topDestinations.add(entry);
-                });
+                    entry.put("name", row[0]);
+                    entry.put("count", row[1]);
+                    return entry;
+                })
+                .toList();
         analytics.setTopDestinations(topDestinations);
 
-        List<User> users = userRepository.findAllActive();
-        double avgCredits = users.stream()
-                .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
-                .average()
-                .orElse(0.0);
-        analytics.setAvgCreditsPerUser(avgCredits);
+        analytics.setAvgCreditsPerUser(userRepository.averageCreditsActiveUsers());
 
         Map<String, Long> corpVsInd = new HashMap<>();
         corpVsInd.put("corporate", userRepository.countByType("COMPANY"));
@@ -230,13 +198,9 @@ public class AdminAnalyticsService {
         // Peak usage times — aggregate AI request logs by hour of day (all 24 hours,
         // 0-filled)
         List<Map<String, Object>> peakTimes = new ArrayList<>();
-        List<AiRequestLog> allAiLogs = aiRequestLogRepository.findAll();
         Map<Integer, Long> hourCounts = new HashMap<>();
-        for (AiRequestLog log : allAiLogs) {
-            if (log.getCreatedAt() != null && log.getDeletedAt() == null) {
-                int hour = log.getCreatedAt().getHour();
-                hourCounts.merge(hour, 1L, Long::sum);
-            }
+        for (Object[] row : aiRequestLogRepository.countActiveByCreatedHour()) {
+            hourCounts.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
         }
         for (int hour = 0; hour < 24; hour++) {
             Map<String, Object> entry = new HashMap<>();
@@ -247,51 +211,31 @@ public class AdminAnalyticsService {
         analytics.setPeakUsageTimes(peakTimes);
 
         // Requests per model — count AI logs grouped by model
-        Map<String, Long> modelCounts = new HashMap<>();
-        for (AiRequestLog log : allAiLogs) {
-            if (log.getDeletedAt() == null && log.getModelUsed() != null && !log.getModelUsed().isBlank()) {
-                modelCounts.merge(log.getModelUsed(), 1L, Long::sum);
-            }
-        }
-        List<Map<String, Object>> requestsByModel = modelCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .map(e -> {
+        List<Map<String, Object>> requestsByModel = aiRequestLogRepository.countActiveByModel().stream()
+                .map(row -> {
                     Map<String, Object> entry = new HashMap<>();
-                    entry.put("model", e.getKey());
-                    entry.put("requests", e.getValue());
+                    entry.put("model", row[0]);
+                    entry.put("requests", row[1]);
                     return entry;
                 })
                 .collect(java.util.stream.Collectors.toList());
         analytics.setRequestsByModel(requestsByModel);
 
         // Monthly requests & revenue — aggregate by month from AI logs and invoices
-        List<Map<String, Object>> monthly = new ArrayList<>();
-        Map<String, Long> monthlyRequestCounts = new HashMap<>();
         java.time.format.DateTimeFormatter monthFmt = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
-        for (AiRequestLog log : allAiLogs) {
-            if (log.getCreatedAt() != null) {
-                String monthKey = log.getCreatedAt().format(monthFmt);
-                monthlyRequestCounts.merge(monthKey, 1L, Long::sum);
-            }
-        }
         String analyticsBaseCurrency = getBaseCurrency();
         Map<String, Double> currencyRates = getExchangeRates();
-        List<Invoice> allInvoices = invoiceRepository.findAllActive();
         // Use YearMonth as key for correct chronological sorting
         Map<java.time.YearMonth, Long> monthlyRequestsByYM = new java.util.TreeMap<>();
         Map<java.time.YearMonth, Double> monthlyRevenueByYM = new java.util.TreeMap<>();
-        java.time.format.DateTimeFormatter ymParser = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
-        for (Map.Entry<String, Long> e : monthlyRequestCounts.entrySet()) {
-            try {
-                java.time.YearMonth ym = java.time.YearMonth.parse(e.getKey(), ymParser);
-                monthlyRequestsByYM.merge(ym, e.getValue(), Long::sum);
-            } catch (Exception ignored) {
-            }
+        for (Object[] row : aiRequestLogRepository.countActiveByCreatedMonth()) {
+            java.time.YearMonth ym = java.time.YearMonth.of(((Number) row[0]).intValue(), ((Number) row[1]).intValue());
+            monthlyRequestsByYM.merge(ym, ((Number) row[2]).longValue(), Long::sum);
         }
-        for (Invoice inv : allInvoices) {
-            if (inv.getPaidAt() != null && inv.getAmount() != null) {
-                java.time.YearMonth ym = java.time.YearMonth.from(inv.getPaidAt());
-                double converted = convertToBase(inv.getAmount(), inv.getCurrency(), analyticsBaseCurrency,
+        for (var inv : invoiceRepository.findRevenueFieldsByStatus("paid")) {
+            if (inv.paidAt() != null && inv.amount() != null) {
+                java.time.YearMonth ym = java.time.YearMonth.from(inv.paidAt());
+                double converted = convertToBase(inv.amount(), inv.currency(), analyticsBaseCurrency,
                         currencyRates);
                 monthlyRevenueByYM.merge(ym, converted, Double::sum);
             }
@@ -299,6 +243,7 @@ public class AdminAnalyticsService {
         Set<java.time.YearMonth> allYMs = new java.util.TreeSet<>();
         allYMs.addAll(monthlyRequestsByYM.keySet());
         allYMs.addAll(monthlyRevenueByYM.keySet());
+        List<Map<String, Object>> monthly = new ArrayList<>();
         for (java.time.YearMonth ym : allYMs) {
             Map<String, Object> entry = new HashMap<>();
             entry.put("month", ym.format(monthFmt));
@@ -310,10 +255,9 @@ public class AdminAnalyticsService {
 
         // Risk distribution — count travel plans by risk score bucket
         List<Map<String, Object>> riskDist = new ArrayList<>();
-        long lowCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() < 40).count();
-        long medCount = plans.stream()
-                .filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 40 && p.getRiskScore() < 70).count();
-        long highCount = plans.stream().filter(p -> p.getRiskScore() != null && p.getRiskScore() >= 70).count();
+        long lowCount = travelPlanRepository.countActiveRiskBelow(40);
+        long medCount = travelPlanRepository.countActiveRiskBetween(40, 70);
+        long highCount = travelPlanRepository.countActiveRiskAtLeast(70);
         Map<String, Object> lowEntry = new HashMap<>();
         lowEntry.put("risk", "Low");
         lowEntry.put("count", lowCount);
@@ -335,11 +279,7 @@ public class AdminAnalyticsService {
         for (int i = 6; i >= 0; i--) {
             LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0).withNano(0);
             LocalDateTime dayEnd = dayStart.plusDays(1);
-            long count = users.stream()
-                    .filter(u -> u.getLastLogin() != null
-                            && u.getLastLogin().isAfter(dayStart)
-                            && u.getLastLogin().isBefore(dayEnd))
-                    .count();
+            long count = userRepository.countActiveLastLoginBetween(dayStart, dayEnd);
             Map<String, Object> entry = new HashMap<>();
             entry.put("day", dayStart.format(dayFmt));
             entry.put("users", count);
@@ -349,31 +289,16 @@ public class AdminAnalyticsService {
 
         // Credit usage by type — real data from users and companies
         List<Map<String, Object>> creditUsage = new ArrayList<>();
-        List<User> individualUsers = userRepository.findByType("INDIVIDUAL");
-        int indUsed = individualUsers.stream()
-                .mapToInt(u -> {
-                    return creditRepository.findLedgerByUserId(u.getId()).stream()
-                            .filter(c -> "consume".equals(c.getType()))
-                            .mapToInt(c -> Math.abs(c.getAmount()))
-                            .sum();
-                }).sum();
-        int indRemaining = individualUsers.stream()
-                .mapToInt(u -> u.getCredits() != null ? u.getCredits() : 0)
-                .sum();
+        long indUsed = creditRepository.sumConsumedByUserType("INDIVIDUAL");
+        long indRemaining = userRepository.sumCreditsByType("INDIVIDUAL");
         Map<String, Object> indMap = new HashMap<>();
         indMap.put("type", "Individual");
         indMap.put("used", indUsed);
         indMap.put("remaining", indRemaining);
         creditUsage.add(indMap);
 
-        List<com.TravelMedicineAdvisory.Server.domain.company.Company> allCompanies = companyRepository.findAllActive();
-        int corpUsed = allCompanies.stream()
-                .mapToInt(c -> c.getUsedCredits() != null ? c.getUsedCredits() : 0)
-                .sum();
-        int corpRemaining = allCompanies.stream()
-                .mapToInt(c -> (c.getTotalCredits() != null ? c.getTotalCredits() : 0)
-                        - (c.getUsedCredits() != null ? c.getUsedCredits() : 0))
-                .sum();
+        long corpUsed = companyRepository.sumUsedCreditsActive();
+        long corpRemaining = companyRepository.sumTotalCreditsActive() - corpUsed;
         Map<String, Object> corpMap = new HashMap<>();
         corpMap.put("type", "Corporate");
         corpMap.put("used", corpUsed);
@@ -546,6 +471,8 @@ public class AdminAnalyticsService {
         response.setPromptSummary(log.getPromptSummary());
         response.setOutputSummary(log.getOutputSummary());
         response.setTokensUsed(log.getTokensUsed() != null ? log.getTokensUsed() : 0);
+        response.setPlanGenerationTokensUsed(log.getPlanGenerationTokensUsed() != null ? log.getPlanGenerationTokensUsed() : 0);
+        response.setSummaryGenerationTokensUsed(log.getSummaryGenerationTokensUsed() != null ? log.getSummaryGenerationTokensUsed() : 0);
         response.setProcessingTimeMs(log.getProcessingTimeMs() != null ? log.getProcessingTimeMs() : 0L);
         response.setStatus(log.getStatus() != null ? log.getStatus() : "success");
         response.setErrorMessage(log.getErrorMessage());

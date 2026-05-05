@@ -9,12 +9,19 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "credits")
+@Table(name = "credits", indexes = {
+        @Index(name = "idx_credits_user_created", columnList = "user_id, created_at"),
+        @Index(name = "idx_credits_company_created", columnList = "company_id, created_at"),
+        @Index(name = "idx_credits_user_type", columnList = "user_id, type"),
+        @Index(name = "idx_credits_company_type", columnList = "company_id, type"),
+        @Index(name = "idx_credits_type_reference", columnList = "type, reference")
+})
 @SQLDelete(sql = "UPDATE credits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class Credit extends BaseEntity {
 

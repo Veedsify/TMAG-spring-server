@@ -1,33 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.plans;
 
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
-import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
-import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
-import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
-import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
-import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
-import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
-import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Roles;
-import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding;
-import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,6 +7,41 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
+import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationProperties;
+import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
+import com.TravelMedicineAdvisory.Server.core.websocket.DoctorWebSocketService;
+import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
+import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
+import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
+import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
+import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
+import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboarding;
+import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * AI generation pipeline for travel health plans created by end users
@@ -61,6 +68,7 @@ public class PlanGenerationService {
     private final UserOnboardingRepository userOnboardingRepository;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
     private final AiGenerationClient aiGenerationClient;
+    private final AiGenerationProperties aiGenerationProperties;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
     private final QueueService queueService;
@@ -68,6 +76,9 @@ public class PlanGenerationService {
     private final UserRepository userRepository;
     private final ClinicalContextExtractor clinicalContextExtractor;
     private final SystemPromptBuilder systemPromptBuilder;
+    private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
+    private final StorageService storageService;
+    private final TravelPlanDoctorAssignmentRepository assignmentRepository;
 
     public PlanGenerationService(
             TravelPlanRepository travelPlanRepository,
@@ -76,19 +87,24 @@ public class PlanGenerationService {
             UserOnboardingRepository userOnboardingRepository,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
             AiGenerationClient aiGenerationClient,
+            AiGenerationProperties aiGenerationProperties,
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
             QueueService queueService,
             DoctorWebSocketService doctorWebSocketService,
             UserRepository userRepository,
             ClinicalContextExtractor clinicalContextExtractor,
-            SystemPromptBuilder systemPromptBuilder) {
+            SystemPromptBuilder systemPromptBuilder,
+            TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
+            StorageService storageService,
+            TravelPlanDoctorAssignmentRepository assignmentRepository) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
         this.userOnboardingRepository = userOnboardingRepository;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
         this.aiGenerationClient = aiGenerationClient;
+        this.aiGenerationProperties = aiGenerationProperties;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
         this.queueService = queueService;
@@ -96,6 +112,9 @@ public class PlanGenerationService {
         this.userRepository = userRepository;
         this.clinicalContextExtractor = clinicalContextExtractor;
         this.systemPromptBuilder = systemPromptBuilder;
+        this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
+        this.storageService = storageService;
+        this.assignmentRepository = assignmentRepository;
     }
 
     public void enqueueGeneration(Long travelPlanId, Long userId) {
@@ -170,7 +189,9 @@ public class PlanGenerationService {
                     clinicalContext.triggeredTrees().size(),
                     clinicalContext.overallRiskLevel());
 
-            AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt);
+            AiModelSelection modelSelection = modelForTier(travelPlan.getPlanTier());
+            AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt,
+                    modelSelection.provider(), modelSelection.model());
             JsonNode structuredOutput = parseJson(result.content());
 
             long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
@@ -180,9 +201,9 @@ public class PlanGenerationService {
             generatedPlan.setProvider(result.provider());
             generatedPlan.setModelUsed(result.model());
             generatedPlan.setTokensUsed(result.estimatedTokens());
+            generatedPlan.setPlanGenerationTokensUsed(result.estimatedTokens());
             generatedPlan.setProcessingTimeMs(elapsedMs);
             generatedPlan.setErrorMessage(null);
-            generatedPlanRepository.save(generatedPlan);
 
             travelPlan.setStatus("COMPLETED");
             travelPlan.setMedicalConsiderations(joinArray(structuredOutput, "recommendations"));
@@ -192,9 +213,16 @@ public class PlanGenerationService {
             travelPlan.setEmergencyContacts(joinArray(structuredOutput.path("medicalCare"), "emergencyContacts"));
             travelPlanRepository.save(travelPlan);
 
+            attachSummaryPdfIfEligible(travelPlan, generatedPlan);
+            generatedPlanRepository.save(generatedPlan);
+
             aiLog.setStatus("success");
             aiLog.setOutputSummary(compactSummary(structuredOutput));
             aiLog.setTokensUsed(result.estimatedTokens());
+            aiLog.setPlanGenerationTokensUsed(result.estimatedTokens());
+            aiLog.setSummaryGenerationTokensUsed(generatedPlan.getSummaryGenerationTokensUsed());
+            aiLog.setTokensUsed((result.estimatedTokens() != null ? result.estimatedTokens() : 0)
+                    + (generatedPlan.getSummaryGenerationTokensUsed() != null ? generatedPlan.getSummaryGenerationTokensUsed() : 0));
             aiLog.setModelUsed(result.model());
             aiLog.setProcessingTimeMs(elapsedMs);
             aiRequestLogRepository.save(aiLog);
@@ -238,14 +266,14 @@ public class PlanGenerationService {
     }
 
     private AiRequestLog buildAiLog(TravelPlan travelPlan) {
-        AiRequestLog log = new AiRequestLog();
-        log.setDestination(travelPlan.getDestination());
-        log.setPromptSummary("Generate structured travel health report (current trip + onboarding health JSON)");
-        log.setRiskLevel((travelPlan.getRiskScore() != null && travelPlan.getRiskScore() >= 60) ? "high" : "medium");
-        log.setCreditConsumed(BigDecimal.ONE);
-        log.setCompany(travelPlan.getCompany());
-        log.setUser(travelPlan.getUser());
-        return log;
+        AiRequestLog aiLog = new AiRequestLog();
+        aiLog.setDestination(travelPlan.getDestination());
+        aiLog.setPromptSummary("Generate structured travel health report (current trip + onboarding health JSON)");
+        aiLog.setRiskLevel((travelPlan.getRiskScore() != null && travelPlan.getRiskScore() >= 60) ? "high" : "medium");
+        aiLog.setCreditConsumed(BigDecimal.ONE);
+        aiLog.setCompany(travelPlan.getCompany());
+        aiLog.setUser(travelPlan.getUser());
+        return aiLog;
     }
 
     private void handlePostGeneration(TravelPlan travelPlan) {
@@ -262,9 +290,13 @@ public class PlanGenerationService {
 
         doctorWebSocketService.broadcastNewPlanPending(travelPlan.getId(), travelPlan.getDestination());
 
-        List<User> doctors = userRepository.findByRoleName(Roles.Doctor.name());
+        List<TravelPlanDoctorAssignment> assignments = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(travelPlan.getId());
+        List<User> doctors = assignments.isEmpty()
+                ? userRepository.findByRoleName(Roles.Doctor.name())
+                : assignments.stream().map(TravelPlanDoctorAssignment::getDoctor).toList();
         for (User doctor : doctors) {
-            if (doctor.getEmail() == null) continue;
+            if (doctor.getEmail() == null)
+                continue;
             String docFirstName = doctor.getFirstName() != null ? doctor.getFirstName() : "there";
             queueService.dispatch(JobType.EMAIL_DOCTOR_PLAN_READY, Map.of(
                     "to", doctor.getEmail(),
@@ -274,6 +306,63 @@ public class PlanGenerationService {
                             "destination", travelPlan.getDestination(),
                             "planId", String.valueOf(travelPlan.getId()))));
         }
+    }
+
+    private void attachSummaryPdfIfEligible(TravelPlan travelPlan, GeneratedPlan generatedPlan) {
+        if (travelPlan.getPlanTier() != PlanTier.STANDARD && travelPlan.getPlanTier() != PlanTier.PREMIUM) {
+            return;
+        }
+        queueService.dispatch(JobType.GENERATE_SUMMARY_PDF, Map.of(
+                "travelPlanId", travelPlan.getId(),
+                "generatedPlanId", generatedPlan.getId()));
+        log.info("Summary PDF generation queued: travelPlanId={} generatedPlanId={}",
+                travelPlan.getId(), generatedPlan.getId());
+    }
+
+    @Transactional
+    public void processSummaryPdf(Long travelPlanId, Long generatedPlanId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(travelPlanId)
+                .orElseThrow(() -> new NoSuchElementException("Travel plan not found: " + travelPlanId));
+        GeneratedPlan generatedPlan = generatedPlanRepository.findById(generatedPlanId)
+                .orElseThrow(() -> new NoSuchElementException("Generated plan not found: " + generatedPlanId));
+
+        log.info("Summary PDF generation starting: travelPlanId={} generatedPlanId={} destination=\"{}\"",
+                travelPlanId, generatedPlanId, travelPlan.getDestination());
+
+        byte[] summaryPdf = travelPlanSummaryPdfGenerator.generate(travelPlan, generatedPlan);
+        String filename = "summary-plan-" + travelPlanId + "-" + UUID.randomUUID() + ".pdf";
+        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename, "application/pdf");
+        generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
+        generatedPlanRepository.save(generatedPlan);
+
+        log.info("Summary PDF generation completed: travelPlanId={} generatedPlanId={}", travelPlanId, generatedPlanId);
+    }
+
+    private AiModelSelection modelForTier(PlanTier tier) {
+        if (tier == PlanTier.STANDARD || tier == PlanTier.PREMIUM) {
+            return new AiModelSelection(
+                    firstNonBlank(aiGenerationProperties.getStandardPremiumProvider(),
+                            aiGenerationProperties.getMainProvider(), aiGenerationProperties.getProvider()),
+                    firstNonBlank(aiGenerationProperties.getStandardPremiumModel(), aiGenerationProperties.getMainModel(),
+                            aiGenerationProperties.getDefaultModel()));
+        }
+        return new AiModelSelection(
+                firstNonBlank(aiGenerationProperties.getFreeProvider(), aiGenerationProperties.getMainProvider(),
+                        aiGenerationProperties.getProvider()),
+                firstNonBlank(aiGenerationProperties.getFreeModel(), aiGenerationProperties.getMainModel(),
+                        aiGenerationProperties.getDefaultModel()));
+    }
+
+    private record AiModelSelection(String provider, String model) {
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private void sendReadyEmail(TravelPlan travelPlan) {
@@ -352,117 +441,139 @@ public class PlanGenerationService {
         }
     }
 
-    private String buildSystemPrompt() {
-        return """
-                You are TMAG's travel medicine advisory engine.
-                Return ONLY valid JSON matching this exact schema:
-                {
-                  "reportTitle": "string",
-                  "travellerName": "string",
-                  "destination": "string",
-                  "travelDates": "string",
-                  "tripAtGlance": {
-                    "durationDays": number,
-                    "purpose": "string",
-                    "travelling": "string",
-                    "accommodation": "string",
-                    "insurance": "string"
-                  },
-                  "healthRiskOverview": [
-                    {"category":"string","level":"LOW|MODERATE|HIGH","summary":"string"}
-                  ],
-                  "vaccinations": [
-                    {"vaccine":"string","status":"string","recommendation":"string","action":"string"}
-                  ],
-                  "recommendations": [
-                    {"title":"string","details":"string"}
-                  ],
-                  "afterReturn": {
-                    "within1Week":["string"],
-                    "within4Weeks":["string"],
-                    "beyond4Weeks":["string"],
-                    "redFlag":"string"
-                  },
-                  "medicalCare": {
-                    "clinics":[{"name":"string","address":"string","phone":"string","distance":"string","notes":"string"}],
-                    "embassyContacts":[{"name":"string","details":"string"}],
-                    "emergencyContacts":[{"label":"string","value":"string"}]
-                  },
-                  "itineraryGuidance": {
-                    "tripType":"ONE_WAY|RETURN|MULTI_STOP",
-                    "summary":"string",
-                    "routeAdvice":[{"stop":"string","country":"string","guidance":"string"}],
-                    "returnGuidance":["string"]
-                  },
-                  "nextSteps": ["string"],
-                  "medicalDisclaimer":"string"
-                }
-                The user prompt has a "Current trip" section: that is the ONLY authoritative source for
-                destination, country, trip length, purpose, and travel dates in your JSON output.
-                For RETURN trips, when Departure date and Return date appear in that section, set travelDates
-                to a clear human-readable range using those exact dates, and set tripAtGlance.durationDays
-                to the inclusive calendar day count (must match "Trip length" in the user prompt).
-                A separate "Traveller health context" block contains questionnaire JSON for medical
-                personalisation only; never infer this trip's destination or itinerary from it
-                (server still treats the Current trip block as sole truth).
-                Use concise, practical medical-travel guidance. Do not include markdown fences.
+    // private String buildSystemPrompt() {
+    // return """
+    // You are TMAG's travel medicine advisory engine.
+    // Return ONLY valid JSON matching this exact schema:
+    // {
+    // "reportTitle": "string",
+    // "travellerName": "string",
+    // "destination": "string",
+    // "travelDates": "string",
+    // "tripAtGlance": {
+    // "durationDays": number,
+    // "purpose": "string",
+    // "travelling": "string",
+    // "accommodation": "string",
+    // "insurance": "string"
+    // },
+    // "healthRiskOverview": [
+    // {"category":"string","level":"LOW|MODERATE|HIGH","summary":"string"}
+    // ],
+    // "vaccinations": [
+    // {"vaccine":"string","status":"string","recommendation":"string","action":"string"}
+    // ],
+    // "recommendations": [
+    // {"title":"string","details":"string"}
+    // ],
+    // "afterReturn": {
+    // "within1Week":["string"],
+    // "within4Weeks":["string"],
+    // "beyond4Weeks":["string"],
+    // "redFlag":"string"
+    // },
+    // "medicalCare": {
+    // "clinics":[{"name":"string","address":"string","phone":"string","distance":"string","notes":"string"}],
+    // "embassyContacts":[{"name":"string","details":"string"}],
+    // "emergencyContacts":[{"label":"string","value":"string"}]
+    // },
+    // "itineraryGuidance": {
+    // "tripType":"ONE_WAY|RETURN|MULTI_STOP",
+    // "summary":"string",
+    // "routeAdvice":[{"stop":"string","country":"string","guidance":"string"}],
+    // "returnGuidance":["string"]
+    // },
+    // "nextSteps": ["string"],
+    // "medicalDisclaimer":"string"
+    // }
+    // The user prompt has a "Current trip" section: that is the ONLY authoritative
+    // source for
+    // destination, country, trip length, purpose, and travel dates in your JSON
+    // output.
+    // For RETURN trips, when Departure date and Return date appear in that section,
+    // set travelDates
+    // to a clear human-readable range using those exact dates, and set
+    // tripAtGlance.durationDays
+    // to the inclusive calendar day count (must match "Trip length" in the user
+    // prompt).
+    // A separate "Traveller health context" block contains questionnaire JSON for
+    // medical
+    // personalisation only; never infer this trip's destination or itinerary from
+    // it
+    // (server still treats the Current trip block as sole truth).
+    // Use concise, practical medical-travel guidance. Do not include markdown
+    // fences.
 
-                COVERAGE (mandatory — do not omit categories to save space):
-                1) healthRiskOverview: Include EXACTLY one object per category below, in this order, using these
-                exact category strings. Every category must appear even if risk is minimal — use level LOW and a
-                short summary (1–3 sentences) explaining low concern, "not applicable to this itinerary", or routine
-                baseline. Only use MODERATE or HIGH when truly warranted.
-                - "Food and water safety"
-                - "Vector-borne diseases"
-                - "Respiratory infections"
-                - "Environmental health (heat, sun, air quality)"
-                - "Injuries and road traffic safety"
-                - "Rabies and animal contact"
-                - "Blood-borne and sexual health"
-                - "Altitude-related illness"
+    // COVERAGE (mandatory — do not omit categories to save space):
+    // 1) healthRiskOverview: Include EXACTLY one object per category below, in this
+    // order, using these
+    // exact category strings. Every category must appear even if risk is minimal —
+    // use level LOW and a
+    // short summary (1–3 sentences) explaining low concern, "not applicable to this
+    // itinerary", or routine
+    // baseline. Only use MODERATE or HIGH when truly warranted.
+    // - "Food and water safety"
+    // - "Vector-borne diseases"
+    // - "Respiratory infections"
+    // - "Environmental health (heat, sun, air quality)"
+    // - "Injuries and road traffic safety"
+    // - "Rabies and animal contact"
+    // - "Blood-borne and sexual health"
+    // - "Altitude-related illness"
 
-                2) vaccinations: Include one object per vaccine topic below (same vaccine string labels where
-                possible). Do not skip a topic because it seems unnecessary — for low-relevance or not-indicated
-                vaccines, set status to e.g. "Low priority — not destination-specific" or "Not routinely indicated
-                for this itinerary", recommendation to a brief evidence-based line, and action to routine follow-up
-                (e.g. confirm records with GP) or "None specific". Topics (in order):
-                - "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
-                - "Influenza"
-                - "COVID-19"
-                - "Hepatitis A"
-                - "Hepatitis B"
-                - "Typhoid"
-                - "Yellow fever"
-                - "Japanese encephalitis"
-                - "Meningococcal"
-                - "Rabies pre-exposure"
-                - "Cholera (oral vaccine)"
+    // 2) vaccinations: Include one object per vaccine topic below (same vaccine
+    // string labels where
+    // possible). Do not skip a topic because it seems unnecessary — for
+    // low-relevance or not-indicated
+    // vaccines, set status to e.g. "Low priority — not destination-specific" or
+    // "Not routinely indicated
+    // for this itinerary", recommendation to a brief evidence-based line, and
+    // action to routine follow-up
+    // (e.g. confirm records with GP) or "None specific". Topics (in order):
+    // - "Routine immunizations (e.g. MMR, varicella, dTdap, polio/IPV)"
+    // - "Influenza"
+    // - "COVID-19"
+    // - "Hepatitis A"
+    // - "Hepatitis B"
+    // - "Typhoid"
+    // - "Yellow fever"
+    // - "Japanese encephalitis"
+    // - "Meningococcal"
+    // - "Rabies pre-exposure"
+    // - "Cholera (oral vaccine)"
 
-                3) recommendations: Include at least one object per topic below. For areas of low relevance to this
-                trip, keep the title and use details to state clearly that risk is low or the topic is standard
-                baseline care — still include the row. Order as listed; tailor details to destination and traveller
-                context.
-                - "Pre-travel review & vaccination records"
-                - "Food and water hygiene"
-                - "Vector bite prevention"
-                - "Sun, heat, and environmental precautions"
-                - "Injury and road safety"
-                - "Sexual health and blood exposure"
-                - "Jet lag, sleep, and mental wellbeing"
-                - "Malaria and other chemoprophylaxis (state if not indicated)"
-                - "Traveller-specific considerations (from health context)"
+    // 3) recommendations: Include at least one object per topic below. For areas of
+    // low relevance to this
+    // trip, keep the title and use details to state clearly that risk is low or the
+    // topic is standard
+    // baseline care — still include the row. Order as listed; tailor details to
+    // destination and traveller
+    // context.
+    // - "Pre-travel review & vaccination records"
+    // - "Food and water hygiene"
+    // - "Vector bite prevention"
+    // - "Sun, heat, and environmental precautions"
+    // - "Injury and road safety"
+    // - "Sexual health and blood exposure"
+    // - "Jet lag, sleep, and mental wellbeing"
+    // - "Malaria and other chemoprophylaxis (state if not indicated)"
+    // - "Traveller-specific considerations (from health context)"
 
-                4) itineraryGuidance (mandatory):
-                - tripType must exactly mirror the Current trip "Trip Type" value.
-                - routeAdvice:
-                  - ONE_WAY: include exactly one stop guidance row.
-                  - RETURN: include outbound stop guidance and include practical return-phase reminders in returnGuidance.
-                  - MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in listed order.
-                - returnGuidance:
-                  - RETURN: include at least 4 actionable bullets for the return leg and immediate post-return period.
-                  - ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is explicit return information.
-                """;
-    }
+    // 4) itineraryGuidance (mandatory):
+    // - tripType must exactly mirror the Current trip "Trip Type" value.
+    // - routeAdvice:
+    // - ONE_WAY: include exactly one stop guidance row.
+    // - RETURN: include outbound stop guidance and include practical return-phase
+    // reminders in returnGuidance.
+    // - MULTI_STOP: include one guidance row per stop from Trip Stops JSON, in
+    // listed order.
+    // - returnGuidance:
+    // - RETURN: include at least 4 actionable bullets for the return leg and
+    // immediate post-return period.
+    // - ONE_WAY or MULTI_STOP: returnGuidance may be an empty array unless there is
+    // explicit return information.
+    // """;
+    // }
 
     private UserOnboarding resolveOnboarding(TravelPlan travelPlan) {
         User user = travelPlan.getUser();
@@ -519,7 +630,7 @@ public class PlanGenerationService {
                 .append("trip duration, purpose, and dates in the report JSON)\n");
         builder.append("Destination: ").append(nullSafe(travelPlan.getDestination())).append("\n");
         builder.append("Country: ").append(nullSafe(travelPlan.getCountry())).append("\n");
-        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)
+        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)   
                 .append("\n");
         builder.append("Purpose: ").append(nullSafe(travelPlan.getPurpose())).append("\n");
         builder.append("Trip Type: ").append(resolveTripType(travelPlan.getTripType())).append("\n");

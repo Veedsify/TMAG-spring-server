@@ -13,6 +13,7 @@ public record UserRequest(
     Boolean onboarded,
     Boolean isVerified,
     String avatarUrl,
+    String profilePictureOption,
     Integer credits,
     String type,
     Long roleId,

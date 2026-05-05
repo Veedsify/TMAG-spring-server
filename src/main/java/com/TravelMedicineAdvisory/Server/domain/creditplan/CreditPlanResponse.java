@@ -14,13 +14,16 @@ public record CreditPlanResponse(
         Boolean isCompanyPlan,
         String signupRangeLabel,
         String serviceLevel,
+        String visibility,
+        Long assignedCompanyId,
+        Integer planCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
     public static CreditPlanResponse from(CreditPlan entity) {
         return new CreditPlanResponse(
                 entity.getId(),
-                entity.getCode() != null ? entity.getCode().name() : null,
+                entity.getCode(),
                 entity.getDisplayName(),
                 entity.getBasePriceUsd(),
                 entity.getBasePriceNgn(),
@@ -29,6 +32,9 @@ public record CreditPlanResponse(
                 entity.getIsCompanyPlan(),
                 entity.getSignupRangeLabel(),
                 entity.getServiceLevel(),
+                entity.getVisibility(),
+                entity.getAssignedCompanyId(),
+                entity.getPlanCount(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

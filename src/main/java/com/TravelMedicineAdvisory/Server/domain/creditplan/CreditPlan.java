@@ -3,8 +3,6 @@ package com.TravelMedicineAdvisory.Server.domain.creditplan;
 import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.SQLDelete;
 
@@ -15,9 +13,8 @@ import java.math.BigDecimal;
 @SQLDelete(sql = "UPDATE user_credit_plans SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class CreditPlan extends BaseEntity {
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, unique = true)
-    private CreditPlanCode code;
+    private String code;
 
     @Column(name = "display_name", nullable = false)
     private String displayName;
@@ -43,12 +40,36 @@ public class CreditPlan extends BaseEntity {
     @Column(name = "service_level", length = 20)
     private String serviceLevel;
 
-    public CreditPlanCode getCode() {
+    @Column(length = 20, nullable = false)
+    private String visibility = CreditPlanVisibility.PUBLIC.name();
+
+    @Column(name = "assigned_company_id")
+    private Long assignedCompanyId;
+
+    @Column(name = "plan_count")
+    private Integer planCount;
+
+    public String getCode() {
         return code;
     }
 
-    public void setCode(CreditPlanCode code) {
+    public void setCode(String code) {
         this.code = code;
+    }
+
+    public void setCode(CreditPlanCode code) {
+        this.code = code != null ? code.name() : null;
+    }
+
+    public CreditPlanCode getCodeEnum() {
+        if (code == null) {
+            return null;
+        }
+        try {
+            return CreditPlanCode.valueOf(code);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     public String getDisplayName() {
@@ -113,5 +134,29 @@ public class CreditPlan extends BaseEntity {
 
     public void setServiceLevel(String serviceLevel) {
         this.serviceLevel = serviceLevel;
+    }
+
+    public String getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(String visibility) {
+        this.visibility = visibility;
+    }
+
+    public Long getAssignedCompanyId() {
+        return assignedCompanyId;
+    }
+
+    public void setAssignedCompanyId(Long assignedCompanyId) {
+        this.assignedCompanyId = assignedCompanyId;
+    }
+
+    public Integer getPlanCount() {
+        return planCount;
+    }
+
+    public void setPlanCount(Integer planCount) {
+        this.planCount = planCount;
     }
 }

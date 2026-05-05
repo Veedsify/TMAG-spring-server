@@ -4,11 +4,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,6 +46,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/pricing")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'pricing_plan:read', 'credit:read')")
     public ResponseEntity<SuccessResponse> getCompanyPricing(@RequestParam Long companyId) {
         try {
             var pricing = service.getCompanyPricing(companyId);
@@ -56,6 +57,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @PostMapping("/quote")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'credit:read')")
     public ResponseEntity<SuccessResponse> getQuote(
             @RequestParam Long companyId,
             @RequestParam Integer credits) {
@@ -70,6 +72,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @PostMapping("/purchase")
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> initiatePurchase(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
@@ -77,7 +80,8 @@ public class CompanyAdminCreditPurchaseController {
             Long userId = getUserIdFromUserDetails(userDetails);
 
             if (body.get("companyId") == null || body.get("credits") == null) {
-                return ResponseEntity.badRequest().body(new SuccessResponse("companyId and credits are required", null));
+                return ResponseEntity.badRequest()
+                        .body(new SuccessResponse("companyId and credits are required", null));
             }
 
             Long companyId = ((Number) body.get("companyId")).longValue();
@@ -92,8 +96,7 @@ public class CompanyAdminCreditPurchaseController {
                     "amount", result.totalAmount(),
                     "currency", result.currency(),
                     "currencySymbol", result.currencySymbol(),
-                    "purchaseId", result.purchaseId()
-            )));
+                    "purchaseId", result.purchaseId())));
         } catch (NoSuchElementException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (IllegalArgumentException e) {
@@ -103,11 +106,13 @@ public class CompanyAdminCreditPurchaseController {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (Exception e) {
             logger.error("Unexpected error during payment initiation: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+            return ResponseEntity.status(500)
+                    .body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
         }
     }
 
     @PostMapping("/purchase/hr")
+    @PreAuthorize("@perm.has(authentication, 'credit:create')")
     public ResponseEntity<SuccessResponse> initiateHrPurchase(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
@@ -115,7 +120,8 @@ public class CompanyAdminCreditPurchaseController {
             Long userId = getUserIdFromUserDetails(userDetails);
 
             if (body.get("companyId") == null || body.get("credits") == null) {
-                return ResponseEntity.badRequest().body(new SuccessResponse("companyId and credits are required", null));
+                return ResponseEntity.badRequest()
+                        .body(new SuccessResponse("companyId and credits are required", null));
             }
 
             Long companyId = ((Number) body.get("companyId")).longValue();
@@ -130,8 +136,7 @@ public class CompanyAdminCreditPurchaseController {
                     "amount", result.totalAmount(),
                     "currency", result.currency(),
                     "currencySymbol", result.currencySymbol(),
-                    "purchaseId", result.purchaseId()
-            )));
+                    "purchaseId", result.purchaseId())));
         } catch (NoSuchElementException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (IllegalArgumentException e) {
@@ -141,7 +146,8 @@ public class CompanyAdminCreditPurchaseController {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), null));
         } catch (Exception e) {
             logger.error("Unexpected error during HR payment initiation: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
+            return ResponseEntity.status(500)
+                    .body(new SuccessResponse("Payment initiation failed: " + e.getMessage(), null));
         }
     }
 
@@ -162,13 +168,13 @@ public class CompanyAdminCreditPurchaseController {
 
             if ("completed".equals(result.status())) {
                 return new RedirectView(
-                    frontendUrl +
-                    "?success=true" +
-                    "&credits=" + result.creditsPurchased() +
-                    "&tx_ref=" + tx_ref
-                );
+                        frontendUrl +
+                                "?success=true" +
+                                "&credits=" + result.creditsPurchased() +
+                                "&tx_ref=" + tx_ref);
             } else {
-                String errorMsg = result.status() != null ? "Payment%20" + result.status() : "Payment%20not%20completed";
+                String errorMsg = result.status() != null ? "Payment%20" + result.status()
+                        : "Payment%20not%20completed";
                 return new RedirectView(frontendUrl + "?success=false&error=" + errorMsg);
             }
         } catch (NoSuchElementException e) {
@@ -179,6 +185,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/verify/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> verifyPurchase(
             @PathVariable String txRef,
             @RequestParam(required = false) String transaction_id) {
@@ -187,14 +194,14 @@ public class CompanyAdminCreditPurchaseController {
             boolean isCompleted = "completed".equalsIgnoreCase(result.status());
             return ResponseEntity.ok(new SuccessResponse(
                     isCompleted ? "Payment verified" : "Payment " + result.status(),
-                    Map.of("success", isCompleted, "purchase", result)
-            ));
+                    Map.of("success", isCompleted, "purchase", result)));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(new SuccessResponse(e.getMessage(), null));
         }
     }
 
     @GetMapping("/history")
+    @PreAuthorize("@perm.has(authentication, 'credit:read', 'credit:list')")
     public ResponseEntity<SuccessResponse> getPurchaseHistory(
             @RequestParam(required = false) Long companyId) {
         var history = service.getPurchaseHistory(companyId);
@@ -202,6 +209,7 @@ public class CompanyAdminCreditPurchaseController {
     }
 
     @GetMapping("/{txRef}")
+    @PreAuthorize("@perm.has(authentication, 'credit:read')")
     public ResponseEntity<SuccessResponse> getPurchase(@PathVariable String txRef) {
         try {
             return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getPurchaseByTxRef(txRef)));

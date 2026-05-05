@@ -11,12 +11,17 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "credit_requests")
+@Table(name = "credit_requests", indexes = {
+        @Index(name = "idx_credit_requests_company_active_created", columnList = "company_id, deleted_at, created_at"),
+        @Index(name = "idx_credit_requests_company_status", columnList = "company_id, status"),
+        @Index(name = "idx_credit_requests_employee_created", columnList = "employee_id, created_at")
+})
 @SQLDelete(sql = "UPDATE credit_requests SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class CreditRequest extends BaseEntity {
 

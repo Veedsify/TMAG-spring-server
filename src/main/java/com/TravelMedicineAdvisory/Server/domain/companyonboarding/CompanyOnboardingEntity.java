@@ -45,6 +45,18 @@ public class CompanyOnboardingEntity extends BaseEntity {
     @Column(name = "team_members", columnDefinition = "TEXT", nullable = false)
     private String teamMembers = "[]";
 
+    @Column(name = "platform_employees", columnDefinition = "TEXT")
+    private String platformEmployees = "[]";
+
+    @Column(name = "team_members_csv_file_name")
+    private String teamMembersCsvFileName;
+
+    @Column(name = "team_members_csv_path")
+    private String teamMembersCsvPath;
+
+    @Column(name = "team_members_csv_content_type")
+    private String teamMembersCsvContentType;
+
     @Column(name = "tx_ref", unique = true)
     private String txRef;
 
@@ -109,6 +121,18 @@ public class CompanyOnboardingEntity extends BaseEntity {
 
     public String getTeamMembers() { return teamMembers; }
     public void setTeamMembers(String teamMembers) { this.teamMembers = teamMembers; }
+
+    public String getPlatformEmployees() { return platformEmployees; }
+    public void setPlatformEmployees(String platformEmployees) { this.platformEmployees = platformEmployees; }
+
+    public String getTeamMembersCsvFileName() { return teamMembersCsvFileName; }
+    public void setTeamMembersCsvFileName(String teamMembersCsvFileName) { this.teamMembersCsvFileName = teamMembersCsvFileName; }
+
+    public String getTeamMembersCsvPath() { return teamMembersCsvPath; }
+    public void setTeamMembersCsvPath(String teamMembersCsvPath) { this.teamMembersCsvPath = teamMembersCsvPath; }
+
+    public String getTeamMembersCsvContentType() { return teamMembersCsvContentType; }
+    public void setTeamMembersCsvContentType(String teamMembersCsvContentType) { this.teamMembersCsvContentType = teamMembersCsvContentType; }
 
     public String getTxRef() { return txRef; }
     public void setTxRef(String txRef) { this.txRef = txRef; }

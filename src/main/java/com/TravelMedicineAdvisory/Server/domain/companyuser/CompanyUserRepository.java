@@ -19,4 +19,7 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
 
     @Query("SELECT cu FROM CompanyUser cu WHERE cu.company.id = :companyId AND cu.role IN ('Administrator', 'HR', 'SuperAdmin') AND cu.deletedAt IS NULL")
     List<CompanyUser> findAdminsByCompanyId(@Param("companyId") Long companyId);
+
+    @Query("SELECT COUNT(cu) > 0 FROM CompanyUser cu WHERE cu.user.id = :userId AND cu.company.id = :companyId AND cu.deletedAt IS NULL")
+    boolean existsActiveByUserIdAndCompanyId(@Param("userId") Long userId, @Param("companyId") Long companyId);
 }

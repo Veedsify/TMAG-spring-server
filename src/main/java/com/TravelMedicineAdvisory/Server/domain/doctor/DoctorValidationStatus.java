@@ -4,5 +4,6 @@ public enum DoctorValidationStatus {
     PENDING,
     APPROVED,
     REJECTED,
+    ELEVATED,
     NOT_REQUIRED
 }

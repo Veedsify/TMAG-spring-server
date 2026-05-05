@@ -222,7 +222,7 @@ public class OnboardingQuestionSeeder implements CommandLineRunner {
     // ── Section 2: Travel Itinerary (trip details, no purpose) ───────────────
     private static final String TRAVEL_QUESTIONS = """
             [
-              {"key":"trip_itinerary","text":"Trip type and itinerary","description":"Start by selecting Single trip, Round trip, or Multi-stop.","type":"trip_itinerary","required":true},
+              {"key":"trip_itinerary","text":"Trip type and itinerary","description":"Choose trip type, then set dates with the calendar fields (not free text). Return and transit flows include quick +day shortcuts after you pick a departure.","type":"trip_itinerary","required":true},
               {"key":"flight_details","text":"Flight & Travel Journey Details","description":"Please describe all legs of your complete itinerary (outbound, any internal flights, and return if known). (optional)","type":"textarea","required":false,"placeholder":"e.g. London → Lagos (direct), then Lagos → Abuja (domestic)"},
               {"key":"longest_flight_leg_hours","text":"Longest single flight leg (hours)  (optional):","type":"text","required":false,"placeholder":"e.g. 6"},
               {"key":"total_flying_hours","text":"Total approximate flying time excluding layovers (hours) (optional):","type":"text","required":false,"placeholder":"e.g. 10"},

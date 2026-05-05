@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.doctor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record DoctorValidationPlanDto(
     Long planId,
@@ -14,5 +15,7 @@ public record DoctorValidationPlanDto(
     String travellerName,
     String travellerEmail,
     LocalDateTime createdAt,
-    String generatedPlanStatus
+    String generatedPlanStatus,
+    List<AssignedDoctorDto> assignedDoctors,
+    Boolean openToAllDoctors
 ) {}

@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
 import java.util.StringJoiner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -20,6 +22,8 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
  */
 @Component
 public class TravelPlanPdfGenerator {
+
+    private static final Logger log = LoggerFactory.getLogger(TravelPlanPdfGenerator.class);
 
     // Primary teal palette
     private static final String TEAL_DEEP = "#0d3d35";
@@ -48,6 +52,9 @@ public class TravelPlanPdfGenerator {
     private static final String GREEN_SOFT = "#d1fae5";
     private static final String GREEN_BORDER = "#6ee7b7";
 
+    private static final String IMPORTANT_MEDICAL_DISCLAIMER = "This travel health advisory plan was generated with artificial intelligence and reviewed and validated by a licensed medical doctor. It is provided for informational and educational purposes only and does not substitute consultation, diagnosis, or treatment from a certified travel medicine doctor or a licensed medical doctor. Before making decisions about vaccinations, medications, or travel health, consult your doctor or a qualified travel medicine specialist, especially if you are pregnant, have chronic conditions, or take regular medications. If you become ill during travel, seek immediate local medical care.";
+    private static final String CLOSING_DISCLAIMER = "This report supports, but does not substitute care from a certified travel medicine doctor or licensed medical doctor.";
+
     private final ObjectMapper objectMapper;
 
     @Value("${app.frontend.url:http://localhost:3000}")
@@ -70,6 +77,19 @@ public class TravelPlanPdfGenerator {
         }
     }
 
+    public byte[] generateSummary(TravelPlan plan, GeneratedPlan generatedPlan) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            String html = buildSummaryHtml(plan, generatedPlan);
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.withHtmlContent(html, frontendUrl);
+            builder.toStream(out);
+            builder.run();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate travel plan summary PDF", e);
+        }
+    }
+
     private String buildHtml(TravelPlan plan, GeneratedPlan generatedPlan) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
@@ -88,13 +108,39 @@ public class TravelPlanPdfGenerator {
         JsonNode structured = parseStructuredJson(generatedPlan);
         if (structured != null && structured.isObject()) {
             appendStructuredBody(sb, structured);
+            appendMedicalDisclaimer(sb, structured);
         } else {
             appendLegacyBody(sb, plan);
+            appendMedicalDisclaimer(sb, null);
         }
 
         // appendGenerationFooter(sb, generatedPlan);
-        sb.append(
-                "<p class=\"closing\">Travel Medicine Advisory Global \u2014 not a substitute for professional medical advice.</p>");
+        sb.append("<p class=\"closing\">").append(escapeHtml(CLOSING_DISCLAIMER)).append("</p>");
+        sb.append("</div>");
+        sb.append("</body></html>");
+        return sb.toString();
+    }
+
+    private String buildSummaryHtml(TravelPlan plan, GeneratedPlan generatedPlan) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"/>");
+        appendStyles(sb);
+        sb.append("</head><body>");
+        sb.append("<div class=\"hero-wrap\">");
+        appendSummaryHero(sb, plan, generatedPlan);
+        sb.append("</div>");
+        sb.append("<div class=\"body-wrap\">");
+
+        JsonNode structured = parseStructuredJson(generatedPlan);
+        if (structured != null && structured.isObject()) {
+            appendSummaryBody(sb, structured);
+            appendMedicalDisclaimer(sb, structured);
+        } else {
+            appendLegacyBody(sb, plan);
+            appendMedicalDisclaimer(sb, null);
+        }
+
+        sb.append("<p class=\"closing\">").append(escapeHtml(CLOSING_DISCLAIMER)).append("</p>");
         sb.append("</div>");
         sb.append("</body></html>");
         return sb.toString();
@@ -175,19 +221,22 @@ public class TravelPlanPdfGenerator {
         // Section heading
         sb.append("td.cap,th.cap{background:").append(BG_SUBTLE)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ")
+                .append(
+                        ";padding:8px 12px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;text-align:left;border-bottom:1px solid ")
                 .append(BORDER).append("}");
 
         // Sub-section heading
         sb.append("td.cap-sub{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ")
+                .append(
+                        ";padding:6px 12px;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ")
                 .append(TEAL_BORDER).append("}");
 
         // KV label / value
         sb.append("td.lbl{width:26%;background:").append(BG_SUBTLE)
                 .append(";color:").append(MUTED)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ")
+                .append(
+                        ";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid ")
                 .append(BORDER_LT).append("}");
         sb.append("td.val{color:").append(DARK)
                 .append(";padding:8px 12px;border-bottom:1px solid ").append(BORDER_LT)
@@ -197,7 +246,8 @@ public class TravelPlanPdfGenerator {
         // Column headers + data cells
         sb.append("th.h{background:").append(TEAL_LIGHT)
                 .append(";color:").append(TEAL_DEEP)
-                .append(";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ")
+                .append(
+                        ";font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border:1px solid ")
                 .append(TEAL_BORDER).append(";text-align:left}");
         sb.append("td.c{padding:8px 12px;border:1px solid ").append(BORDER)
                 .append(";vertical-align:top;line-height:1.5;white-space:pre-wrap;color:").append(DARK)
@@ -310,7 +360,164 @@ public class TravelPlanPdfGenerator {
         sb.append("<div class=\"hero-rule\"></div>");
     }
 
+    private void appendSummaryHero(StringBuilder sb, TravelPlan plan, GeneratedPlan gp) {
+        JsonNode j = parseStructuredJson(gp);
+        String title = "Travel health summary";
+        if (plan.getDestination() != null) {
+            title = "Travel health summary: " + plan.getDestination();
+        }
+
+        sb.append("<div class=\"brand-strip\">")
+                .append("<div class=\"brand-name\">Travel Medicine Advisory Global</div>")
+                .append("<div class=\"brand-sub\">Condensed Travel Health Summary</div>")
+                .append("</div>");
+        sb.append("<table class=\"hero-tbl\" cellspacing=\"0\" cellpadding=\"0\"><tr>");
+        sb.append("<td class=\"hero-left\">");
+        sb.append("<h1 class=\"doc-title\">").append(escapeHtml(title)).append("</h1>");
+        sb.append("<p class=\"hero-meta\">")
+                .append(escapeHtml(nullSafe(plan.getCountry())))
+                .append(plan.getDuration() != null ? " \u00B7 " + plan.getDuration() + " days" : "")
+                .append(StringUtils.hasText(plan.getPurpose()) ? " \u00B7 " + escapeHtml(plan.getPurpose()) : "")
+                .append("</p>");
+        if (j != null && j.path("travelDates").isTextual() && StringUtils.hasText(j.get("travelDates").asText())) {
+            sb.append("<p class=\"hero-dates\">").append(escapeHtml(j.get("travelDates").asText())).append("</p>");
+        } else {
+            String fallbackDates = formatReturnDatesFromPlan(plan);
+            if (StringUtils.hasText(fallbackDates)) {
+                sb.append("<p class=\"hero-dates\">").append(escapeHtml(fallbackDates)).append("</p>");
+            }
+        }
+        if (j != null && j.path("travellerName").isTextual() && StringUtils.hasText(j.get("travellerName").asText())) {
+            sb.append("<p class=\"hero-traveller\">Traveller: <strong>")
+                    .append(escapeHtml(j.get("travellerName").asText()))
+                    .append("</strong></p>");
+        }
+        sb.append("</td>");
+        sb.append("<td class=\"hero-right\">");
+        sb.append("<span class=\"badge ").append(riskBadgeClass(plan.getRiskScore())).append("\">")
+                .append(escapeHtml(riskLabel(plan.getRiskScore()))).append(" risk</span>");
+        sb.append("<span class=\"badge b-nu\">SUMMARY</span>");
+        if (plan.getCreatedAt() != null) {
+            sb.append("<span class=\"badge b-nu\">")
+                    .append(plan.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM d, yyyy")))
+                    .append("</span>");
+        }
+        sb.append("</td></tr></table>");
+        sb.append("<div class=\"hero-rule\"></div>");
+    }
+
     // ── Structured body ───────────────────────────────────────────────────────
+    private void appendSummaryBody(StringBuilder sb, JsonNode root) {
+        JsonNode risks = root.path("healthRiskOverview");
+        if (risks.isArray() && risks.size() > 0) {
+            appendTableStart(sb, "Key health risks", 3);
+            sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Level</th><th class=\"h\">Summary</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = risks.elements(); it.hasNext(); rowIdx++) {
+                JsonNode r = it.next();
+                String lvl = r.path("level").asText("—");
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("category").asText("—"))).append("</td>")
+                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">")
+                        .append(escapeHtml(lvl.toUpperCase())).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("summary").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        appendSummaryRecommendations(sb, root.path("vaccinations"), "Vaccination actions", "vaccine", "recommendation", "action");
+        appendMalariaSummary(sb, root.path("malariaPrevention"));
+        appendSummaryRecommendations(sb, root.path("recommendations"), "Priority medical advice", "title", "details", null);
+        appendTextArraySection(sb, root.path("clinicalFlags"), "Clinical flags");
+        appendTextArraySection(sb, root.path("contraindications"), "Contraindications");
+
+        JsonNode afterReturn = root.path("afterReturn");
+        if (afterReturn.isObject() && afterReturnNonEmpty(afterReturn)) {
+            appendTableStart(sb, "After return red flags", 1);
+            if (afterReturn.path("redFlag").isTextual() && StringUtils.hasText(afterReturn.get("redFlag").asText())) {
+                sb.append("<tr><td class=\"val\">").append(escapeHtml(afterReturn.get("redFlag").asText())).append("</td></tr>");
+            }
+            appendBulletSubTable(sb, afterReturn.path("within1Week"), "Within 1 week");
+            appendBulletSubTable(sb, afterReturn.path("within4Weeks"), "Within 4 weeks");
+            sb.append("</table>");
+        }
+
+        JsonNode medicalCare = root.path("medicalCare");
+        if (medicalCare.isObject() && medicalCare.path("emergencyContacts").isArray()
+                && medicalCare.path("emergencyContacts").size() > 0) {
+            appendTableStart(sb, "Emergency contacts", 1);
+            appendBulletSubTable(sb, medicalCare.path("emergencyContacts"), "Contacts");
+            sb.append("</table>");
+        }
+    }
+
+    private void appendSummaryRecommendations(StringBuilder sb, JsonNode items, String title, String labelField,
+            String primaryField, String secondaryField) {
+        if (!items.isArray() || items.size() == 0) {
+            return;
+        }
+        appendTableStart(sb, title, 2);
+        sb.append("<tr><th class=\"h\">Topic</th><th class=\"h\">Action</th></tr>");
+        int rowIdx = 0;
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext(); rowIdx++) {
+            JsonNode item = it.next();
+            StringBuilder details = new StringBuilder(item.path(primaryField).asText(""));
+            if (secondaryField != null && item.path(secondaryField).isTextual()
+                    && StringUtils.hasText(item.get(secondaryField).asText())) {
+                if (!details.isEmpty()) {
+                    details.append("\n\n");
+                }
+                details.append(item.get(secondaryField).asText());
+            }
+            String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+            sb.append("<tr").append(alt).append(">")
+                    .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                    .append(escapeHtml(item.path(labelField).asText("—"))).append("</strong></td>")
+                    .append("<td class=\"c\">").append(escapeHtml(details.toString())).append("</td>")
+                    .append("</tr>");
+        }
+        sb.append("</table>");
+    }
+
+    private void appendMalariaSummary(StringBuilder sb, JsonNode malaria) {
+        if (!malaria.isObject() || !malariaNonEmpty(malaria)) {
+            return;
+        }
+        appendTableStart(sb, "Malaria prevention summary", 2);
+        int rows = 3;
+        int i = 0;
+        i += appendKVRow(sb, "Risk level", textOrNull(malaria, "riskLevel"), i, rows);
+        i += appendKVRow(sb, "Recommended chemoprophylaxis", textOrNull(malaria, "recommendedAgent"), i, rows);
+        appendKVRow(sb, "Rationale", textOrNull(malaria, "rationale"), i, rows);
+        JsonNode mosquito = malaria.path("mosquitoProtection");
+        if (mosquito.isArray() && mosquito.size() > 0) {
+            sb.append("<tr><td colspan=\"2\" class=\"cap-sub\">Mosquito protection</td></tr>");
+            for (Iterator<JsonNode> it = mosquito.elements(); it.hasNext();) {
+                JsonNode line = it.next();
+                if (line.isTextual()) {
+                    sb.append("<tr><td colspan=\"2\" class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                }
+            }
+        }
+        sb.append("</table>");
+    }
+
+    private void appendTextArraySection(StringBuilder sb, JsonNode items, String title) {
+        if (!items.isArray() || items.size() == 0) {
+            return;
+        }
+        appendTableStart(sb, title, 1);
+        for (Iterator<JsonNode> it = items.elements(); it.hasNext();) {
+            JsonNode item = it.next();
+            if (item.isTextual()) {
+                sb.append("<tr><td class=\"bull\">").append(escapeHtml(item.asText())).append("</td></tr>");
+            }
+        }
+        sb.append("</table>");
+    }
+
     private void appendStructuredBody(StringBuilder sb, JsonNode root) {
         JsonNode glance = root.path("tripAtGlance");
         if (glance.isObject() && glance.size() > 0) {
@@ -426,7 +633,8 @@ public class TravelPlanPdfGenerator {
                 sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
                         .append("\">")
                         .append("<div class=\"alert\"><div class=\"alert-t\">Airline MEDIF clearance required</div>")
-                        .append("<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
+                        .append(
+                                "<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
                         .append("</td></tr>");
             }
             if (flight.path("medicationTimingGuidance").isTextual()
@@ -678,7 +886,8 @@ public class TravelPlanPdfGenerator {
             appendTableStart(sb, "After you return", 1);
             if (ar.path("redFlag").isTextual() && StringUtils.hasText(ar.get("redFlag").asText())) {
                 sb.append("<tr><td class=\"val\" style=\"border:none;padding:6px 12px 4px\">")
-                        .append("<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
+                        .append(
+                                "<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
                         .append("<div class=\"alert-b\">").append(escapeHtml(ar.get("redFlag").asText()))
                         .append("</div></div>")
                         .append("</td></tr>");
@@ -784,11 +993,6 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
-        if (root.path("medicalDisclaimer").isTextual() && StringUtils.hasText(root.get("medicalDisclaimer").asText())) {
-            sb.append("<div class=\"disclaimer\">")
-                    .append(escapeHtml(root.get("medicalDisclaimer").asText()))
-                    .append("</div>");
-        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -866,6 +1070,23 @@ public class TravelPlanPdfGenerator {
                 .append("<tr><td class=\"val\" style=\"border:none\">").append(escapeHtml(raw.trim()))
                 .append("</td></tr>")
                 .append("</table>");
+    }
+
+    private void appendMedicalDisclaimer(StringBuilder sb, JsonNode root) {
+        sb.append("<div class=\"disclaimer\">")
+                .append("<strong>Important Medical Disclaimer</strong>\n")
+                .append(escapeHtml(resolveMedicalDisclaimer(root)))
+                .append("</div>");
+    }
+
+    private String resolveMedicalDisclaimer(JsonNode root) {
+        if (root != null && root.path("medicalDisclaimer").isTextual()) {
+            String structured = root.get("medicalDisclaimer").asText();
+            if (StringUtils.hasText(structured)) {
+                return structured;
+            }
+        }
+        return IMPORTANT_MEDICAL_DISCLAIMER;
     }
 
     // private void appendGenerationFooter(StringBuilder sb, GeneratedPlan gp) {
@@ -1076,13 +1297,14 @@ public class TravelPlanPdfGenerator {
         return s != null ? s : "";
     }
 
-    public byte[] generateSignedPdf(TravelPlan plan, GeneratedPlan generatedPlan, com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
+    public byte[] generateSignedPdf(TravelPlan plan, GeneratedPlan generatedPlan,
+            com.TravelMedicineAdvisory.Server.domain.user.User doctor,
+            com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting doctorSettings) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             String baseHtml = buildHtml(plan, generatedPlan);
             String signedHtml = baseHtml.replace(
-                "</body></html>",
-                buildDoctorVerificationSection(doctor) + "</body></html>"
-            );
+                    "</body></html>",
+                    buildDoctorVerificationSection(doctor, doctorSettings) + "</body></html>");
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.withHtmlContent(signedHtml, frontendUrl);
             builder.toStream(out);
@@ -1093,38 +1315,98 @@ public class TravelPlanPdfGenerator {
         }
     }
 
-    private String buildDoctorVerificationSection(com.TravelMedicineAdvisory.Server.domain.user.User doctor) {
+    private String buildDoctorVerificationSection(com.TravelMedicineAdvisory.Server.domain.user.User doctor,
+            com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting doctorSettings) {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='page-break-before:always;padding:14pt 16mm 0;'>");
         sb.append("<table class='sec' cellspacing='0' cellpadding='0'><tr>");
-        sb.append("<td class='cap' style='background:").append(TEAL_DEEP).append(";color:#ffffff;'>Doctor Verification &amp; Digital Signature</td>");
-        sb.append("</tr><tr><td style='padding:12px;'>");
-        sb.append("<p style='margin:0 0 8px;font-size:10pt;color:").append(DARK).append(";'>");
-        sb.append("This travel health plan has been reviewed and approved by a licensed physician on the TMAG Doctor Network.");
-        sb.append("</p>");
-        sb.append("<table style='width:100%;border-collapse:collapse;margin-top:10px;'>");
-        sb.append("<tr><td style='width:30%;font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>Physician Name</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getName())).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>License Number</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getMedicalLicenseNumber())).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>Validation Date</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ").append(BORDER_LT).append(";'>").append(java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))).append("</td></tr>");
-        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED).append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;'>Status</td>");
-        sb.append("<td style='font-size:9.5pt;color:").append(GREEN).append(";font-weight:700;padding:6px 0;'>TMAG Verified &amp; Approved</td></tr>");
-        sb.append("</table>");
-        if (StringUtils.hasText(doctor.getSignatureUrl())) {
-            sb.append("<div style='margin-top:16px;text-align:center;'>");
-            sb.append("<img src='").append(doctor.getSignatureUrl()).append("' style='max-height:80px;max-width:300px;' alt='Doctor Signature'/>");
-            sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
+        sb.append("<td class='cap' style='background:").append(TEAL_DEEP)
+                .append(";color:#ffffff;'>Doctor Verification &amp; Digital Signature</td>");
+        sb.append("</tr><tr><td style='padding:0;'>");
+        sb.append("<div style='padding:12px;position:relative;'>");
+
+        boolean hasStamp = StringUtils.hasText(doctorSettings.getStampUrl());
+        boolean hasSignature = StringUtils.hasText(doctorSettings.getSignatureUrl());
+
+        // Stamp as watermark behind content
+        if (hasStamp) {
+            sb.append("<div style='position:absolute;top:12px;right:12px;opacity:0.2;'>");
+            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getStampUrl()))
+                    .append("' style='max-height:220px;max-width:200px;' alt='Official Stamp'/>");
             sb.append("</div>");
         }
+
+        sb.append("<p style='margin:0 0 8px;font-size:10pt;color:").append(DARK).append(";'>");
+        sb.append(
+                "This travel health plan has been reviewed and approved by a licensed physician on the TMAG Doctor Network.");
+        sb.append("</p>");
+        sb.append("<table style='width:100%;border-collapse:collapse;margin-top:10px;'>");
+        sb.append("<tr><td style='width:30%;font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>Physician Name</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>").append(escapeHtml(doctor.getFullName())).append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>License Number</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>").append(escapeHtml(doctorSettings.getMedicalLicenseNumber()))
+                .append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(
+                        ";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>Validation Date</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(DARK).append(";padding:6px 0;border-bottom:1px solid ")
+                .append(BORDER_LT).append(";'>")
+                .append(java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")))
+                .append("</td></tr>");
+        sb.append("<tr><td style='font-size:8pt;color:").append(MUTED)
+                .append(";font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0;'>Status</td>");
+        sb.append("<td style='font-size:9.5pt;color:").append(GREEN)
+                .append(";font-weight:700;padding:6px 0;'>TMAG Verified &amp; Approved</td></tr>");
+        sb.append("</table>");
+
+        // Signature below doctor info
+        if (hasSignature) {
+            sb.append("<table style='width:100%;margin-top:16px;border-collapse:collapse;'>");
+            sb.append("<tr><td style='text-align:center;padding:5px;'>");
+            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getSignatureUrl()))
+                    .append("' style='height:250px;width:250px;' alt='Doctor Signature'/>");
+            sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
+            sb.append("</td></tr>");
+            sb.append("</table>");
+        }
+
+        sb.append("</div>");
         sb.append("</td></tr></table>");
-        sb.append("<div style='margin-top:14pt;text-align:center;padding:12px;background:").append(GOLD_SOFT).append(";border:1px solid ").append(GOLD_BORDER).append(";border-radius:4px;'>");
-        sb.append("<p style='margin:0;font-size:9pt;color:").append(DARK).append(";font-weight:600;'>TMAG Verified Seal</p>");
-        sb.append("<p style='margin:4px 0 0;font-size:7.5pt;color:").append(MUTED).append(";'>This document was generated by Travel Medicine Advisory Global and approved by a licensed physician.</p>");
+        sb.append("<div style='margin-top:14pt;text-align:center;padding:12px;background:").append(GOLD_SOFT)
+                .append(";border:1px solid ").append(GOLD_BORDER).append(";border-radius:4px;'>");
+        sb.append("<p style='margin:0;font-size:9pt;color:").append(DARK)
+                .append(";font-weight:600;'>TMAG Verified Seal</p>");
+        sb.append("<p style='margin:4px 0 0;font-size:7.5pt;color:").append(MUTED).append(
+                ";'>This document was generated by Travel Medicine Advisory Global and approved by a licensed physician.</p>");
         sb.append("</div>");
         sb.append("</div>");
         return sb.toString();
+    }
+
+    private String resolveImageSrc(String url) {
+        if (!StringUtils.hasText(url))
+            return null;
+        try (java.io.InputStream in = new java.net.URI(url).toURL().openStream()) {
+            byte[] bytes = in.readAllBytes();
+            String lower = url.toLowerCase();
+            String mime = lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg"
+                    : lower.endsWith(".webp") ? "image/webp"
+                            : lower.endsWith(".gif") ? "image/gif"
+                                    : "image/png";
+            return "data:" + mime + ";base64," + java.util.Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            log.warn("Could not load image for PDF embed, falling back to URL: {}", url);
+            return url;
+        }
     }
 
     private static String escapeHtml(String str) {

@@ -42,6 +42,12 @@ public class GeneratedPlan extends BaseEntity {
     @Column(name = "tokens_used")
     private Integer tokensUsed;
 
+    @Column(name = "plan_generation_tokens_used")
+    private Integer planGenerationTokensUsed;
+
+    @Column(name = "summary_generation_tokens_used")
+    private Integer summaryGenerationTokensUsed;
+
     @Column(name = "processing_time_ms")
     private Long processingTimeMs;
 
@@ -53,6 +59,9 @@ public class GeneratedPlan extends BaseEntity {
 
     @Column(name = "signed_pdf_url")
     private String signedPdfUrl;
+
+    @Column(name = "summary_pdf_url")
+    private String summaryPdfUrl;
 
     @Column(name = "is_signed")
     private Boolean isSigned = false;
@@ -145,6 +154,22 @@ public class GeneratedPlan extends BaseEntity {
         this.tokensUsed = tokensUsed;
     }
 
+    public Integer getPlanGenerationTokensUsed() {
+        return planGenerationTokensUsed;
+    }
+
+    public void setPlanGenerationTokensUsed(Integer planGenerationTokensUsed) {
+        this.planGenerationTokensUsed = planGenerationTokensUsed;
+    }
+
+    public Integer getSummaryGenerationTokensUsed() {
+        return summaryGenerationTokensUsed;
+    }
+
+    public void setSummaryGenerationTokensUsed(Integer summaryGenerationTokensUsed) {
+        this.summaryGenerationTokensUsed = summaryGenerationTokensUsed;
+    }
+
     public Long getProcessingTimeMs() {
         return processingTimeMs;
     }
@@ -175,6 +200,14 @@ public class GeneratedPlan extends BaseEntity {
 
     public void setSignedPdfUrl(String signedPdfUrl) {
         this.signedPdfUrl = signedPdfUrl;
+    }
+
+    public String getSummaryPdfUrl() {
+        return summaryPdfUrl;
+    }
+
+    public void setSummaryPdfUrl(String summaryPdfUrl) {
+        this.summaryPdfUrl = summaryPdfUrl;
     }
 
     public Boolean getIsSigned() {

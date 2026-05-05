@@ -13,7 +13,6 @@ import java.util.Map;
 @Tag(name = "Admin · Roles")
 @RestController
 @RequestMapping("/api/v1/admin/roles")
-@PreAuthorize("hasAuthority('all')")
 public class AdminRoleController {
 
     private final AdminRoleService service;
@@ -23,27 +22,32 @@ public class AdminRoleController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.admin(authentication, 'authorization:list')")
     public ResponseEntity<SuccessResponse> getAll() {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findAll()));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'authorization:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id)));
     }
 
     @PostMapping
+    @PreAuthorize("@perm.admin(authentication, 'authorization:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody Map<String, Object> body) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(body)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'authorization:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, updates)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.admin(authentication, 'authorization:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

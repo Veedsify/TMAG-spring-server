@@ -9,7 +9,12 @@ import org.hibernate.annotations.SQLDelete;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "credit_purchases")
+@Table(name = "credit_purchases", indexes = {
+    @Index(name = "idx_credit_purchases_user_created", columnList = "user_id, created_at"),
+    @Index(name = "idx_credit_purchases_company_created", columnList = "company_id, created_at"),
+    @Index(name = "idx_credit_purchases_status_created", columnList = "status, created_at"),
+    @Index(name = "idx_credit_purchases_user_status", columnList = "user_id, status")
+})
 @SQLDelete(sql = "UPDATE credit_purchases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 
 public class CreditPurchase extends BaseEntity {

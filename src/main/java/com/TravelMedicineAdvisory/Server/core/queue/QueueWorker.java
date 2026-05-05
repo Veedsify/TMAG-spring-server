@@ -94,6 +94,16 @@ public class QueueWorker {
                     logger.info("GENERATE_TRAVEL_PLAN starting: queueJobId={} travelPlanId={}", msg.getId(), planId);
                     planGenerationService.processQueuedGeneration(planId);
                 }
+                case GENERATE_SUMMARY_PDF -> {
+                    Number travelPlanId = (Number) msg.getData().get("travelPlanId");
+                    Number generatedPlanId = (Number) msg.getData().get("generatedPlanId");
+                    if (travelPlanId == null || generatedPlanId == null) {
+                        throw new IllegalArgumentException("Missing travelPlanId or generatedPlanId in queue payload");
+                    }
+                    logger.info("GENERATE_SUMMARY_PDF starting: queueJobId={} travelPlanId={} generatedPlanId={}",
+                            msg.getId(), travelPlanId, generatedPlanId);
+                    planGenerationService.processSummaryPdf(travelPlanId.longValue(), generatedPlanId.longValue());
+                }
                 case EMAIL_VERIFICATION ->
                     handleEmailJob(msg, "verification");
                 case EMAIL_PASSWORD_RESET ->
@@ -163,16 +173,16 @@ public class QueueWorker {
                 case EMAIL_DOCTOR_INVITATION ->
                     handleEmailJob(msg, "doctor_invitation");
             }
-            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
-                logger.info("GENERATE_TRAVEL_PLAN finished successfully: queueJobId={}", msg.getId());
+            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN || msg.getType() == JobType.GENERATE_SUMMARY_PDF) {
+                logger.info("{} finished successfully: queueJobId={}", msg.getType(), msg.getId());
             } else {
                 logger.info("Queue job [{}] id={} completed", msg.getType(), msg.getId());
             }
 
         } catch (Exception e) {
-            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN) {
-                logger.error("GENERATE_TRAVEL_PLAN failed: queueJobId={} attempt={}/{} — {}",
-                        msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());
+            if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN || msg.getType() == JobType.GENERATE_SUMMARY_PDF) {
+                logger.error("{} failed: queueJobId={} attempt={}/{} — {}",
+                        msg.getType(), msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());
             } else {
                 logger.error("Queue job [{}] id={} failed (attempt {}/{}): {}",
                         msg.getType(), msg.getId(), msg.getAttempts(), msg.getMaxAttempts(), e.getMessage());

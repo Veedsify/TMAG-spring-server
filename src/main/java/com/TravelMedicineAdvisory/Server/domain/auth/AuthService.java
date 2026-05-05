@@ -1,27 +1,15 @@
 package com.TravelMedicineAdvisory.Server.domain.auth;
 
-import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
-import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
-import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
-import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
-import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
-import com.TravelMedicineAdvisory.Server.security.JwtService;
-
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -36,16 +24,30 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.UUID;
+import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
+import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanResponse;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingResponse;
+import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingService;
+import com.TravelMedicineAdvisory.Server.security.JwtService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 
 @Service
 public class AuthService {
@@ -61,6 +63,8 @@ public class AuthService {
     private final CompanyUserRepository companyUserRepository;
     private final AdminNotificationService adminNotificationService;
     private final CreditPlanRepository userCreditPlanRepository;
+    private final UserSettingService userSettingService;
+    private final AvatarUrlService avatarUrlService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -82,7 +86,9 @@ public class AuthService {
             QueueService queueService, CreditRepository creditRepository,
             CompanyUserRepository companyUserRepository,
             AdminNotificationService adminNotificationService,
-            CreditPlanRepository userCreditPlanRepository) {
+            CreditPlanRepository userCreditPlanRepository,
+            UserSettingService userSettingService,
+            AvatarUrlService avatarUrlService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -94,6 +100,8 @@ public class AuthService {
         this.companyUserRepository = companyUserRepository;
         this.adminNotificationService = adminNotificationService;
         this.userCreditPlanRepository = userCreditPlanRepository;
+        this.userSettingService = userSettingService;
+        this.avatarUrlService = avatarUrlService;
 
     }
 
@@ -222,6 +230,7 @@ public class AuthService {
     }
 
     @Transactional
+    @SuppressWarnings("unchecked")
     public AuthResponse googleCallback(String code, String planCode) {
         if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null
                 || googleClientSecret.isBlank()) {
@@ -535,18 +544,20 @@ public class AuthService {
             response.setRoleName(user.getRole().getName());
         }
 
-        response.setAvatarUrl(user.getAvatarUrl());
+        response.setAvatarUrl(avatarUrlService.toFullUrl(user.getAvatarUrl()));
         response.setOnboardingStage(user.getOnboardingStage() != null ? user.getOnboardingStage() : 0);
-        response.setIsVerified(user.getVerified() != null ? user.getVerified() : false);
+        response.setIsVerified(Boolean.TRUE.equals(user.getVerified()));
         response.setLastLogin(user.getLastLogin() != null ? user.getLastLogin().toString() : null);
         response.setAccessToken(jwtToken);
         response.setExp(System.currentTimeMillis() + jwtService.getJwtExpiration());
         response.setBillingCurrency(user.getBillingCurrency());
-        response.setMustChangePassword(user.getMustChangePassword() != null ? user.getMustChangePassword() : false);
+        response.setMustChangePassword(Boolean.TRUE.equals(user.getMustChangePassword()));
 
         if (user.getCreditPlan() != null) {
             response.setUserCreditPlan(CreditPlanResponse.from(user.getCreditPlan()));
         }
+
+        response.setSettings(UserSettingResponse.from(userSettingService.getOrCreateByUserId(user.getId())));
 
         return response;
     }

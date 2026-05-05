@@ -17,352 +17,352 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_users_active_created", columnList = "deleted_at, created_at"),
+    @Index(name = "idx_users_type_active", columnList = "type, deleted_at"),
+    @Index(name = "idx_users_role_active", columnList = "role_id, deleted_at"),
+    @Index(name = "idx_users_last_login_active", columnList = "deleted_at, last_login"),
+    @Index(name = "idx_users_email", columnList = "email"),
+    @Index(name = "idx_users_username", columnList = "username")
+})
 @SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class User extends BaseEntity {
 
-    @Column(name = "first_name")
-    private String firstName;
+  @Column(name = "first_name")
+  private String firstName;
 
-    @Column(name = "last_name")
-    private String lastName;
+  @Column(name = "last_name")
+  private String lastName;
 
-    private String name;
+  private String name;
 
-    @Column(unique = true)
-    private String username;
+  @Column(unique = true)
+  private String username;
 
-    private String phone;
+  private String phone;
 
-    @Column(unique = true, nullable = false)
-    private String email;
+  @Column(unique = true, nullable = false)
+  private String email;
 
-    private String password;
+  private String password;
 
-    @Column(name = "onboarding_stage")
-    private Integer onboardingStage;
+  @Column(name = "onboarding_stage")
+  private Integer onboardingStage;
 
-    @Column(nullable = false)
-    private Boolean onboarded = false;
+  @Column(nullable = false)
+  private Boolean onboarded = false;
 
-    @Column(name = "is_verified")
-    private Boolean is_verified = false;
+  @Column(name = "is_verified")
+  private Boolean is_verified = false;
 
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+  @Column(name = "is_active")
+  private Boolean isActive = true;
 
-    @Column(name = "verification_token")
-    private String verificationToken;
+  @Column(name = "verification_token")
+  private String verificationToken;
 
-    @Column(name = "verification_token_expiry")
-    private LocalDateTime verificationTokenExpiry;
+  @Column(name = "verification_token_expiry")
+  private LocalDateTime verificationTokenExpiry;
 
-    @Column(name = "reset_token")
-    private String resetToken;
+  @Column(name = "reset_token")
+  private String resetToken;
 
-    @Column(name = "reset_token_expiry")
-    private LocalDateTime resetTokenExpiry;
+  @Column(name = "reset_token_expiry")
+  private LocalDateTime resetTokenExpiry;
 
-    @Column(name = "invitation_token")
-    private String invitationToken;
+  @Column(name = "invitation_token")
+  private String invitationToken;
 
-    @Column(name = "invitation_token_expiry")
-    private LocalDateTime invitationTokenExpiry;
+  @Column(name = "invitation_token_expiry")
+  private LocalDateTime invitationTokenExpiry;
 
-    @Column(name = "must_change_password")
-    private Boolean mustChangePassword = false;
+  @Column(name = "must_change_password")
+  private Boolean mustChangePassword = false;
 
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
+  @Column(name = "last_login")
+  private LocalDateTime lastLogin;
 
-    @Column(name = "avatar_url")
-    private String avatarUrl;
+  @Column(name = "avatar_url")
+  private String avatarUrl;
 
-    private Integer credits = 0;
+  @Column(name = "profile_picture_option")
+  private String profilePictureOption = "upload";
 
-    private String type;
+  @Column(columnDefinition = "TEXT")
+  private String bio;
 
-    private String provider;
+  private Integer credits = 0;
 
-    @Column(name = "provider_id")
-    private String providerId;
+  private String type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "billing_currency")
-    private BillingCurrency billingCurrency = BillingCurrency.NGN;
+  private String provider;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Credit> creditHistory;
+  @Column(name = "provider_id")
+  private String providerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_id")
-    private Role role;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "billing_currency")
+  private BillingCurrency billingCurrency = BillingCurrency.NGN;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_credit_plan_id")
-    private CreditPlan userCreditPlan;
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Credit> creditHistory;
 
-    @Column(name = "medical_license_number")
-    private String medicalLicenseNumber;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "role_id")
+  private Role role;
 
-    @Column(name = "signature_url")
-    private String signatureUrl;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_credit_plan_id")
+  private CreditPlan userCreditPlan;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "doctor_application_status")
-    private com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus doctorApplicationStatus = com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus.NONE;
+  public String getFirstName() {
+    return firstName;
+  }
 
-    public String getFirstName() {
-        return firstName;
-    }
+  public void setFirstName(String firstName) {
+    this.firstName = firstName;
+  }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+  public String getLastName() {
+    return lastName;
+  }
 
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Integer getOnboardingStage() {
-        return onboardingStage;
-    }
-
-    public void setOnboardingStage(Integer onboardingStage) {
-        this.onboardingStage = onboardingStage;
-    }
-
-    public Boolean getVerified() {
-        return is_verified;
-    }
-
-    public void setVerified(Boolean verified) {
-        is_verified = verified;
-    }
-
-    public String getVerificationToken() {
-        return verificationToken;
-    }
-
-    public void setVerificationToken(String verificationToken) {
-        this.verificationToken = verificationToken;
-    }
-
-    public LocalDateTime getVerificationTokenExpiry() {
-        return verificationTokenExpiry;
-    }
-
-    public void setVerificationTokenExpiry(LocalDateTime verificationTokenExpiry) {
-        this.verificationTokenExpiry = verificationTokenExpiry;
-    }
-
-    public String getResetToken() {
-        return resetToken;
-    }
-
-    public void setResetToken(String resetToken) {
-        this.resetToken = resetToken;
-    }
-
-    public LocalDateTime getResetTokenExpiry() {
-        return resetTokenExpiry;
-    }
-
-    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) {
-        this.resetTokenExpiry = resetTokenExpiry;
-    }
-
-    public LocalDateTime getLastLogin() {
-        return lastLogin;
-    }
-
-    public void setLastLogin(LocalDateTime lastLogin) {
-        this.lastLogin = lastLogin;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-
-    public Integer getCredits() {
-        return credits;
-    }
-
-    public void setCredits(Integer credits) {
-        this.credits = credits;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public BillingCurrency getBillingCurrency() {
-        return billingCurrency;
-    }
-
-    public void setBillingCurrency(BillingCurrency billingCurrency) {
-        this.billingCurrency = billingCurrency;
-    }
-
-    public Boolean getOnboarded() {
-        return onboarded;
-    }
-
-    public void setOnboarded(Boolean onboarded) {
-        this.onboarded = onboarded;
-    }
-
-    public List<Credit> getCreditHistory() {
-        return creditHistory;
-    }
-
-    public void setCreditHistory(List<Credit> creditHistory) {
-        this.creditHistory = creditHistory;
-    }
-
-    public String getInvitationToken() {
-        return invitationToken;
-    }
-
-    public void setInvitationToken(String invitationToken) {
-        this.invitationToken = invitationToken;
-    }
-
-    public LocalDateTime getInvitationTokenExpiry() {
-        return invitationTokenExpiry;
-    }
-
-    public void setInvitationTokenExpiry(LocalDateTime invitationTokenExpiry) {
-        this.invitationTokenExpiry = invitationTokenExpiry;
-    }
-
-    public Boolean getMustChangePassword() {
-        return mustChangePassword;
-    }
-
-    public void setMustChangePassword(Boolean mustChangePassword) {
-        this.mustChangePassword = mustChangePassword;
-    }
-
-    public String getProvider() {
-        return provider;
-    }
-
-    public void setProvider(String provider) {
-        this.provider = provider;
-    }
-
-    public String getProviderId() {
-        return providerId;
-    }
-
-    public void setProviderId(String providerId) {
-        this.providerId = providerId;
-    }
-
-    public Boolean getIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
-    }
-
-    public CreditPlan getCreditPlan() {
-        return userCreditPlan;
-    }
-
-    public void setCreditPlan(CreditPlan userCreditPlan) {
-        this.userCreditPlan = userCreditPlan;
-    }
-
-    public String getMedicalLicenseNumber() {
-        return medicalLicenseNumber;
-    }
-
-    public void setMedicalLicenseNumber(String medicalLicenseNumber) {
-        this.medicalLicenseNumber = medicalLicenseNumber;
-    }
-
-    public String getSignatureUrl() {
-        return signatureUrl;
-    }
-
-    public void setSignatureUrl(String signatureUrl) {
-        this.signatureUrl = signatureUrl;
-    }
-
-    public com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus getDoctorApplicationStatus() {
-        return doctorApplicationStatus;
-    }
-
-    public void setDoctorApplicationStatus(com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus doctorApplicationStatus) {
-        this.doctorApplicationStatus = doctorApplicationStatus;
-    }
+  public void setLastName(String lastName) {
+    this.lastName = lastName;
+  }
+
+  public String getFullName() {
+    return firstName + " " + lastName;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
+  public void setUsername(String username) {
+    this.username = username;
+  }
+
+  public String getPhone() {
+    return phone;
+  }
+
+  public void setPhone(String phone) {
+    this.phone = phone;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
+  }
+
+  public Integer getOnboardingStage() {
+    return onboardingStage;
+  }
+
+  public void setOnboardingStage(Integer onboardingStage) {
+    this.onboardingStage = onboardingStage;
+  }
+
+  public Boolean getVerified() {
+    return is_verified;
+  }
+
+  public void setVerified(Boolean verified) {
+    is_verified = verified;
+  }
+
+  public String getVerificationToken() {
+    return verificationToken;
+  }
+
+  public void setVerificationToken(String verificationToken) {
+    this.verificationToken = verificationToken;
+  }
+
+  public LocalDateTime getVerificationTokenExpiry() {
+    return verificationTokenExpiry;
+  }
+
+  public void setVerificationTokenExpiry(LocalDateTime verificationTokenExpiry) {
+    this.verificationTokenExpiry = verificationTokenExpiry;
+  }
+
+  public String getResetToken() {
+    return resetToken;
+  }
+
+  public void setResetToken(String resetToken) {
+    this.resetToken = resetToken;
+  }
+
+  public LocalDateTime getResetTokenExpiry() {
+    return resetTokenExpiry;
+  }
+
+  public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) {
+    this.resetTokenExpiry = resetTokenExpiry;
+  }
+
+  public LocalDateTime getLastLogin() {
+    return lastLogin;
+  }
+
+  public void setLastLogin(LocalDateTime lastLogin) {
+    this.lastLogin = lastLogin;
+  }
+
+  public Role getRole() {
+    return role;
+  }
+
+  public void setRole(Role role) {
+    this.role = role;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public String getAvatarUrl() {
+    return avatarUrl;
+  }
+
+  public void setAvatarUrl(String avatarUrl) {
+    this.avatarUrl = avatarUrl;
+  }
+
+  public String getProfilePictureOption() {
+    return profilePictureOption;
+  }
+
+  public void setProfilePictureOption(String profilePictureOption) {
+    this.profilePictureOption = profilePictureOption;
+  }
+
+  public String getBio() {
+    return bio;
+  }
+
+  public void setBio(String bio) {
+    this.bio = bio;
+  }
+
+  public Integer getCredits() {
+    return credits;
+  }
+
+  public void setCredits(Integer credits) {
+    this.credits = credits;
+  }
+
+  public String getType() {
+    return type;
+  }
+
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  public BillingCurrency getBillingCurrency() {
+    return billingCurrency;
+  }
+
+  public void setBillingCurrency(BillingCurrency billingCurrency) {
+    this.billingCurrency = billingCurrency;
+  }
+
+  public Boolean getOnboarded() {
+    return onboarded;
+  }
+
+  public void setOnboarded(Boolean onboarded) {
+    this.onboarded = onboarded;
+  }
+
+  public List<Credit> getCreditHistory() {
+    return creditHistory;
+  }
+
+  public void setCreditHistory(List<Credit> creditHistory) {
+    this.creditHistory = creditHistory;
+  }
+
+  public String getInvitationToken() {
+    return invitationToken;
+  }
+
+  public void setInvitationToken(String invitationToken) {
+    this.invitationToken = invitationToken;
+  }
+
+  public LocalDateTime getInvitationTokenExpiry() {
+    return invitationTokenExpiry;
+  }
+
+  public void setInvitationTokenExpiry(LocalDateTime invitationTokenExpiry) {
+    this.invitationTokenExpiry = invitationTokenExpiry;
+  }
+
+  public Boolean getMustChangePassword() {
+    return mustChangePassword;
+  }
+
+  public void setMustChangePassword(Boolean mustChangePassword) {
+    this.mustChangePassword = mustChangePassword;
+  }
+
+  public String getProvider() {
+    return provider;
+  }
+
+  public void setProvider(String provider) {
+    this.provider = provider;
+  }
+
+  public String getProviderId() {
+    return providerId;
+  }
+
+  public void setProviderId(String providerId) {
+    this.providerId = providerId;
+  }
+
+  public Boolean getIsActive() {
+    return isActive;
+  }
+
+  public void setIsActive(Boolean isActive) {
+    this.isActive = isActive;
+  }
+
+  public CreditPlan getCreditPlan() {
+    return userCreditPlan;
+  }
+
+  public void setCreditPlan(CreditPlan userCreditPlan) {
+    this.userCreditPlan = userCreditPlan;
+  }
 }

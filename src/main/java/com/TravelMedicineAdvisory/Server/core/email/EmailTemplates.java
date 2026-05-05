@@ -722,4 +722,30 @@ public class EmailTemplates {
                 fine("If you have any questions, contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a>.");
         return wrap("Doctor Invitation — TMAG", content);
     }
+
+    public String planEscalatedEmail(String firstName, String destination) {
+        String content =
+                badge("Plan Under Review") +
+                heading("Your travel health plan has been escalated") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Your travel health plan for <strong>" + esc(destination) + "</strong> has been escalated for further expert review by our senior medical team.</p>" +
+                "<p style=\"" + P_STYLE + "\">This means a travel medicine specialist will be giving your plan additional attention to ensure the most comprehensive health guidance for your trip.</p>" +
+                "<p style=\"" + P_STYLE + "\">You&rsquo;ll receive an update as soon as the review is complete. If you have any urgent questions in the meantime, please reach out to our support team.</p>" +
+                divider() +
+                fine("Safe travels! Contact us at <a href=\"mailto:support@travelmedicineadvisory.com\" style=\"color:#2a7a6a;\">support@travelmedicineadvisory.com</a> if you need assistance.");
+        return wrap("Plan Under Review — TMAG", content);
+    }
+
+    public String planEscalatedNotificationEmail(String travellerName, String destination, String doctorFeedback) {
+        String content =
+                badge("New Escalated Plan") +
+                heading("A travel plan requires senior review") +
+                "<p style=\"" + P_STYLE + "\">A travel health plan has been escalated for further review by the medical team.</p>" +
+                infoBox("<strong>Traveller:</strong> " + esc(travellerName) + "<br/><strong>Destination:</strong> " + esc(destination)) +
+                infoBox("<strong>Doctor Feedback:</strong><br/>" + esc(doctorFeedback)) +
+                "<p style=\"" + P_STYLE + "\">Please review this plan in the admin dashboard and provide a final determination.</p>" +
+                divider() +
+                fine("Review the plan details for more information.");
+        return wrap("Escalated Plan Notification — TMAG", content);
+    }
 }

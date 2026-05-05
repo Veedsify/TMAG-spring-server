@@ -61,6 +61,12 @@ public class AdminAdminUserService {
         if (body.containsKey("name")) {
             user.setName((String) body.get("name"));
         }
+        if (body.containsKey("firstName")) {
+            user.setFirstName((String) body.get("firstName"));
+        }
+        if (body.containsKey("lastName")) {
+            user.setLastName((String) body.get("lastName"));
+        }
         if (body.containsKey("password")) {
             user.setPassword(passwordEncoder.encode((String) body.get("password")));
         }
@@ -82,6 +88,12 @@ public class AdminAdminUserService {
         
         if (updates.containsKey("name")) {
             user.setName((String) updates.get("name"));
+        }
+        if (updates.containsKey("firstName")) {
+            user.setFirstName((String) updates.get("firstName"));
+        }
+        if (updates.containsKey("lastName")) {
+            user.setLastName((String) updates.get("lastName"));
         }
         if (updates.containsKey("email")) {
             user.setEmail((String) updates.get("email"));
@@ -128,12 +140,19 @@ public class AdminAdminUserService {
         
         String name = user.getName();
         if (name == null || name.isEmpty()) {
+            name = (user.getFirstName() != null ? user.getFirstName() : "")
+                    + (user.getLastName() != null ? " " + user.getLastName() : "");
+            name = name.trim();
+        }
+        if (name == null || name.isEmpty()) {
             name = user.getEmail();
         }
 
         return new AdminAdminUserResponse(
             user.getId(),
             name,
+            user.getFirstName(),
+            user.getLastName(),
             user.getEmail(),
             role,
             status,

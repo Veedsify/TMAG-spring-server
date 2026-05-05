@@ -8,7 +8,11 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "ai_request_logs")
+@Table(name = "ai_request_logs", indexes = {
+    @Index(name = "idx_ai_request_logs_active_created", columnList = "deleted_at, created_at"),
+    @Index(name = "idx_ai_request_logs_active_status_created", columnList = "deleted_at, status, created_at"),
+    @Index(name = "idx_ai_request_logs_model_created", columnList = "model_used, created_at")
+})
 @SQLDelete(sql = "UPDATE ai_request_logs SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class AiRequestLog extends BaseEntity {
 
@@ -19,6 +23,10 @@ public class AiRequestLog extends BaseEntity {
     private String outputSummary;
     @Column(name = "tokens_used")
     private Integer tokensUsed;
+    @Column(name = "plan_generation_tokens_used")
+    private Integer planGenerationTokensUsed;
+    @Column(name = "summary_generation_tokens_used")
+    private Integer summaryGenerationTokensUsed;
     @Column(name = "processing_time_ms")
     private Long processingTimeMs;
     private String status;
@@ -70,6 +78,22 @@ public class AiRequestLog extends BaseEntity {
 
     public void setTokensUsed(Integer tokensUsed) {
         this.tokensUsed = tokensUsed;
+    }
+
+    public Integer getPlanGenerationTokensUsed() {
+        return planGenerationTokensUsed;
+    }
+
+    public void setPlanGenerationTokensUsed(Integer planGenerationTokensUsed) {
+        this.planGenerationTokensUsed = planGenerationTokensUsed;
+    }
+
+    public Integer getSummaryGenerationTokensUsed() {
+        return summaryGenerationTokensUsed;
+    }
+
+    public void setSummaryGenerationTokensUsed(Integer summaryGenerationTokensUsed) {
+        this.summaryGenerationTokensUsed = summaryGenerationTokensUsed;
     }
 
     public Long getProcessingTimeMs() {

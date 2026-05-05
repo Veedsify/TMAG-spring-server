@@ -8,7 +8,10 @@ import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 
 @Entity
-@Table(name = "plan_usage_ledgers")
+@Table(name = "plan_usage_ledgers", indexes = {
+    @Index(name = "idx_plan_usage_ledgers_user_created", columnList = "user_id, created_at"),
+    @Index(name = "idx_plan_usage_ledgers_plan_created", columnList = "travel_plan_id, created_at")
+})
 @SQLDelete(sql = "UPDATE plan_usage_ledgers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 
 public class PlanUsageLedger extends BaseEntity {

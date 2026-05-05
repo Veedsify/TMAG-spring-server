@@ -13,5 +13,6 @@ public record GeneratedPlanPayload(
         Long processingTimeMs,
         String errorMessage,
         String signedPdfUrl,
+        String summaryPdfUrl,
         Boolean isSigned
 ) {}

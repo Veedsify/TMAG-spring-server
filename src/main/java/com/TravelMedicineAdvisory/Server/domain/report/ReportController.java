@@ -7,6 +7,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class ReportController {
     }
 
     @GetMapping("/dashboard/analytics")
+    @PreAuthorize("@perm.has(authentication, 'report:read', 'system_log:read')")
     public ResponseEntity<SuccessResponse> getDashboardAnalytics(@RequestParam(required = false) Long companyId) {
         Long userId = null;
         if (companyId == null) {
@@ -37,12 +39,14 @@ public class ReportController {
     }
 
     @GetMapping("/usage")
+    @PreAuthorize("@perm.has(authentication, 'report:read', 'plan_usage_ledger:read', 'employee:list')")
     public ResponseEntity<SuccessResponse> getUsageReport(@RequestParam(required = false) Long companyId) {
         UsageReportSummary summary = reportService.getUsageReport(companyId);
         return ResponseEntity.ok(new SuccessResponse("Usage report fetched successfully", summary));
     }
 
     @GetMapping("/usage/csv")
+    @PreAuthorize("@perm.has(authentication, 'data_export:read', 'report:read', 'plan_usage_ledger:read')")
     public ResponseEntity<String> exportUsageReportCsv(@RequestParam(required = false) Long companyId) {
         UsageReportSummary summary = reportService.getUsageReport(companyId);
         String csv = generateUsageReportCsv(summary);
@@ -53,12 +57,14 @@ public class ReportController {
     }
 
     @GetMapping("/plans")
+    @PreAuthorize("@perm.has(authentication, 'report:read', 'travel_plan:list', 'travel_plan:read')")
     public ResponseEntity<SuccessResponse> getPlanHistory(@RequestParam(required = false) Long companyId) {
         List<PlanHistoryDto> plans = reportService.getPlanHistory(companyId);
         return ResponseEntity.ok(new SuccessResponse("Plan history fetched successfully", plans));
     }
 
     @GetMapping("/plans/csv")
+    @PreAuthorize("@perm.has(authentication, 'data_export:read', 'report:read', 'travel_plan:list')")
     public ResponseEntity<String> exportPlanHistoryCsv(@RequestParam(required = false) Long companyId) {
         List<PlanHistoryDto> plans = reportService.getPlanHistory(companyId);
         String csv = generatePlanHistoryCsv(plans);
@@ -69,12 +75,14 @@ public class ReportController {
     }
 
     @GetMapping("/compliance")
+    @PreAuthorize("@perm.has(authentication, 'report:read', 'plan_usage_ledger:read', 'system_log:read')")
     public ResponseEntity<SuccessResponse> getComplianceReport(@RequestParam(required = false) Long companyId) {
         ComplianceReportDto report = reportService.getComplianceReport(companyId);
         return ResponseEntity.ok(new SuccessResponse("Compliance report fetched successfully", report));
     }
 
     @GetMapping("/compliance/csv")
+    @PreAuthorize("@perm.has(authentication, 'data_export:read', 'report:read', 'plan_usage_ledger:read')")
     public ResponseEntity<String> exportComplianceReportCsv(@RequestParam(required = false) Long companyId) {
         ComplianceReportDto report = reportService.getComplianceReport(companyId);
         String csv = generateComplianceReportCsv(report);
@@ -109,19 +117,15 @@ public class ReportController {
 
     private String generatePlanHistoryCsv(List<PlanHistoryDto> plans) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Plan ID,Destination,Country,Purpose,Duration,Risk Score,Status,Employee Name,Created At,Updated At\n");
+        sb.append("Plan ID,Destination trip details,Country,Purpose,Trip Type,Employees Name\n");
         for (PlanHistoryDto plan : plans) {
-            sb.append(String.format("%d,\"%s\",\"%s\",\"%s\",%d,%d,\"%s\",\"%s\",\"%s\",\"%s\"\n",
+            sb.append(String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
                 plan.planId(),
-                escapeCsv(plan.destination()),
+                escapeCsv(plan.tripDetailsJson() != null && !plan.tripDetailsJson().isBlank() ? plan.tripDetailsJson() : plan.destination()),
                 escapeCsv(plan.country()),
                 escapeCsv(plan.purpose()),
-                plan.duration() != null ? plan.duration() : 0,
-                plan.riskScore() != null ? plan.riskScore() : 0,
-                plan.status() != null ? escapeCsv(plan.status()) : "",
-                escapeCsv(plan.employeeName()),
-                plan.createdAt() != null ? plan.createdAt() : "",
-                plan.updatedAt() != null ? plan.updatedAt() : ""
+                escapeCsv(plan.tripType()),
+                escapeCsv(plan.employeeName())
             ));
         }
         return sb.toString();

@@ -14,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +43,7 @@ public class InvoiceController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.has(authentication, 'invoice:list', 'invoice:read')")
     public ResponseEntity<SuccessResponse> getAll(Pageable pageable) {
         User currentUser = getCurrentUser();
         Page<InvoiceResponse> page = service.findAllByUser(currentUser, pageable);
@@ -51,17 +53,19 @@ public class InvoiceController {
                 page.getSize(),
                 page.getTotalPages()
         );
-        PaginatedResponse<InvoiceResponse> paginatedResponse = new PaginatedResponse(page.getContent(), pagination);
+        PaginatedResponse<java.util.List<InvoiceResponse>> paginatedResponse = new PaginatedResponse<>(page.getContent(), pagination);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", paginatedResponse));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'invoice:read')")
     public ResponseEntity<SuccessResponse> getById(@PathVariable Long id) {
         User currentUser = getCurrentUser();
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.findById(id, currentUser)));
     }
 
     @GetMapping("/{id}/pdf")
+    @PreAuthorize("@perm.has(authentication, 'invoice:read')")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
         User currentUser = getCurrentUser();
         InvoiceResponse invoice = service.findById(id, currentUser);
@@ -81,17 +85,20 @@ public class InvoiceController {
     }
 
     @PostMapping
+    @PreAuthorize("@perm.has(authentication, 'invoice:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody InvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new SuccessResponse("Created successfully", service.create(request)));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'invoice:update')")
     public ResponseEntity<SuccessResponse> update(@PathVariable Long id, @RequestBody InvoiceRequest request) {
         return ResponseEntity.ok(new SuccessResponse("Updated successfully", service.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.has(authentication, 'invoice:delete')")
     public ResponseEntity<SuccessResponse> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));

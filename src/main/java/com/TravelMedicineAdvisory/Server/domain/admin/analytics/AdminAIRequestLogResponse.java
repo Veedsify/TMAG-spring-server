@@ -12,6 +12,8 @@ public class AdminAIRequestLogResponse {
     private String promptSummary;
     private String outputSummary;
     private Integer tokensUsed;
+    private Integer planGenerationTokensUsed;
+    private Integer summaryGenerationTokensUsed;
     private Long processingTimeMs;
     private String status;
     private String errorMessage;
@@ -40,6 +42,10 @@ public class AdminAIRequestLogResponse {
     public void setOutputSummary(String outputSummary) { this.outputSummary = outputSummary; }
     public Integer getTokensUsed() { return tokensUsed; }
     public void setTokensUsed(Integer tokensUsed) { this.tokensUsed = tokensUsed; }
+    public Integer getPlanGenerationTokensUsed() { return planGenerationTokensUsed; }
+    public void setPlanGenerationTokensUsed(Integer planGenerationTokensUsed) { this.planGenerationTokensUsed = planGenerationTokensUsed; }
+    public Integer getSummaryGenerationTokensUsed() { return summaryGenerationTokensUsed; }
+    public void setSummaryGenerationTokensUsed(Integer summaryGenerationTokensUsed) { this.summaryGenerationTokensUsed = summaryGenerationTokensUsed; }
     public Long getProcessingTimeMs() { return processingTimeMs; }
     public void setProcessingTimeMs(Long processingTimeMs) { this.processingTimeMs = processingTimeMs; }
     public String getStatus() { return status; }

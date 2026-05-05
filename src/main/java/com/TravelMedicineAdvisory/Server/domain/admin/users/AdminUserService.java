@@ -22,6 +22,7 @@ import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.AvatarUrlService;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -37,12 +38,13 @@ public class AdminUserService {
     private final TravelPlanRepository travelPlanRepository;
     private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
+    private final AvatarUrlService avatarUrlService;
 
     public AdminUserService(UserRepository userRepository, CreditRepository creditRepository,
             AdminCreditService adminCreditService, EmployeeRepository employeeRepository,
             CompanyUserRepository companyUserRepository, AbuseFlagRepository abuseFlagRepository,
             TravelPlanRepository travelPlanRepository, PasswordEncoder passwordEncoder,
-            QueueService queueService) {
+            QueueService queueService, AvatarUrlService avatarUrlService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.adminCreditService = adminCreditService;
@@ -52,6 +54,7 @@ public class AdminUserService {
         this.travelPlanRepository = travelPlanRepository;
         this.passwordEncoder = passwordEncoder;
         this.queueService = queueService;
+        this.avatarUrlService = avatarUrlService;
     }
 
     public List<AdminUserResponse> findAll() {
@@ -62,8 +65,10 @@ public class AdminUserService {
     @Transactional
     public AdminUserResponse create(Map<String, Object> body) {
         User user = new User();
-        if (body.containsKey("name"))
-            user.setName((String) body.get("name"));
+        if (body.containsKey("firstName"))
+            user.setFirstName((String) body.get("firstName"));
+        if (body.containsKey("lastName"))
+            user.setLastName((String) body.get("lastName"));
         if (body.containsKey("email"))
             user.setEmail((String) body.get("email"));
         if (body.containsKey("phone"))
@@ -89,8 +94,11 @@ public class AdminUserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (updates.containsKey("name")) {
-            user.setName((String) updates.get("name"));
+        if (updates.containsKey("firstName")) {
+            user.setFirstName((String) updates.get("firstName"));
+        }
+        if (updates.containsKey("lastName")) {
+            user.setLastName((String) updates.get("lastName"));
         }
         if (updates.containsKey("email")) {
             user.setEmail((String) updates.get("email"));
@@ -240,7 +248,7 @@ public class AdminUserService {
                 status,
                 riskFlags,
                 user.getCreatedAt(),
-                user.getAvatarUrl(),
+                avatarUrlService.toFullUrl(user.getAvatarUrl()),
                 null,
                 null);
     }

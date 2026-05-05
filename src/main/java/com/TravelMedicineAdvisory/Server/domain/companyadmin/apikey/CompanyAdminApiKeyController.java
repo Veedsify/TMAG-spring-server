@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
@@ -28,12 +29,14 @@ public class CompanyAdminApiKeyController {
     public record CreateApiKeyResponse(String fullKey, CompanyApiKeyResponse key) {}
 
     @GetMapping
+    @PreAuthorize("@perm.company(authentication, #companyId, 'api_key:list', 'authorization:read')")
     public ResponseEntity<SuccessResponse> list(@RequestParam Long companyId) {
         List<CompanyApiKeyResponse> keys = service.listByCompany(companyId);
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", keys));
     }
 
     @PostMapping
+    @PreAuthorize("@perm.company(authentication, #request.companyId(), 'api_key:create', 'authorization:create')")
     public ResponseEntity<SuccessResponse> create(@RequestBody CompanyApiKeyRequest request) {
         CreateResult result = service.create(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -42,6 +45,7 @@ public class CompanyAdminApiKeyController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.company(authentication, #companyId, 'api_key:delete', 'authorization:delete')")
     public ResponseEntity<SuccessResponse> revoke(@PathVariable Long id, @RequestParam Long companyId) {
         service.revoke(id, companyId);
         return ResponseEntity.ok(new SuccessResponse("API key revoked", null));

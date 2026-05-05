@@ -18,7 +18,9 @@ public class WebMvcConfigurer implements org.springframework.web.servlet.config.
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/storage/**")
+        registry.addResourceHandler("/storage/upload/**")
+                .addResourceLocations("file:" + storagePath + "/");
+        registry.addResourceHandler("/storage/uploads/**")
                 .addResourceLocations("file:" + storagePath + "/");
     }
 }

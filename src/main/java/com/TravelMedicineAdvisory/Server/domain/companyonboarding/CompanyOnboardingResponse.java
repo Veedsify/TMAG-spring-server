@@ -16,6 +16,9 @@ public record CompanyOnboardingResponse(
         Integer creditCount,
         String sampleRequest,
         List<TeamMemberResponse> teamMembers,
+        List<PlatformEmployeeResponse> platformEmployees,
+        String teamMembersCsvFileName,
+        String teamMembersCsvUrl,
         String txRef,
         String paymentStatus,
         BigDecimal paymentAmount,
@@ -29,8 +32,15 @@ public record CompanyOnboardingResponse(
         LocalDateTime updatedAt) {
 
     public record TeamMemberResponse(
-            String name,
+            String firstName,
+            String lastName,
             String email,
             String role) {
+    }
+
+    public record PlatformEmployeeResponse(
+            String email,
+            String firstName,
+            String lastName) {
     }
 }

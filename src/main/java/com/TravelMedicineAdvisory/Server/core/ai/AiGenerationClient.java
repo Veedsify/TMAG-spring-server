@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@SuppressWarnings("deprecation")
 public class AiGenerationClient {
 
     private final WebClient webClient;
@@ -31,22 +32,44 @@ public class AiGenerationClient {
     }
 
     public AiGenerationResult generate(String systemPrompt, String userPrompt) {
-        String provider = normalizeProvider(properties.getProvider());
+        return generate(systemPrompt, userPrompt, null, null, properties.getMaxOutputTokens());
+    }
+
+    public AiGenerationResult generate(String systemPrompt, String userPrompt, String modelOverride) {
+        return generate(systemPrompt, userPrompt, null, modelOverride, properties.getMaxOutputTokens());
+    }
+
+    public AiGenerationResult generate(String systemPrompt, String userPrompt, String providerOverride,
+            String modelOverride) {
+        return generate(systemPrompt, userPrompt, providerOverride, modelOverride, properties.getMaxOutputTokens());
+    }
+
+    public AiGenerationResult generateSummary(String systemPrompt, String userPrompt) {
+        String model = firstNonBlank(properties.getSummaryModel(), properties.getMainModel(), properties.getDefaultModel());
+        String provider = firstNonBlank(properties.getSummaryProvider(), properties.getMainProvider(), properties.getProvider());
+        return generate(systemPrompt, userPrompt, provider, model, properties.getSummaryMaxOutputTokens());
+    }
+
+    private AiGenerationResult generate(String systemPrompt, String userPrompt, String providerOverride,
+            String modelOverride, int maxOutputTokens) {
+        String provider = normalizeProvider(firstNonBlank(providerOverride, properties.getMainProvider(), properties.getProvider()));
         return switch (provider) {
-            case "openai" -> generateOpenAi(systemPrompt, userPrompt);
-            case "anthropic" -> generateAnthropic(systemPrompt, userPrompt);
-            default -> generateVertex(systemPrompt, userPrompt);
+            case "openai" -> generateOpenAi(systemPrompt, userPrompt, modelOverride, maxOutputTokens);
+            case "anthropic" -> generateAnthropic(systemPrompt, userPrompt, modelOverride, maxOutputTokens);
+            default -> generateVertex(systemPrompt, userPrompt, modelOverride, maxOutputTokens);
         };
     }
 
-    private AiGenerationResult generateVertex(String systemPrompt, String userPrompt) {
+    private AiGenerationResult generateVertex(String systemPrompt, String userPrompt, String modelOverride,
+            int maxOutputTokens) {
         String projectId = properties.getVertex().getProjectId();
         if (!StringUtils.hasText(projectId)) {
             throw new IllegalStateException("Vertex project id is required (app.ai.vertex.project-id)");
         }
 
         String location = properties.getVertex().getLocation();
-        String model = firstNonBlank(properties.getVertex().getModel(), properties.getDefaultModel(), "gemini-2.5-pro");
+        String model = firstNonBlank(modelOverride, properties.getVertex().getModel(), properties.getMainModel(),
+                properties.getDefaultModel(), "gemini-2.5-pro");
         String token = getGoogleAccessToken();
         String url = buildVertexGenerateContentUrl(projectId, location, model);
 
@@ -59,7 +82,7 @@ public class AiGenerationClient {
                                 "SYSTEM:\n" + systemPrompt + "\n\nUSER:\n" + userPrompt)))),
                         "generationConfig", Map.of(
                                 "temperature", properties.getTemperature(),
-                                "maxOutputTokens", properties.getMaxOutputTokens())))
+                                "maxOutputTokens", maxOutputTokens)))
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
                         .defaultIfEmpty("")
@@ -85,13 +108,15 @@ public class AiGenerationClient {
         return new AiGenerationResult(text, "vertex", model, tokens);
     }
 
-    private AiGenerationResult generateOpenAi(String systemPrompt, String userPrompt) {
+    private AiGenerationResult generateOpenAi(String systemPrompt, String userPrompt, String modelOverride,
+            int maxOutputTokens) {
         String apiKey = properties.getOpenai().getApiKey();
         if (!StringUtils.hasText(apiKey)) {
             throw new IllegalStateException("OpenAI API key is required (app.ai.openai.api-key)");
         }
 
-        String model = firstNonBlank(properties.getOpenai().getModel(), properties.getDefaultModel(), "gpt-4.1");
+        String model = firstNonBlank(modelOverride, properties.getOpenai().getModel(), properties.getMainModel(),
+                properties.getDefaultModel(), "gpt-4.1");
         String baseUrl = firstNonBlank(properties.getOpenai().getBaseUrl(), "https://api.openai.com/v1");
 
         JsonNode response = webClient.post()
@@ -102,7 +127,7 @@ public class AiGenerationClient {
                         "model", model,
                         "temperature", properties.getTemperature(),
                         "reasoning", Map.of("effort", "high"),
-                        "max_tokens", properties.getMaxOutputTokens(),
+                        "max_tokens", maxOutputTokens,
                         "instructions", systemPrompt,
                         "messages", List.of(
                                 Map.of("role", "platform", "content", systemPrompt),
@@ -118,13 +143,15 @@ public class AiGenerationClient {
         return new AiGenerationResult(text, "openai", model, tokens);
     }
 
-    private AiGenerationResult generateAnthropic(String systemPrompt, String userPrompt) {
+    private AiGenerationResult generateAnthropic(String systemPrompt, String userPrompt, String modelOverride,
+            int maxOutputTokens) {
         String apiKey = properties.getAnthropic().getApiKey();
         if (!StringUtils.hasText(apiKey)) {
             throw new IllegalStateException("Anthropic API key is required (app.ai.anthropic.api-key)");
         }
 
-        String model = firstNonBlank(properties.getAnthropic().getModel(), properties.getDefaultModel(),
+        String model = firstNonBlank(modelOverride, properties.getAnthropic().getModel(), properties.getMainModel(),
+                properties.getDefaultModel(),
                 "claude-sonnet-4-0");
         String baseUrl = firstNonBlank(properties.getAnthropic().getBaseUrl(), "https://api.anthropic.com/v1");
 
@@ -136,7 +163,7 @@ public class AiGenerationClient {
                 .bodyValue(Map.of(
                         "model", model,
                         "system", systemPrompt,
-                        "max_tokens", properties.getMaxOutputTokens(),
+                        "max_tokens", maxOutputTokens,
                         "temperature", properties.getTemperature(),
                         "messages", List.of(Map.of("role", "user", "content", userPrompt))))
                 .retrieve()

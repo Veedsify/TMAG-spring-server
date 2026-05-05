@@ -324,7 +324,7 @@ public class CompanyAdminManagementService {
 
     private String resolvePlanCode(Company company) {
         if (company.getCreditPlan() != null && company.getCreditPlan().getCode() != null) {
-            return company.getCreditPlan().getCode().name();
+            return company.getCreditPlan().getCode();
         }
         return company.getPlan();
     }

@@ -8,8 +8,12 @@ public record DoctorProfileResponse(
     String lastName,
     String email,
     String phone,
+    String avatarUrl,
+    String profilePictureOption,
+    String bio,
     String medicalLicenseNumber,
     String signatureUrl,
+    String stampUrl,
     String doctorApplicationStatus,
     LocalDateTime applicationSubmittedAt
 ) {}
