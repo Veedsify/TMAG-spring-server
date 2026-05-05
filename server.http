@@ -1,15 +1,13 @@
 ### GET request to example server
 
 ###
-POST http://localhost:8080/api/auth/register
+POST http://localhost:8080/api/v1/auth/register
 Content-Type: application/json
-X-Api-Key: 26aeb674-1ae8-11f1-b69e-2b73bbf41615
 
 {
-    "username": "dikewisdom",
+    "username": "dikewisdom2",
     "password": "password",
-    "first_name": "Dike Wisdom",
+    "first_name": "Dike Thomas",
     "last_name": "User",
-    "phone": "08099997777",
-    "email": "dikewisdom787@gmail.com"
+    "email": "dikewisdom770@gmail.com"
 }
