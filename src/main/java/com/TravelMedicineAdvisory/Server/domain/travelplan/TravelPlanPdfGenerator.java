@@ -1331,7 +1331,7 @@ public class TravelPlanPdfGenerator {
         // Stamp as watermark behind content
         if (hasStamp) {
             sb.append("<div style='position:absolute;top:12px;right:12px;opacity:0.2;'>");
-            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getStampUrl()))
+            sb.append("<img src='").append(escapeHtmlAttribute(resolveImageSrc(doctorSettings.getStampUrl())))
                     .append("' style='max-height:220px;max-width:200px;' alt='Official Stamp'/>");
             sb.append("</div>");
         }
@@ -1372,7 +1372,7 @@ public class TravelPlanPdfGenerator {
         if (hasSignature) {
             sb.append("<table style='width:100%;margin-top:16px;border-collapse:collapse;'>");
             sb.append("<tr><td style='text-align:center;padding:5px;'>");
-            sb.append("<img src='").append(resolveImageSrc(doctorSettings.getSignatureUrl()))
+            sb.append("<img src='").append(escapeHtmlAttribute(resolveImageSrc(doctorSettings.getSignatureUrl())))
                     .append("' style='height:250px;width:250px;' alt='Doctor Signature'/>");
             sb.append("<p style='margin-top:4px;font-size:8pt;color:").append(MUTED).append(";'>Digital Signature</p>");
             sb.append("</td></tr>");
@@ -1417,5 +1417,9 @@ public class TravelPlanPdfGenerator {
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;");
+    }
+
+    private static String escapeHtmlAttribute(String str) {
+        return escapeHtml(str).replace("'", "&#39;");
     }
 }
