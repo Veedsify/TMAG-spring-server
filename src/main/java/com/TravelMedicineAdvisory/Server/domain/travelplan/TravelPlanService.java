@@ -22,6 +22,8 @@ import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMember;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
@@ -98,6 +100,16 @@ public class TravelPlanService {
         if (!canAccessPlan(entity, currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this travel plan");
         }
+        GeneratedPlanPayload generated = generatedPlanRepository.findByTravelPlanId(id)
+                .map(this::toGeneratedPayload)
+                .orElse(null);
+        return toResponse(entity, generated);
+    }
+
+    @Transactional(readOnly = true)
+    public TravelPlanResponse findByIdInternal(Long id) {
+        TravelPlan entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
         GeneratedPlanPayload generated = generatedPlanRepository.findByTravelPlanId(id)
                 .map(this::toGeneratedPayload)
                 .orElse(null);
@@ -248,6 +260,30 @@ public class TravelPlanService {
         planGenerationService.enqueueGeneration(saved.getId(), user.getId());
 
         return toResponse(saved);
+    }
+
+    @Transactional
+    public TravelPlan createForFamilyMember(FamilyTripMember member, FamilyTrip trip) {
+        TravelPlan plan = new TravelPlan();
+        plan.setUser(trip.getUser());
+        plan.setDestination(trip.getDestination());
+        plan.setCountry(trip.getCountry());
+        plan.setDuration(trip.getDuration());
+        plan.setPurpose(trip.getPurpose());
+        plan.setTripType(trip.getTripType());
+        plan.setTripDetailsJson(trip.getTripDetailsJson());
+        plan.setStatus("QUEUED");
+        plan.setFamilyTrip(trip);
+        plan.setFamilyTripMember(member);
+        plan.setTravellerDisplayName(member.getFirstName() + " " + member.getLastName());
+        plan.setTravellerRelationship(member.getRelationship().name());
+        
+        String tier = resolvePlanTier(trip.getUser());
+        plan.setPlanTier(PlanTier.valueOf(tier));
+        plan.setDoctorValidationStatus(
+                tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+
+        return repository.save(plan);
     }
 
     private void persistQuestionnaireResponses(TravelPlanRequest request, TravelPlan travelPlan) {

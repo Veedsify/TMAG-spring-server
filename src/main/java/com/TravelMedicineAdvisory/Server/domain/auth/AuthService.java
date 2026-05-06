@@ -139,10 +139,11 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setOnboardingStage(0);
-        user.setOnboarded(false);
+        boolean isFamilySignup = request.getPlanCode() != null && request.getPlanCode().startsWith("FAMILY");
+        user.setOnboardingStage(isFamilySignup ? 99 : 0);
+        user.setOnboarded(isFamilySignup);
         user.setVerified(false);
-        user.setType("INDIVIDUAL");
+        user.setType(isFamilySignup ? "FAMILY" : "INDIVIDUAL");
         user.setCredits(1);
         user.setCreditPlan(userCreditPlan.get());
         user.setBillingCurrency(

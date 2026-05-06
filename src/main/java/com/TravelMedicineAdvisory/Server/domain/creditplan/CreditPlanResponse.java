@@ -12,11 +12,15 @@ public record CreditPlanResponse(
         String description,
         Boolean isDefault,
         Boolean isCompanyPlan,
+        Boolean isFamilyPlan,
         String signupRangeLabel,
         String serviceLevel,
         String visibility,
         Long assignedCompanyId,
         Integer planCount,
+        Integer includedFamilyMembers,
+        BigDecimal additionalMemberPriceUsd,
+        BigDecimal additionalMemberPriceNgn,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -30,11 +34,15 @@ public record CreditPlanResponse(
                 entity.getDescription(),
                 entity.getIsDefault(),
                 entity.getIsCompanyPlan(),
+                entity.getIsFamilyPlan(),
                 entity.getSignupRangeLabel(),
                 entity.getServiceLevel(),
                 entity.getVisibility(),
                 entity.getAssignedCompanyId(),
                 entity.getPlanCount(),
+                entity.getIncludedFamilyMembers(),
+                entity.getAdditionalMemberPriceUsd(),
+                entity.getAdditionalMemberPriceNgn(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

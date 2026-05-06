@@ -626,6 +626,25 @@ public class EmailTemplates {
                 .replace("\"", "&quot;");
     }
 
+    /** Family member invite — access code */
+    public String familyMemberInviteEmail(String memberFirstName, String leadName, String destination,
+                                           String loginCode, String tripId) {
+        String loginUrl = frontendUrl + "/auth/family/login?trip=" + tripId;
+        String content =
+                badge("Family Travel Plan") +
+                heading("You've been added to a family trip") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(memberFirstName) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\"><strong style=\"" + STRONG_STYLE + "\">" + esc(leadName) + "</strong> has included you in a family travel health plan for <strong style=\"" + STRONG_STYLE + "\">" + esc(destination) + "</strong>. " +
+                "Use the access code below to log in and complete your personal health questionnaire.</p>" +
+                verificationCode(loginCode) +
+                tealButton("Complete My Questionnaire", loginUrl) +
+                divider() +
+                fine("Your access code is private to you. Adults fill their own questionnaire — your lead applicant cannot view your personal health information. " +
+                     "If you were not expecting this invitation, you can safely ignore this email.");
+
+        return wrap("You've been added to a TMAG family trip", content);
+    }
+
     // ─── Ebook delivery email ─────────────────────────────────────────────────
 
     public String ebookDeliveryEmail(String buyerName, String ebookTitle, String versionLabel,

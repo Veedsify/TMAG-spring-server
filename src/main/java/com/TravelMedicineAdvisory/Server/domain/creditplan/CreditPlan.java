@@ -34,6 +34,9 @@ public class CreditPlan extends BaseEntity {
     @Column(name = "is_company_plan", nullable = false)
     private Boolean isCompanyPlan = false;
 
+    @Column(name = "is_family_plan", nullable = false)
+    private Boolean isFamilyPlan = false;
+
     @Column(name = "signup_range_label", length = 20)
     private String signupRangeLabel;
 
@@ -48,6 +51,15 @@ public class CreditPlan extends BaseEntity {
 
     @Column(name = "plan_count")
     private Integer planCount;
+
+    @Column(name = "included_family_members")
+    private Integer includedFamilyMembers;
+
+    @Column(name = "additional_member_price_usd", precision = 10, scale = 2)
+    private BigDecimal additionalMemberPriceUsd;
+
+    @Column(name = "additional_member_price_ngn", precision = 12, scale = 2)
+    private BigDecimal additionalMemberPriceNgn;
 
     public String getCode() {
         return code;
@@ -120,6 +132,14 @@ public class CreditPlan extends BaseEntity {
         this.isCompanyPlan = isCompanyPlan;
     }
 
+    public Boolean getIsFamilyPlan() {
+        return isFamilyPlan;
+    }
+
+    public void setIsFamilyPlan(Boolean isFamilyPlan) {
+        this.isFamilyPlan = isFamilyPlan;
+    }
+
     public String getSignupRangeLabel() {
         return signupRangeLabel;
     }
@@ -158,5 +178,29 @@ public class CreditPlan extends BaseEntity {
 
     public void setPlanCount(Integer planCount) {
         this.planCount = planCount;
+    }
+
+    public Integer getIncludedFamilyMembers() {
+        return includedFamilyMembers;
+    }
+
+    public void setIncludedFamilyMembers(Integer includedFamilyMembers) {
+        this.includedFamilyMembers = includedFamilyMembers;
+    }
+
+    public BigDecimal getAdditionalMemberPriceUsd() {
+        return additionalMemberPriceUsd;
+    }
+
+    public void setAdditionalMemberPriceUsd(BigDecimal additionalMemberPriceUsd) {
+        this.additionalMemberPriceUsd = additionalMemberPriceUsd;
+    }
+
+    public BigDecimal getAdditionalMemberPriceNgn() {
+        return additionalMemberPriceNgn;
+    }
+
+    public void setAdditionalMemberPriceNgn(BigDecimal additionalMemberPriceNgn) {
+        this.additionalMemberPriceNgn = additionalMemberPriceNgn;
     }
 }
