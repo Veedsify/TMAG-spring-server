@@ -1,5 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.familytrip;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -42,12 +44,11 @@ public class FamilyPackagePurchaseController {
     }
 
     @PostMapping("/checkout")
-    // @PreAuthorize("@perm.has(authentication, 'family:create')")
     public ResponseEntity<SuccessResponse> initiateCheckout(
             @AuthenticationPrincipal AppUserDetails userDetails,
             @Valid @RequestBody FamilyPackageCheckoutRequest request) {
         try {
-            Long userId = userDetails.getUserId();
+            Long userId = userDetails != null ? userDetails.getUserId() : null;
             var result = service.initiateCheckout(userId, request);
             Map<String, Object> data = Map.of(
                     "success", true,
@@ -96,7 +97,7 @@ public class FamilyPackagePurchaseController {
                         + "&tx_ref=" + tx_ref
                         + "&packageType=" + result.packageType()
                         + "&tripsAllowed=" + result.tripsAllowed()
-                        + "&amount=" + displayAmount
+                        + "&amount=" + URLEncoder.encode(displayAmount, StandardCharsets.UTF_8)
                         + "&status=" + result.status()
                 );
             } else {

@@ -51,16 +51,11 @@ public class CreditPlanSeeder implements CommandLineRunner {
                         "Everything in Standard plus a Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter.",
                         false, false, null, null),
 
-                // Standalone family plans
-                createFamilyPlan(CreditPlanCode.FAMILY_ONE_TRIP, "One Family Plan",
+                // Standalone family plan
+                createFamilyPlan(CreditPlanCode.FAMILY_STANDARD, "Family Plan",
                         new BigDecimal("180.00"), new BigDecimal("180000.00"),
-                        "One standalone family travel health plan for up to 6 family members. Additional family members are billed separately.",
+                        "One family travel health plan for up to 6 family members. Additional family members are billed separately.",
                         1),
-
-                createFamilyPlan(CreditPlanCode.FAMILY_TWO_TRIP, "Two Family Plans",
-                        new BigDecimal("360.00"), new BigDecimal("360000.00"),
-                        "Two standalone family travel health plans. Each plan includes up to 6 family members; additional family members are billed separately.",
-                        2),
 
                 // Enterprise company plans — 0-100 signups
                 createPlan(CreditPlanCode.ENTERPRISE_SILVER, "Enterprise Silver",

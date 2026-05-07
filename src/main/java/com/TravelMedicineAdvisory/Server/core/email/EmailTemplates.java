@@ -533,6 +533,21 @@ public class EmailTemplates {
         return wrap("Welcome to TMAG updates", content);
     }
 
+    public String familyPlanWelcomeEmail(String firstName, String setupLink) {
+        String content = badge("Family Plan")
+                + heading("Welcome to your TMAG Family Plan")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Your TMAG Family Plan is ready. You can use it to create personalised travel medicine advisories for your household before upcoming trips.</p>"
+                + infoBox("Your plan includes one family trip advisory with guidance tailored to each traveller's itinerary, health profile, vaccines, medicines, and destination risks.")
+                + "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Set your password to finish activating your account and start adding your family trip details.</p>"
+                + tealButton("Set Your Password", setupLink)
+                + copyLink(setupLink)
+                + divider()
+                + fine("This setup link expires in <strong>15 minutes</strong>. If it expires, use forgot password to request a new one.");
+
+        return wrap("Welcome to your TMAG Family Plan", content);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

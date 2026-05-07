@@ -8,7 +8,10 @@ import jakarta.validation.constraints.NotNull;
 public record FamilyPackageCheckoutRequest(
         @NotNull(message = "Package type is required")
         FamilyPackageType packageType,
-        BillingCurrency currency
+        BillingCurrency currency,
+        String name,
+        String email,
+        String phone
         ) {
 
 }

@@ -24,96 +24,204 @@ import jakarta.persistence.Table;
 @SQLDelete(sql = "UPDATE family_package_purchases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 public class FamilyPackagePurchase extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = true)
+  private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "package_type", nullable = false)
-    private FamilyPackageType packageType;
+  @Column(name = "guest_email")
+  private String guestEmail;
 
-    @Column(name = "trips_allowed", nullable = false)
-    private Integer tripsAllowed;
+  @Column(name = "guest_name")
+  private String guestName;
 
-    @Column(name = "trips_used", nullable = false)
-    private Integer tripsUsed = 0;
+  @Column(name = "guest_phone")
+  private String guestPhone;
 
-    @Column(name = "amount_paid_minor", nullable = false)
-    private Long amountPaidMinor;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "package_type", nullable = false)
+  private FamilyPackageType packageType;
 
-    @Column(nullable = false)
-    private String currency;
+  @Column(name = "trips_allowed", nullable = false)
+  private Integer tripsAllowed;
 
-    @Column(name = "payment_provider")
-    private String paymentProvider;
+  @Column(name = "trips_used", nullable = false)
+  private Integer tripsUsed = 0;
 
-    @Column(name = "payment_reference")
-    private String paymentReference;
+  @Column(name = "amount_paid_minor", nullable = false)
+  private Long amountPaidMinor;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private FamilyPackagePurchaseStatus status;
+  @Column(nullable = false)
+  private String currency;
 
-    @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
+  @Column(name = "payment_provider")
+  private String paymentProvider;
 
-    @Column(name = "tx_ref", nullable = false, unique = true)
-    private String txRef;
+  @Column(name = "payment_reference")
+  private String paymentReference;
 
-    @Column(name = "flw_ref")
-    private String flwRef;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private FamilyPackagePurchaseStatus status;
 
-    @Column(name = "flutterwave_status")
-    private String flutterwaveStatus;
+  @Column(name = "expires_at")
+  private LocalDateTime expiresAt;
 
-    @Column(name = "failed_reason")
-    private String failedReason;
+  @Column(name = "tx_ref", nullable = false, unique = true)
+  private String txRef;
 
-    @Column(name = "paid_at")
-    private LocalDateTime paidAt;
+  @Column(name = "flw_ref")
+  private String flwRef;
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+  @Column(name = "flutterwave_status")
+  private String flutterwaveStatus;
 
-    public FamilyPackageType getPackageType() { return packageType; }
-    public void setPackageType(FamilyPackageType packageType) { this.packageType = packageType; }
+  @Column(name = "failed_reason")
+  private String failedReason;
 
-    public Integer getTripsAllowed() { return tripsAllowed; }
-    public void setTripsAllowed(Integer tripsAllowed) { this.tripsAllowed = tripsAllowed; }
+  @Column(name = "paid_at")
+  private LocalDateTime paidAt;
 
-    public Integer getTripsUsed() { return tripsUsed; }
-    public void setTripsUsed(Integer tripsUsed) { this.tripsUsed = tripsUsed; }
+  public User getUser() {
+    return user;
+  }
 
-    public Long getAmountPaidMinor() { return amountPaidMinor; }
-    public void setAmountPaidMinor(Long amountPaidMinor) { this.amountPaidMinor = amountPaidMinor; }
+  public void setUser(User user) {
+    this.user = user;
+  }
 
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
+  public String getGuestEmail() {
+    return guestEmail;
+  }
 
-    public String getPaymentProvider() { return paymentProvider; }
-    public void setPaymentProvider(String paymentProvider) { this.paymentProvider = paymentProvider; }
+  public void setGuestEmail(String guestEmail) {
+    this.guestEmail = guestEmail;
+  }
 
-    public String getPaymentReference() { return paymentReference; }
-    public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
+  public String getGuestName() {
+    return guestName;
+  }
 
-    public FamilyPackagePurchaseStatus getStatus() { return status; }
-    public void setStatus(FamilyPackagePurchaseStatus status) { this.status = status; }
+  public void setGuestName(String guestName) {
+    this.guestName = guestName;
+  }
 
-    public LocalDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
+  public String getGuestPhone() {
+    return guestPhone;
+  }
 
-    public String getTxRef() { return txRef; }
-    public void setTxRef(String txRef) { this.txRef = txRef; }
+  public void setGuestPhone(String guestPhone) {
+    this.guestPhone = guestPhone;
+  }
 
-    public String getFlwRef() { return flwRef; }
-    public void setFlwRef(String flwRef) { this.flwRef = flwRef; }
+  public FamilyPackageType getPackageType() {
+    return packageType;
+  }
 
-    public String getFlutterwaveStatus() { return flutterwaveStatus; }
-    public void setFlutterwaveStatus(String flutterwaveStatus) { this.flutterwaveStatus = flutterwaveStatus; }
+  public void setPackageType(FamilyPackageType packageType) {
+    this.packageType = packageType;
+  }
 
-    public String getFailedReason() { return failedReason; }
-    public void setFailedReason(String failedReason) { this.failedReason = failedReason; }
+  public Integer getTripsAllowed() {
+    return tripsAllowed;
+  }
 
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+  public void setTripsAllowed(Integer tripsAllowed) {
+    this.tripsAllowed = tripsAllowed;
+  }
+
+  public Integer getTripsUsed() {
+    return tripsUsed;
+  }
+
+  public void setTripsUsed(Integer tripsUsed) {
+    this.tripsUsed = tripsUsed;
+  }
+
+  public Long getAmountPaidMinor() {
+    return amountPaidMinor;
+  }
+
+  public void setAmountPaidMinor(Long amountPaidMinor) {
+    this.amountPaidMinor = amountPaidMinor;
+  }
+
+  public String getCurrency() {
+    return currency;
+  }
+
+  public void setCurrency(String currency) {
+    this.currency = currency;
+  }
+
+  public String getPaymentProvider() {
+    return paymentProvider;
+  }
+
+  public void setPaymentProvider(String paymentProvider) {
+    this.paymentProvider = paymentProvider;
+  }
+
+  public String getPaymentReference() {
+    return paymentReference;
+  }
+
+  public void setPaymentReference(String paymentReference) {
+    this.paymentReference = paymentReference;
+  }
+
+  public FamilyPackagePurchaseStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(FamilyPackagePurchaseStatus status) {
+    this.status = status;
+  }
+
+  public LocalDateTime getExpiresAt() {
+    return expiresAt;
+  }
+
+  public void setExpiresAt(LocalDateTime expiresAt) {
+    this.expiresAt = expiresAt;
+  }
+
+  public String getTxRef() {
+    return txRef;
+  }
+
+  public void setTxRef(String txRef) {
+    this.txRef = txRef;
+  }
+
+  public String getFlwRef() {
+    return flwRef;
+  }
+
+  public void setFlwRef(String flwRef) {
+    this.flwRef = flwRef;
+  }
+
+  public String getFlutterwaveStatus() {
+    return flutterwaveStatus;
+  }
+
+  public void setFlutterwaveStatus(String flutterwaveStatus) {
+    this.flutterwaveStatus = flutterwaveStatus;
+  }
+
+  public String getFailedReason() {
+    return failedReason;
+  }
+
+  public void setFailedReason(String failedReason) {
+    this.failedReason = failedReason;
+  }
+
+  public LocalDateTime getPaidAt() {
+    return paidAt;
+  }
+
+  public void setPaidAt(LocalDateTime paidAt) {
+    this.paidAt = paidAt;
+  }
 }
