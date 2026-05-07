@@ -63,9 +63,13 @@ public class FamilyTripService {
         User user = userRepository.findById(userId).orElseThrow();
         LocalDate departureDate = extractDepartureDate(request.tripDetailsJson());
         
-        PricingResult pricing = calculatePricing(request.members(), departureDate, user.getBillingCurrency());
+        FamilyPackagePurchase activePurchase = findActiveAllowance(userId);
+        int purchaseIncludedMembers = activePurchase != null ? activePurchase.getTotalMembers() : 6;
+        PricingResult pricing = calculatePricing(request.members(), departureDate, user.getBillingCurrency(), purchaseIncludedMembers);
         
-        ActivePackageAllowanceDto allowance = getActiveAllowance(userId);
+        ActivePackageAllowanceDto allowance = activePurchase != null
+            ? new ActivePackageAllowanceDto(activePurchase.getPackageType().name(), activePurchase.getTripsAllowed() - activePurchase.getTripsUsed())
+            : null;
         
         boolean paymentRequired = false;
         List<PaymentBreakdownItem> breakdown = new ArrayList<>();
@@ -114,7 +118,9 @@ public class FamilyTripService {
         trip.setTripDetailsJson(request.tripDetailsJson());
         
         LocalDate departureDate = extractDepartureDate(request.tripDetailsJson());
-        PricingResult pricing = calculatePricing(request.members(), departureDate, user.getBillingCurrency());
+        FamilyPackagePurchase activePurchase = findActiveAllowance(userId);
+        int purchaseIncludedMembers = activePurchase != null ? activePurchase.getTotalMembers() : 6;
+        PricingResult pricing = calculatePricing(request.members(), departureDate, user.getBillingCurrency(), purchaseIncludedMembers);
         trip.setBaseFiatCost(pricing.baseFiatCost);
         trip.setExtraFiatCost(pricing.extraFiatCost);
         trip.setTotalFiatCost(pricing.totalFiatCost);
@@ -175,7 +181,9 @@ public class FamilyTripService {
         trip.setTripDetailsJson(request.tripDetailsJson());
 
         LocalDate departureDate = extractDepartureDate(request.tripDetailsJson());
-        PricingResult pricing = calculatePricing(request.members(), departureDate, trip.getUser().getBillingCurrency());
+        FamilyPackagePurchase activePurchase = findActiveAllowance(userId);
+        int purchaseIncludedMembers = activePurchase != null ? activePurchase.getTotalMembers() : 6;
+        PricingResult pricing = calculatePricing(request.members(), departureDate, trip.getUser().getBillingCurrency(), purchaseIncludedMembers);
         trip.setBaseFiatCost(pricing.baseFiatCost);
         trip.setExtraFiatCost(pricing.extraFiatCost);
         trip.setTotalFiatCost(pricing.totalFiatCost);
@@ -281,19 +289,28 @@ public class FamilyTripService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only 1 spouse allowed");
         }
         
-        // Determine included vs extra fiat costs
-        long extraFiatCost = trip.getExtraFiatCost();
-        
         // Handle allowance
         FamilyPackagePurchase allowance = findActiveAllowance(userId);
         if (allowance == null) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "No active family package allowance. Please purchase a Family Package.");
         }
         
+        // Recalculate extra cost based on what the purchase actually covers
+        int memberCount = members.size();
+        int coveredByPurchase = allowance.getTotalMembers();
+        int additionalMembers = Math.max(0, memberCount - coveredByPurchase);
+        long extraFiatCost = 0L;
+        if (additionalMembers > 0) {
+            String currency = allowance.getCurrency();
+            if ("USD".equalsIgnoreCase(currency)) {
+                extraFiatCost = additionalMembers * (30 * 100L);
+            } else {
+                extraFiatCost = additionalMembers * (25000 * 100L);
+            }
+        }
+        
         if (extraFiatCost > 0) {
-            // Note: Since this requires fiat payment, the system should redirect to a checkout page 
-            // if there's an extra cost. For now, we block submission if there's an unpaid fiat amount.
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Additional payment required for extra members. Please complete checkout.");
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Additional payment required for extra members beyond your plan. Please complete checkout.");
         }
         
         allowance.setTripsUsed(allowance.getTripsUsed() + 1);
@@ -327,6 +344,13 @@ public class FamilyTripService {
         return toResponse(trip);
     }
     
+    public List<FamilyTripResponse> getUserTrips(Long userId) {
+        return familyTripRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
+            .stream()
+            .map(this::toResponse)
+            .toList();
+    }
+
     public FamilyTripResponse getById(Long id, Long userId) {
         FamilyTrip trip = familyTripRepository.findById(id).orElseThrow();
         if (!trip.getUser().getId().equals(userId)) {
@@ -343,12 +367,12 @@ public class FamilyTripService {
         familyTripRepository.delete(trip);
     }
 
-    private PricingResult calculatePricing(List<FamilyTripMemberRequest> members, LocalDate departureDate, com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency billingCurrency) {
+    private PricingResult calculatePricing(List<FamilyTripMemberRequest> members, LocalDate departureDate, com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency billingCurrency, int baseMemberCount) {
         if (members == null) members = new ArrayList<>();
 
         int memberCount = members.size();
-        int includedMembers = Math.min(6, memberCount);
-        int additionalMembers = Math.max(0, memberCount - 6);
+        int includedMembers = Math.min(baseMemberCount, memberCount);
+        int additionalMembers = Math.max(0, memberCount - baseMemberCount);
         
         long baseFiatCost = 0L;
         long extraFiatCost = 0L;
@@ -368,10 +392,7 @@ public class FamilyTripService {
     }
 
     private FamilyPackagePurchase findActiveAllowance(Long userId) {
-        // simplified query logic
-        return purchaseRepository.findAll().stream()
-            .filter(p -> p.getUser().getId().equals(userId) && p.getStatus() == FamilyPackagePurchaseStatus.ACTIVE)
-            .findFirst().orElse(null);
+        return purchaseRepository.findAvailableByUserId(userId).orElse(null);
     }
     
     private ActivePackageAllowanceDto getActiveAllowance(Long userId) {

@@ -34,6 +34,12 @@ public class FamilyTripController {
         this.travelPlanRepository = travelPlanRepository;
     }
 
+    @GetMapping
+    public ResponseEntity<SuccessResponse> getUserTrips(@AuthenticationPrincipal AppUserDetails user) {
+        var trips = familyTripService.getUserTrips(user.getUserId());
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", trips));
+    }
+
     @PostMapping("/preview")
     public ResponseEntity<SuccessResponse> preview(@RequestBody FamilyTripRequest request, @AuthenticationPrincipal AppUserDetails user) {
         return ResponseEntity.ok(new SuccessResponse("Preview generated", familyTripService.preview(request, user.getUserId())));

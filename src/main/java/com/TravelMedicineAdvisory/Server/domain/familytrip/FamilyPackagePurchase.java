@@ -47,6 +47,12 @@ public class FamilyPackagePurchase extends BaseEntity {
   @Column(name = "trips_used", nullable = false)
   private Integer tripsUsed = 0;
 
+  @Column(name = "additional_members", nullable = false)
+  private Integer additionalMembers = 0;
+
+  @Column(name = "total_members", nullable = false)
+  private Integer totalMembers = 6;
+
   @Column(name = "amount_paid_minor", nullable = false)
   private Long amountPaidMinor;
 
@@ -135,6 +141,22 @@ public class FamilyPackagePurchase extends BaseEntity {
 
   public void setTripsUsed(Integer tripsUsed) {
     this.tripsUsed = tripsUsed;
+  }
+
+  public Integer getAdditionalMembers() {
+    return additionalMembers;
+  }
+
+  public void setAdditionalMembers(Integer additionalMembers) {
+    this.additionalMembers = additionalMembers;
+  }
+
+  public Integer getTotalMembers() {
+    return totalMembers;
+  }
+
+  public void setTotalMembers(Integer totalMembers) {
+    this.totalMembers = totalMembers;
   }
 
   public Long getAmountPaidMinor() {

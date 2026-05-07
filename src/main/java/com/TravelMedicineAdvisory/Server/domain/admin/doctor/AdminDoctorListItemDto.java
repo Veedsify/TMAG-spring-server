@@ -9,6 +9,8 @@ public record AdminDoctorListItemDto(
         String licenseNumber,
         String specialization,
         String profilePictureUrl,
+        String practicingLicenseUrl,
+        String travelMedicineCertificateUrl,
         String bio,
         long validatedPlansCount,
         String createdAt) {

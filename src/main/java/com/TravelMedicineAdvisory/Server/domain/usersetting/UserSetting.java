@@ -30,6 +30,12 @@ public class UserSetting extends BaseEntity {
     @Column(name = "stamp_url")
     private String stampUrl;
 
+    @Column(name = "practicing_license_url", length = 1024)
+    private String practicingLicenseUrl;
+
+    @Column(name = "travel_medicine_certificate_url", length = 1024)
+    private String travelMedicineCertificateUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "doctor_application_status")
     private DoctorApplicationStatus doctorApplicationStatus = DoctorApplicationStatus.NONE;
@@ -76,6 +82,22 @@ public class UserSetting extends BaseEntity {
 
     public void setStampUrl(String stampUrl) {
         this.stampUrl = stampUrl;
+    }
+
+    public String getPracticingLicenseUrl() {
+        return practicingLicenseUrl;
+    }
+
+    public void setPracticingLicenseUrl(String practicingLicenseUrl) {
+        this.practicingLicenseUrl = practicingLicenseUrl;
+    }
+
+    public String getTravelMedicineCertificateUrl() {
+        return travelMedicineCertificateUrl;
+    }
+
+    public void setTravelMedicineCertificateUrl(String travelMedicineCertificateUrl) {
+        this.travelMedicineCertificateUrl = travelMedicineCertificateUrl;
     }
 
     public DoctorApplicationStatus getDoctorApplicationStatus() {

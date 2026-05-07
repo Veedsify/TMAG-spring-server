@@ -27,6 +27,9 @@ import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyPackageCheckoutRequest;
 import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyPackagePurchaseResponse;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -36,8 +39,11 @@ public class FamilyPackagePurchaseService {
 
     private static final Logger logger = LoggerFactory.getLogger(FamilyPackagePurchaseService.class);
 
-    private static final BigDecimal STANDARD_PRICE_USD = new BigDecimal("180"); // $180.00 in cents
-    private static final BigDecimal STANDARD_PRICE_NGN = new BigDecimal("180000"); // ₦180,000 in kobo
+    private static final BigDecimal STANDARD_PRICE_USD = new BigDecimal("180"); // $180.00 base price (up to 6 members)
+    private static final BigDecimal STANDARD_PRICE_NGN = new BigDecimal("180000"); // ₦180,000 base price
+    private static final BigDecimal ADDITIONAL_MEMBER_PRICE_USD = new BigDecimal("30"); // $30 per extra member
+    private static final BigDecimal ADDITIONAL_MEMBER_PRICE_NGN = new BigDecimal("25000"); // ₦25,000 per extra member
+    private static final int BASE_INCLUDED_MEMBERS = 6;
 
     private final FamilyPackagePurchaseRepository purchaseRepository;
     private final UserRepository userRepository;
@@ -45,6 +51,7 @@ public class FamilyPackagePurchaseService {
     private final CallbackRegistry callbackRegistry;
     private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
+    private final RoleRepository roleRepo;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -55,12 +62,14 @@ public class FamilyPackagePurchaseService {
             FlutterwaveService flutterwaveService,
             CallbackRegistry callbackRegistry,
             PasswordEncoder passwordEncoder,
+            RoleRepository roleRepo,
             QueueService queueService) {
         this.purchaseRepository = purchaseRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
         this.callbackRegistry = callbackRegistry;
         this.passwordEncoder = passwordEncoder;
+        this.roleRepo = roleRepo;
         this.queueService = queueService;
     }
 
@@ -72,7 +81,9 @@ public class FamilyPackagePurchaseService {
             BigDecimal amountMinor,
             String currency,
             String currencySymbol,
-            Long purchaseId) {
+            Long purchaseId,
+            Integer additionalMembers,
+            Integer totalMembers) {
 
     }
 
@@ -99,16 +110,25 @@ public class FamilyPackagePurchaseService {
 
         FamilyPackageType packageType = request.packageType();
         int tripsAllowed = 1;
+        int additionalMembers = Math.max(0, request.additionalMembers());
 
-        BillingCurrency currency = request.currency() != null ? request.currency() : BillingCurrency.USD;
-        BigDecimal priceMinor;
+        BillingCurrency currency = request.currency() != null ? request.currency() :
+                (user != null && user.getBillingCurrency() != null ? user.getBillingCurrency() : BillingCurrency.USD);
+        BigDecimal basePriceMinor;
+        BigDecimal additionalMemberPriceMinor;
         String currencySymbol = currency == BillingCurrency.NGN ? "₦" : "$";
 
         if (currency == BillingCurrency.NGN) {
-            priceMinor = STANDARD_PRICE_NGN;
+            basePriceMinor = STANDARD_PRICE_NGN;
+            additionalMemberPriceMinor = ADDITIONAL_MEMBER_PRICE_NGN;
         } else {
-            priceMinor = STANDARD_PRICE_USD;
+            basePriceMinor = STANDARD_PRICE_USD;
+            additionalMemberPriceMinor = ADDITIONAL_MEMBER_PRICE_USD;
         }
+
+        BigDecimal extraCost = additionalMemberPriceMinor.multiply(BigDecimal.valueOf(additionalMembers));
+        BigDecimal priceMinor = basePriceMinor.add(extraCost);
+        int totalMembers = BASE_INCLUDED_MEMBERS + additionalMembers;
 
         String txRef = "TMAG_FAMILY_" + java.util.UUID.randomUUID().toString();
 
@@ -117,6 +137,8 @@ public class FamilyPackagePurchaseService {
         purchase.setPackageType(packageType);
         purchase.setTripsAllowed(tripsAllowed);
         purchase.setTripsUsed(0);
+        purchase.setAdditionalMembers(additionalMembers);
+        purchase.setTotalMembers(totalMembers);
         purchase.setAmountPaidMinor(priceMinor.longValue());
         purchase.setCurrency(currency.name());
         purchase.setStatus(FamilyPackagePurchaseStatus.PENDING);
@@ -130,10 +152,10 @@ public class FamilyPackagePurchaseService {
 
         purchaseRepository.save(purchase);
 
-        logger.info("Initiating family package checkout: txRef={}, packageType={}, amount={}, guest={}",
-                txRef, packageType, priceMinor, userId == null);
+        logger.info("Initiating family package checkout: txRef={}, packageType={}, amount={}, guest={}, additionalMembers={}, totalMembers={}",
+                txRef, packageType, priceMinor, userId == null, additionalMembers, totalMembers);
 
-        String description = "TMAG Family Plan - One plan for up to 6 family members";
+        String description = "TMAG Family Plan - " + totalMembers + " member" + (totalMembers > 1 ? "s" : "") + ", " + tripsAllowed + " trip";
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 priceMinor,
@@ -161,7 +183,9 @@ public class FamilyPackagePurchaseService {
                     priceMinor,
                     currency.name(),
                     currencySymbol,
-                    purchase.getId());
+                    purchase.getId(),
+                    additionalMembers,
+                    totalMembers);
         } else {
             logger.error("Flutterwave payment initiation failed: txRef={}, error={}", txRef, paymentResponse.message());
             purchase.setStatus(FamilyPackagePurchaseStatus.REFUNDED);
@@ -267,9 +291,15 @@ public class FamilyPackagePurchaseService {
         }
     }
 
-    public Optional<FamilyPackagePurchaseResponse> getActivePurchase(Long userId) {
-        return purchaseRepository.findActiveByUserId(userId)
-                .map(FamilyPackagePurchaseResponse::from);
+    /**
+     * Get all active purchases with remaining trips for a user.
+     * Users can buy multiple family plans, each covering one trip.
+     */
+    public List<FamilyPackagePurchaseResponse> getActivePurchases(Long userId) {
+        return purchaseRepository.findAllAvailableByUserId(userId)
+                .stream()
+                .map(FamilyPackagePurchaseResponse::from)
+                .toList();
     }
 
     public List<FamilyPackagePurchaseResponse> getPurchaseHistory(Long userId) {
@@ -278,6 +308,8 @@ public class FamilyPackagePurchaseService {
                 .map(FamilyPackagePurchaseResponse::from)
                 .toList();
     }
+
+
 
     private User findOrCreateUser(String email, String guestName, String guestPhone) {
         Optional<User> existing = userRepository.findByEmailIgnoreCase(email);
@@ -299,6 +331,12 @@ public class FamilyPackagePurchaseService {
         String rawPassword = generateRandomPassword();
         String encodedPassword = passwordEncoder.encode(rawPassword);
 
+        Optional<Role> individualRole = roleRepo.findByName(Roles.Individual.name());
+        if (individualRole.isEmpty()) {
+            logger.error("Individual role not found in database");
+            throw new RuntimeException("Required role not found: " + Roles.Individual.name());
+        }
+
         User user = new User();
         user.setFirstName(nameParts[0]);
         user.setLastName(nameParts.length > 1 ? nameParts[1] : "");
@@ -309,9 +347,10 @@ public class FamilyPackagePurchaseService {
         user.setPhone(guestPhone);
         user.setType("FAMILY");
         user.setOnboardingStage(5);
-        user.setOnboarded(false);
+        user.setOnboarded(true);
         user.setVerified(false);
         user.setIsActive(true);
+        user.setRole(individualRole.get());
 
         String resetToken = generateRandomToken(32);
         user.setResetToken(resetToken);

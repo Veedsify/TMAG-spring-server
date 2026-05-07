@@ -160,6 +160,7 @@ public class DataSeeder implements CommandLineRunner {
             "ai_request_log", "api_key", "blog_post", "company", "company_user",
             "country", "country_accommodation", "country_health_alert",
             "credit", "data_export", "doctor", "ebook", "employee", "faq_item",
+            "family",
             "health_profile", "invoice", "notification", "plan_generation_context",
             "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
             "travel_plan", "travel_request", "user_onboarding"
@@ -286,6 +287,7 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, individual, permMap, "blog_post", "read");
         addPermissions(assignments, individual, permMap, "ebook", "read", "list");
         addPermissions(assignments, individual, permMap, "faq_item", "read");
+        addPermissions(assignments, individual, permMap, "family", "read");
         addPermissions(assignments, individual, permMap, "pricing_plan", "read", "list");
         addPermissions(assignments, individual, permMap, "report", "read");
         addPermissions(assignments, individual, permMap, "notification", "read");

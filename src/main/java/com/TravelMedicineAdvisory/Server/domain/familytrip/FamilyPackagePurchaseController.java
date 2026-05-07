@@ -1,7 +1,8 @@
 package com.TravelMedicineAdvisory.Server.domain.familytrip;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyPackageCheckoutRequest;
@@ -50,17 +52,18 @@ public class FamilyPackagePurchaseController {
         try {
             Long userId = userDetails != null ? userDetails.getUserId() : null;
             var result = service.initiateCheckout(userId, request);
-            Map<String, Object> data = Map.of(
-                    "success", true,
-                    "txRef", result.txRef(),
-                    "paymentLink", result.paymentLink(),
-                    "packageType", result.packageType(),
-                    "tripsAllowed", result.tripsAllowed(),
-                    "amount", result.amountMinor(),
-                    "currency", result.currency(),
-                    "currencySymbol", result.currencySymbol(),
-                    "purchaseId", result.purchaseId()
-            );
+            Map<String, Object> data = new HashMap<>();
+            data.put("success", true);
+            data.put("txRef", result.txRef());
+            data.put("paymentLink", result.paymentLink());
+            data.put("packageType", result.packageType());
+            data.put("tripsAllowed", result.tripsAllowed());
+            data.put("amount", result.amountMinor());
+            data.put("currency", result.currency());
+            data.put("currencySymbol", result.currencySymbol());
+            data.put("purchaseId", result.purchaseId());
+            data.put("additionalMembers", result.additionalMembers());
+            data.put("totalMembers", result.totalMembers());
             return ResponseEntity.ok(new SuccessResponse("Payment initiated successfully", data));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), Map.of("success", false, "errorType", "COMPANY_USER_ERROR")));
@@ -81,7 +84,9 @@ public class FamilyPackagePurchaseController {
         String frontendUrl = callbackRegistry.getFrontendRedirectUrl("FAMILY_PACKAGE");
 
         if (tx_ref == null) {
-            return new RedirectView(frontendUrl + "?error=Missing%20transaction%20reference");
+            return redirectToFamilyPaymentCallback(frontendUrl, Map.of(
+                    "success", "false",
+                    "error", "Missing transaction reference"));
         }
 
         try {
@@ -89,35 +94,50 @@ public class FamilyPackagePurchaseController {
 
             if ("ACTIVE".equalsIgnoreCase(result.status())) {
                 String displayAmount = result.currency().equals("NGN")
-                        ? "₦" + (result.amountPaidMinor() / 100)
-                        : "$" + (result.amountPaidMinor() / 100);
-                return new RedirectView(
-                        frontendUrl
-                        + "?success=true"
-                        + "&tx_ref=" + tx_ref
-                        + "&packageType=" + result.packageType()
-                        + "&tripsAllowed=" + result.tripsAllowed()
-                        + "&amount=" + URLEncoder.encode(displayAmount, StandardCharsets.UTF_8)
-                        + "&status=" + result.status()
-                );
+                        ? "₦" + result.amountPaidMinor()
+                        : "$" + result.amountPaidMinor();
+                return redirectToFamilyPaymentCallback(frontendUrl, Map.of(
+                        "success", "true",
+                        "tx_ref", tx_ref,
+                        "packageType", result.packageType(),
+                        "tripsAllowed", result.tripsAllowed(),
+                        "amount", displayAmount,
+                        "status", result.status()));
             } else {
-                String errorMsg = result.status() != null ? "Payment%20" + result.status() : "Payment%20not%20completed";
-                return new RedirectView(frontendUrl + "?success=false&error=" + errorMsg + "&tx_ref=" + tx_ref);
+                String errorMsg = result.status() != null ? "Payment " + result.status() : "Payment not completed";
+                return redirectToFamilyPaymentCallback(frontendUrl, Map.of(
+                        "success", "false",
+                        "error", errorMsg,
+                        "tx_ref", tx_ref));
             }
         } catch (NoSuchElementException e) {
-            return new RedirectView(frontendUrl + "?error=Transaction%20not%20found&tx_ref=" + tx_ref);
+            return redirectToFamilyPaymentCallback(frontendUrl, Map.of(
+                    "success", "false",
+                    "error", "Transaction not found",
+                    "tx_ref", tx_ref));
         } catch (Exception e) {
-            return new RedirectView(frontendUrl + "?error=Payment%20verification%20failed&tx_ref=" + tx_ref);
+            return redirectToFamilyPaymentCallback(frontendUrl, Map.of(
+                    "success", "false",
+                    "error", "Payment verification failed",
+                    "tx_ref", tx_ref));
         }
+    }
+
+    private RedirectView redirectToFamilyPaymentCallback(String frontendUrl, Map<String, ?> queryParams) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(frontendUrl);
+        queryParams.forEach(builder::queryParam);
+        return new RedirectView(builder.build().encode().toUriString());
     }
 
     @GetMapping("/active")
     @PreAuthorize("@perm.has(authentication, 'family:read')")
-    public ResponseEntity<SuccessResponse> getActivePurchase(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<SuccessResponse> getActivePurchases(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserId(userDetails);
-        return service.getActivePurchase(userId)
-                .map(p -> ResponseEntity.ok(new SuccessResponse("Active purchase found", p)))
-                .orElse(ResponseEntity.ok(new SuccessResponse("No active purchase", Map.of("activePurchase", null))));
+        var purchases = service.getActivePurchases(userId);
+        if (purchases.isEmpty()) {
+            return ResponseEntity.ok(new SuccessResponse("No active purchases", List.of()));
+        }
+        return ResponseEntity.ok(new SuccessResponse("Active purchases found", purchases));
     }
 
     @GetMapping("/history")
