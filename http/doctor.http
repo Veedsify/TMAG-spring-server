@@ -1,0 +1,144 @@
+### ============================================================================
+### DOCTOR — /api/v1/doctor
+### ============================================================================
+
+### Get doctor profile
+GET {{baseUrl}}/api/v1/doctor/profile
+Authorization: Bearer {{doctorToken}}
+
+### Get reviewers
+GET {{baseUrl}}/api/v1/doctor/reviewers
+
+### Onboard doctor (multipart)
+POST {{baseUrl}}/api/v1/doctor/onboard
+Authorization: Bearer {{doctorToken}}
+Content-Type: multipart/form-data; boundary=doctor-boundary
+
+--doctor-boundary
+Content-Disposition: form-data; name="medicalLicenseNumber"
+
+MLN-12345-XYZ
+--doctor-boundary
+Content-Disposition: form-data; name="signature"; filename="signature.png"
+Content-Type: image/png
+
+< ./signature.png
+--doctor-boundary--
+
+### Apply to become a doctor (multipart)
+POST {{baseUrl}}/api/v1/doctor/apply
+Content-Type: multipart/form-data; boundary=apply-boundary
+
+--apply-boundary
+Content-Disposition: form-data; name="firstName"
+
+Jane
+--apply-boundary
+Content-Disposition: form-data; name="lastName"
+
+Doctor
+--apply-boundary
+Content-Disposition: form-data; name="email"
+
+jane.doctor@example.com
+--apply-boundary
+Content-Disposition: form-data; name="specialty"
+
+Infectious Disease
+--apply-boundary
+Content-Disposition: form-data; name="country"
+
+Nigeria
+--apply-boundary
+Content-Disposition: form-data; name="medicalLicenseNumber"
+
+MLN-67890-ABC
+--apply-boundary
+Content-Disposition: form-data; name="signature"; filename="signature.png"
+Content-Type: image/png
+
+< ./signature.png
+--apply-boundary
+Content-Disposition: form-data; name="confidentialityAgreementAccepted"
+
+true
+--apply-boundary
+Content-Disposition: form-data; name="conductAgreementAccepted"
+
+true
+--apply-boundary--
+
+### Update doctor profile (multipart)
+PUT {{baseUrl}}/api/v1/doctor/profile
+Authorization: Bearer {{doctorToken}}
+Content-Type: multipart/form-data; boundary=profile-boundary
+
+--profile-boundary
+Content-Disposition: form-data; name="firstName"
+
+Jane
+--profile-boundary
+Content-Disposition: form-data; name="lastName"
+
+Doctor
+--profile-boundary
+Content-Disposition: form-data; name="medicalLicenseNumber"
+
+MLN-12345-XYZ
+--profile-boundary--
+
+### Doctor dashboard
+GET {{baseUrl}}/api/v1/doctor/dashboard
+Authorization: Bearer {{doctorToken}}
+
+### Pending plans (paginated)
+GET {{baseUrl}}/api/v1/doctor/pending?page=0&size=20
+Authorization: Bearer {{doctorToken}}
+
+### Validated plans (paginated)
+GET {{baseUrl}}/api/v1/doctor/validated?page=0&size=20
+Authorization: Bearer {{doctorToken}}
+
+### Pending plans (legacy)
+GET {{baseUrl}}/api/v1/doctor/plans/pending
+Authorization: Bearer {{doctorToken}}
+
+### Approved plans
+GET {{baseUrl}}/api/v1/doctor/plans/approved
+Authorization: Bearer {{doctorToken}}
+
+### Rejected plans
+GET {{baseUrl}}/api/v1/doctor/plans/rejected
+Authorization: Bearer {{doctorToken}}
+
+### Get plan detail for review
+GET {{baseUrl}}/api/v1/doctor/plans/{{planId}}
+Authorization: Bearer {{doctorToken}}
+
+### Validate plan (approve or reject)
+POST {{baseUrl}}/api/v1/doctor/validate
+Authorization: Bearer {{doctorToken}}
+Content-Type: application/json
+
+{
+  "planId": {{planId}},
+  "approved": true,
+  "rejectionReason": null
+}
+
+### Approve plan
+POST {{baseUrl}}/api/v1/doctor/plans/{{planId}}/approve
+Authorization: Bearer {{doctorToken}}
+
+### Reject plan
+POST {{baseUrl}}/api/v1/doctor/plans/{{planId}}/reject
+Authorization: Bearer {{doctorToken}}
+Content-Type: application/json
+
+{
+  "rejectionReason": "Missing vaccination data"
+}
+
+### Download signed PDF
+GET {{baseUrl}}/api/v1/doctor/plans/{{planId}}/signed-pdf
+Authorization: Bearer {{doctorToken}}

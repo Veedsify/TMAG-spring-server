@@ -1,0 +1,20 @@
+### ============================================================================
+### ADMIN → AUTH — /api/v1/admin/auth
+### ============================================================================
+
+### Admin login
+POST {{baseUrl}}/api/v1/admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "AdminPass123!"
+}
+
+### Admin logout
+POST {{baseUrl}}/api/v1/admin/auth/logout
+Authorization: Bearer {{adminToken}}
+
+### Admin me (current user)
+GET {{baseUrl}}/api/v1/admin/auth/me
+Authorization: Bearer {{adminToken}}

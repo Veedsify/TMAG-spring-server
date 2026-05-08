@@ -1,0 +1,41 @@
+### ============================================================================
+### NOTIFICATIONS — /api/v1/notifications
+### ============================================================================
+
+### List notifications (paginated)
+GET {{baseUrl}}/api/v1/notifications?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get notification by ID
+GET {{baseUrl}}/api/v1/notifications/{{notificationId}}
+Authorization: Bearer {{authToken}}
+
+### Create notification
+POST {{baseUrl}}/api/v1/notifications
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Travel Plan Approved",
+  "message": "Your travel plan for Nigeria has been approved by Dr. Jane.",
+  "type": "APPROVAL",
+  "link": "/plans/1",
+  "isRead": false,
+  "userId": {{userId}}
+}
+
+### Update notification
+PUT {{baseUrl}}/api/v1/notifications/{{notificationId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Travel Plan Approved",
+  "message": "Your travel plan has been approved.",
+  "isRead": true,
+  "userId": {{userId}}
+}
+
+### Delete notification
+DELETE {{baseUrl}}/api/v1/notifications/{{notificationId}}
+Authorization: Bearer {{authToken}}

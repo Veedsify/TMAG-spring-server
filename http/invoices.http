@@ -1,0 +1,44 @@
+### ============================================================================
+### INVOICES — /api/v1/invoices
+### ============================================================================
+
+### List my invoices (paginated)
+GET {{baseUrl}}/api/v1/invoices?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get invoice by ID
+GET {{baseUrl}}/api/v1/invoices/{{invoiceId}}
+Authorization: Bearer {{authToken}}
+
+### Download invoice PDF
+GET {{baseUrl}}/api/v1/invoices/{{invoiceId}}/pdf
+Authorization: Bearer {{authToken}}
+
+### Create invoice
+POST {{baseUrl}}/api/v1/invoices
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 50000,
+  "currency": "NGN",
+  "description": "Professional Plan — Monthly subscription",
+  "userId": {{userId}},
+  "companyId": {{companyId}},
+  "status": "PENDING"
+}
+
+### Update invoice
+PUT {{baseUrl}}/api/v1/invoices/{{invoiceId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 55000,
+  "description": "Professional Plan — Monthly subscription (updated)",
+  "status": "PENDING"
+}
+
+### Delete invoice
+DELETE {{baseUrl}}/api/v1/invoices/{{invoiceId}}
+Authorization: Bearer {{authToken}}

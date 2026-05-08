@@ -1,0 +1,53 @@
+### ============================================================================
+### HEALTH PROFILES — /api/v1/health-profiles
+### ============================================================================
+
+### Get my health profile
+GET {{baseUrl}}/api/v1/health-profiles/my
+Authorization: Bearer {{authToken}}
+
+### List all health profiles (unpaginated)
+GET {{baseUrl}}/api/v1/health-profiles/all
+Authorization: Bearer {{authToken}}
+
+### List health profiles (paginated)
+GET {{baseUrl}}/api/v1/health-profiles?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get health profile by ID
+GET {{baseUrl}}/api/v1/health-profiles/{{healthProfileId}}
+Authorization: Bearer {{authToken}}
+
+### Create health profile
+POST {{baseUrl}}/api/v1/health-profiles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "conditions": "None",
+  "medications": "None",
+  "allergies": "Penicillin",
+  "bloodType": "O+",
+  "emergencyContactName": "Mary Thomas",
+  "emergencyContactPhone": "+2348023456789",
+  "userId": {{userId}}
+}
+
+### Update health profile
+PUT {{baseUrl}}/api/v1/health-profiles/{{healthProfileId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "conditions": "Asthma (mild)",
+  "medications": "Ventolin inhaler",
+  "allergies": "Penicillin, Sulfa",
+  "bloodType": "O+",
+  "emergencyContactName": "Mary Thomas",
+  "emergencyContactPhone": "+2348023456789",
+  "userId": {{userId}}
+}
+
+### Delete health profile
+DELETE {{baseUrl}}/api/v1/health-profiles/{{healthProfileId}}
+Authorization: Bearer {{authToken}}

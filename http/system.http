@@ -1,0 +1,86 @@
+### ============================================================================
+### SYSTEM — /api/v1/system-logs + /api/v1/system-settings + /api/v1/settings
+### ============================================================================
+
+### ─── System Logs — /api/v1/system-logs ─────────────────────
+
+### List system logs (paginated)
+GET {{baseUrl}}/api/v1/system-logs?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get system log by ID
+GET {{baseUrl}}/api/v1/system-logs/{{systemLogId}}
+Authorization: Bearer {{authToken}}
+
+### Create system log
+POST {{baseUrl}}/api/v1/system-logs
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "level": "INFO",
+  "message": "User completed onboarding",
+  "userId": {{userId}},
+  "ipAddress": "192.168.1.1",
+  "userAgent": "Mozilla/5.0"
+}
+
+### Update system log
+PUT {{baseUrl}}/api/v1/system-logs/{{systemLogId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "level": "WARN",
+  "message": "Updated: User completed onboarding with warnings"
+}
+
+### Delete system log
+DELETE {{baseUrl}}/api/v1/system-logs/{{systemLogId}}
+Authorization: Bearer {{authToken}}
+
+### ─── System Settings — /api/v1/system-settings ─────────────
+
+### List system settings (paginated)
+GET {{baseUrl}}/api/v1/system-settings?page=0&size=20
+
+### Get system setting by ID
+GET {{baseUrl}}/api/v1/system-settings/{{systemSettingId}}
+
+### Create system setting
+POST {{baseUrl}}/api/v1/system-settings
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "key": "MAINTENANCE_MODE",
+  "value": "false",
+  "type": "BOOLEAN",
+  "description": "Enable maintenance mode"
+}
+
+### Update system setting
+PUT {{baseUrl}}/api/v1/system-settings/{{systemSettingId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "key": "MAINTENANCE_MODE",
+  "value": "true",
+  "type": "BOOLEAN",
+  "description": "Enable maintenance mode"
+}
+
+### Delete system setting
+DELETE {{baseUrl}}/api/v1/system-settings/{{systemSettingId}}
+Authorization: Bearer {{authToken}}
+
+### ─── User Settings — /api/v1/settings ──────────────────────
+
+### Get my settings
+GET {{baseUrl}}/api/v1/settings
+Authorization: Bearer {{authToken}}
+
+### Accept questionnaire consent
+POST {{baseUrl}}/api/v1/settings/questionnaire-consent
+Authorization: Bearer {{authToken}}

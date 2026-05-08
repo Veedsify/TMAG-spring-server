@@ -1,0 +1,57 @@
+### ============================================================================
+### PROFILE — /api/v1/profile
+### ============================================================================
+
+### Get my companies
+GET {{baseUrl}}/api/v1/profile/companies
+Authorization: Bearer {{authToken}}
+
+### Get my profile
+GET {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{authToken}}
+
+### Update my profile
+PUT {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "first_name": "Dike",
+  "last_name": "Thomas",
+  "username": "dikethomas",
+  "phone": "+2348012345678",
+  "avatar_url": null,
+  "profile_picture_option": "initials",
+  "billing_currency": "NGN"
+}
+
+### Upload avatar (multipart)
+PUT {{baseUrl}}/api/v1/profile/avatar
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=avatar-boundary
+
+--avatar-boundary
+Content-Disposition: form-data; name="avatar"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./test-avatar.jpg
+--avatar-boundary--
+
+### Change password
+PUT {{baseUrl}}/api/v1/profile/password
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "current_password": "Str0ng!Pass123",
+  "new_password": "NewStr0ng!Pass456"
+}
+
+### Upgrade plan
+PUT {{baseUrl}}/api/v1/profile/upgrade-plan
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "plan_code": "PREMIUM"
+}

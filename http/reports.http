@@ -1,0 +1,81 @@
+### ============================================================================
+### REPORTS — /api/v1/reports + /api/v1/plan-usage-ledgers
+### ============================================================================
+
+### ─── Reports — /api/v1/reports ─────────────────────────────
+
+### Dashboard analytics
+GET {{baseUrl}}/api/v1/reports/dashboard/analytics?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Usage report
+GET {{baseUrl}}/api/v1/reports/usage?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Usage report CSV
+GET {{baseUrl}}/api/v1/reports/usage/csv?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Plan history
+GET {{baseUrl}}/api/v1/reports/plans?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Plan history CSV
+GET {{baseUrl}}/api/v1/reports/plans/csv?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Compliance report
+GET {{baseUrl}}/api/v1/reports/compliance?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Compliance report CSV
+GET {{baseUrl}}/api/v1/reports/compliance/csv?companyId={{companyId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Plan Usage Ledgers — /api/v1/plan-usage-ledgers ───────
+
+### List all usage ledgers (paginated)
+GET {{baseUrl}}/api/v1/plan-usage-ledgers?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get my usage ledgers (paginated)
+GET {{baseUrl}}/api/v1/plan-usage-ledgers/my?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get usage ledgers by employee ID
+GET {{baseUrl}}/api/v1/plan-usage-ledgers/employee/{{employeeId}}?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get usage ledger by ID
+GET {{baseUrl}}/api/v1/plan-usage-ledgers/{{planUsageLedgerId}}
+Authorization: Bearer {{authToken}}
+
+### Create usage ledger entry
+POST {{baseUrl}}/api/v1/plan-usage-ledgers
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "employeeId": {{employeeId}},
+  "userId": {{userId}},
+  "companyId": {{companyId}},
+  "planId": {{planId}},
+  "action": "PLAN_CREATED",
+  "creditsUsed": 1,
+  "ipAddress": "192.168.1.1",
+  "userAgent": "Mozilla/5.0"
+}
+
+### Update usage ledger
+PUT {{baseUrl}}/api/v1/plan-usage-ledgers/{{planUsageLedgerId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "creditsUsed": 2,
+  "action": "PLAN_GENERATED"
+}
+
+### Delete usage ledger
+DELETE {{baseUrl}}/api/v1/plan-usage-ledgers/{{planUsageLedgerId}}
+Authorization: Bearer {{authToken}}
