@@ -16,12 +16,14 @@ public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
+    private final EmailTemplates emailTemplates;
 
     @Value("${app.email.from-address}")
     private String fromEmail;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, EmailTemplates emailTemplates) {
         this.mailSender = mailSender;
+        this.emailTemplates = emailTemplates;
     }
 
     public void sendEmail(String to, String subject, String body) {
@@ -70,6 +72,24 @@ public class EmailService {
         } catch (MessagingException e) {
             logger.error("Failed to send HTML email to {}: {}", to, e.getMessage());
             throw new RuntimeException("Failed to send email", e);
+        }
+    }
+
+    public void sendAffiliateWelcomeEmail(String to, String name, String email, String tempPassword, String loginUrl) {
+        try {
+            sendHtmlEmail(to, "Welcome to TMAG Affiliate Program",
+                    emailTemplates.affiliateWelcome(name, email, tempPassword, loginUrl));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate welcome email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliateRejectionEmail(String to, String name, String reason) {
+        try {
+            sendHtmlEmail(to, "Your TMAG Affiliate Application",
+                    emailTemplates.affiliateRejection(name, reason));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate rejection email to {}: {}", to, e.getMessage());
         }
     }
 

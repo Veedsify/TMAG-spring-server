@@ -548,6 +548,40 @@ public class EmailTemplates {
         return wrap("Welcome to your TMAG Family Plan", content);
     }
 
+    /** Affiliate welcome — sent on application approval with temp credentials */
+    public String affiliateWelcome(String name, String email, String tempPassword, String loginUrl) {
+        String content =
+                badge("Welcome, Affiliate!") +
+                heading("You're in — welcome to TMAG Affiliates") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(name) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Congratulations! Your affiliate application has been approved. You can now log in, generate referral links, and start earning commissions.</p>" +
+                infoBox("Login email: <strong>" + esc(email) + "</strong><br/>Temporary password: <strong>" + esc(tempPassword) + "</strong><br/><em>You will be asked to change your password on first login.</em>") +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Click below to access your affiliate dashboard and get started.</p>" +
+                tealButton("Log In to Dashboard", loginUrl) +
+                copyLink(loginUrl) +
+                divider() +
+                fine("If you didn't apply for an affiliate account, please contact our support team immediately.");
+
+        return wrap("You've been approved as a TMAG Affiliate!", content);
+    }
+
+    /** Affiliate rejection — sent when application is rejected */
+    public String affiliateRejection(String name, String reason) {
+        String content =
+                badge("Application Update") +
+                heading("Your affiliate application was not approved") +
+                "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(name) + "</strong>,</p>" +
+                "<p style=\"" + P_STYLE + "\">Thank you for your interest in the TMAG Affiliate Program. After reviewing your application, we're unable to approve it at this time.</p>" +
+                (reason != null && !reason.isBlank()
+                        ? infoBox("Reason: " + esc(reason))
+                        : infoBox("Your application did not meet our current affiliate program requirements.")) +
+                "<p style=\"" + P_STYLE + "margin-bottom:36px;\">You're welcome to reapply in the future. If you have questions, please contact our support team.</p>" +
+                divider() +
+                fine("Thank you for your interest in TMAG.");
+
+        return wrap("Update on your TMAG Affiliate application", content);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

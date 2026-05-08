@@ -3,9 +3,12 @@ package com.TravelMedicineAdvisory.Server.domain.affiliate;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,6 +40,11 @@ public class PublicAffiliateController {
         AffiliateDiscountResponse response = affiliateService.getDiscount(referralCode)
                 .orElse(new AffiliateDiscountResponse(false, null, null, java.math.BigDecimal.ZERO));
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", response));
+    }
+
+    @PostMapping("/apply")
+    public ResponseEntity<SuccessResponse> apply(@Valid @RequestBody AffiliateApplicationRequest request) {
+        return ResponseEntity.ok(new SuccessResponse("Application submitted successfully", affiliateService.submitApplication(request)));
     }
 
     private String firstNonBlank(String first, String second) {

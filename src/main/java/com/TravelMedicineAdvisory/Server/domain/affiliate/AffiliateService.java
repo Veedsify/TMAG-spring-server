@@ -39,6 +39,7 @@ public class AffiliateService {
     private final AffiliateClickRepository affiliateClickRepository;
     private final UserRepository userRepository;
     private final CreditPlanRepository creditPlanRepository;
+    private final AffiliateApplicationRepository affiliateApplicationRepository;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -51,7 +52,8 @@ public class AffiliateService {
             AffiliatePayoutRepository affiliatePayoutRepository,
             AffiliateClickRepository affiliateClickRepository,
             UserRepository userRepository,
-            CreditPlanRepository creditPlanRepository) {
+            CreditPlanRepository creditPlanRepository,
+            AffiliateApplicationRepository affiliateApplicationRepository) {
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.referralLinkRepository = referralLinkRepository;
         this.affiliateReferralRepository = affiliateReferralRepository;
@@ -60,6 +62,7 @@ public class AffiliateService {
         this.affiliateClickRepository = affiliateClickRepository;
         this.userRepository = userRepository;
         this.creditPlanRepository = creditPlanRepository;
+        this.affiliateApplicationRepository = affiliateApplicationRepository;
     }
 
     public record AffiliatePurchaseDiscount(BigDecimal rate, String referralCode) {}
@@ -257,6 +260,28 @@ public class AffiliateService {
                         safeRate(referral.getAffiliateProfile().getDiscountRate(), DEFAULT_DISCOUNT_RATE),
                         referral.getReferralCode()
                 ));
+    }
+
+    public AffiliateApplicationResponse submitApplication(AffiliateApplicationRequest request) {
+        if (affiliateApplicationRepository.existsByEmailAndDeletedAtIsNull(request.email())) {
+            throw new IllegalStateException("An application with this email already exists");
+        }
+        AffiliateApplication application = new AffiliateApplication();
+        application.setFullName(request.fullName());
+        application.setCompanyName(request.companyName());
+        application.setEmail(request.email().trim().toLowerCase());
+        application.setPhone(request.phone());
+        application.setWebsiteUrl(request.websiteUrl());
+        application.setSocialMediaLinks(request.socialMediaLinks());
+        application.setEstimatedMonthlyReach(request.estimatedMonthlyReach());
+        application.setPromoDescription(request.promoDescription());
+        application.setAgreedToTerms(request.agreedToTerms());
+        application.setStatus("pending");
+        return AffiliateApplicationResponse.from(affiliateApplicationRepository.save(application));
+    }
+
+    public String generateReferralCodeForUser(User user) {
+        return generateReferralCode(user);
     }
 
     public void recordCommissionForCompletedPurchase(CreditPurchase purchase) {
