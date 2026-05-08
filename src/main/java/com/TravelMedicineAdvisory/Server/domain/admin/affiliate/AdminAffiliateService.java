@@ -5,6 +5,9 @@ import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateApplication;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateApplicationRepository;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateApplicationResponse;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateAuditLog;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateAuditLogRepository;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateClickRepository;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateCommissionRepository;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliatePayoutRepository;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateProfile;
@@ -13,6 +16,8 @@ import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateReferralRepos
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -23,8 +28,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -42,6 +51,8 @@ public class AdminAffiliateService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final EmailTemplates emailTemplates;
+    private final AffiliateAuditLogRepository affiliateAuditLogRepository;
+    private final AffiliateClickRepository affiliateClickRepository;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -56,7 +67,9 @@ public class AdminAffiliateService {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             EmailService emailService,
-            EmailTemplates emailTemplates) {
+            EmailTemplates emailTemplates,
+            AffiliateAuditLogRepository affiliateAuditLogRepository,
+            AffiliateClickRepository affiliateClickRepository) {
         this.affiliateApplicationRepository = affiliateApplicationRepository;
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.affiliateCommissionRepository = affiliateCommissionRepository;
@@ -67,6 +80,8 @@ public class AdminAffiliateService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.emailTemplates = emailTemplates;
+        this.affiliateAuditLogRepository = affiliateAuditLogRepository;
+        this.affiliateClickRepository = affiliateClickRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -160,6 +175,7 @@ public class AdminAffiliateService {
             // Log but don't fail the approval
         }
 
+        logAudit(savedProfile.getId(), "approve", "Application approved for " + app.getEmail());
         return AdminAffiliateDetailResponse.from(savedProfile, List.of(), List.of(), List.of());
     }
 
@@ -188,6 +204,7 @@ public class AdminAffiliateService {
             // Log but don't fail
         }
 
+        logAudit(applicationId, "reject", "Application rejected" + (reason != null && !reason.isBlank() ? ": " + reason : ""));
         return AffiliateApplicationResponse.from(app);
     }
 
@@ -203,6 +220,7 @@ public class AdminAffiliateService {
         app.setAdminNotes(notes);
         affiliateApplicationRepository.save(app);
 
+        logAudit(applicationId, "request_info", "Additional information requested: " + notes);
         return AffiliateApplicationResponse.from(app);
     }
 
@@ -233,6 +251,37 @@ public class AdminAffiliateService {
         BigDecimal totalPending2 = affiliateProfileRepository.sumPendingCommission();
         BigDecimal totalRevenue = affiliateCommissionRepository.sumTotalRevenue();
 
+        // Aggregate click and conversion stats across all active affiliates
+        List<AffiliateProfile> allProfiles = affiliateProfileRepository.findByDeletedAtIsNullOrderByCreatedAtDesc();
+        long totalClicks = 0;
+        long totalConversions = 0;
+        for (AffiliateProfile p : allProfiles) {
+            totalClicks += p.getTotalClicks() != null ? p.getTotalClicks() : 0;
+            totalConversions += p.getTotalConversions() != null ? p.getTotalConversions() : 0;
+        }
+        BigDecimal conversionRate = totalClicks > 0
+                ? BigDecimal.valueOf(totalConversions).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalClicks), 2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+
+        // Build 30-day clicks chart
+        LocalDate start = LocalDate.now().minusDays(29);
+        LocalDateTime createdAfter = start.atStartOfDay();
+        Map<LocalDate, long[]> chart = new LinkedHashMap<>();
+        for (int i = 0; i < 30; i++) {
+            chart.put(start.plusDays(i), new long[]{0, 0});
+        }
+        affiliateClickRepository.findByCreatedAtAfterAndDeletedAtIsNull(createdAfter)
+                .forEach(click -> {
+                    if (click.getCreatedAt() != null) {
+                        long[] counts = chart.get(click.getCreatedAt().toLocalDate());
+                        if (counts != null) counts[0]++;
+                    }
+                });
+        List<AdminAffiliateStatsResponse.ClicksChartPoint> clicksChart = new ArrayList<>();
+        chart.forEach((date, counts) -> clicksChart.add(
+                new AdminAffiliateStatsResponse.ClicksChartPoint(date.toString(), counts[0], counts[1])
+        ));
+
         Pageable top5 = PageRequest.of(0, 5);
         List<AdminAffiliateStatsResponse.TopAffiliateItem> topAffiliates =
                 affiliateProfileRepository.findTopByTotalCommissionEarned(top5)
@@ -262,6 +311,10 @@ public class AdminAffiliateService {
                 totalPaid != null ? totalPaid : BigDecimal.ZERO,
                 totalPending2 != null ? totalPending2 : BigDecimal.ZERO,
                 totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
+                conversionRate,
+                totalClicks,
+                totalConversions,
+                clicksChart,
                 topAffiliates
         );
     }
@@ -286,6 +339,7 @@ public class AdminAffiliateService {
                 .orElseThrow(() -> new NoSuchElementException("Affiliate profile not found"));
         profile.setStatus("suspended");
         affiliateProfileRepository.save(profile);
+        logAudit(affiliateProfileId, "suspend", "Affiliate account suspended");
         return getAffiliateDetail(affiliateProfileId);
     }
 
@@ -294,6 +348,7 @@ public class AdminAffiliateService {
                 .orElseThrow(() -> new NoSuchElementException("Affiliate profile not found"));
         profile.setStatus("active");
         affiliateProfileRepository.save(profile);
+        logAudit(affiliateProfileId, "activate", "Affiliate account activated");
         return getAffiliateDetail(affiliateProfileId);
     }
 
@@ -303,14 +358,36 @@ public class AdminAffiliateService {
         }
         AffiliateProfile profile = affiliateProfileRepository.findByIdAndDeletedAtIsNull(affiliateProfileId)
                 .orElseThrow(() -> new NoSuchElementException("Affiliate profile not found"));
+        BigDecimal oldRate = profile.getCommissionRate();
         profile.setCommissionRate(rate);
         affiliateProfileRepository.save(profile);
+        logAudit(affiliateProfileId, "update_commission_rate", "Commission rate changed from " + oldRate + "% to " + rate + "%");
         return getAffiliateDetail(affiliateProfileId);
     }
 
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    private void logAudit(Long affiliateId, String action, String description) {
+        try {
+            String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+            User adminUser = userRepository.findByEmail(adminEmail).orElse(null);
+            Long adminUserId = adminUser != null ? adminUser.getId() : null;
+
+            AffiliateAuditLog log = new AffiliateAuditLog(
+                    affiliateId,
+                    adminUserId,
+                    adminEmail,
+                    action,
+                    description,
+                    null
+            );
+            affiliateAuditLogRepository.save(log);
+        } catch (Exception e) {
+            // Log but don't fail the operation
+        }
+    }
 
     private String generateReferralCode(User user) {
         String raw = user.getFirstName() != null && !user.getFirstName().isBlank()

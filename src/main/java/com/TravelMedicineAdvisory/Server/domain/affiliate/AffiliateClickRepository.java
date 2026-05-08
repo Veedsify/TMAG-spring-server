@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface AffiliateClickRepository extends JpaRepository<AffiliateClick, Long> {
     List<AffiliateClick> findByAffiliateProfileIdAndCreatedAtAfterAndDeletedAtIsNull(Long affiliateId, LocalDateTime createdAfter);
+
+    List<AffiliateClick> findByCreatedAtAfterAndDeletedAtIsNull(LocalDateTime createdAfter);
+
+    long countByCreatedAtAfterAndDeletedAtIsNull(LocalDateTime createdAfter);
 }

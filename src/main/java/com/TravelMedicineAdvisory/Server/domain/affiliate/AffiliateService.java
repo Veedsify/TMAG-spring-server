@@ -1,13 +1,22 @@
 package com.TravelMedicineAdvisory.Server.domain.affiliate;
 
+import com.TravelMedicineAdvisory.Server.core.email.EmailService;
+import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Role;
+import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +49,10 @@ public class AffiliateService {
     private final UserRepository userRepository;
     private final CreditPlanRepository creditPlanRepository;
     private final AffiliateApplicationRepository affiliateApplicationRepository;
+    private final EmailService emailService;
+    private final EmailTemplates emailTemplates;
+    private final QueueService queueService;
+    private final RoleRepository roleRepository;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -53,7 +66,11 @@ public class AffiliateService {
             AffiliateClickRepository affiliateClickRepository,
             UserRepository userRepository,
             CreditPlanRepository creditPlanRepository,
-            AffiliateApplicationRepository affiliateApplicationRepository) {
+            AffiliateApplicationRepository affiliateApplicationRepository,
+            EmailService emailService,
+            EmailTemplates emailTemplates,
+            QueueService queueService,
+            RoleRepository roleRepository) {
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.referralLinkRepository = referralLinkRepository;
         this.affiliateReferralRepository = affiliateReferralRepository;
@@ -63,6 +80,10 @@ public class AffiliateService {
         this.userRepository = userRepository;
         this.creditPlanRepository = creditPlanRepository;
         this.affiliateApplicationRepository = affiliateApplicationRepository;
+        this.emailService = emailService;
+        this.emailTemplates = emailTemplates;
+        this.queueService = queueService;
+        this.roleRepository = roleRepository;
     }
 
     public record AffiliatePurchaseDiscount(BigDecimal rate, String referralCode) {}
@@ -277,7 +298,36 @@ public class AffiliateService {
         application.setPromoDescription(request.promoDescription());
         application.setAgreedToTerms(request.agreedToTerms());
         application.setStatus("pending");
-        return AffiliateApplicationResponse.from(affiliateApplicationRepository.save(application));
+        AffiliateApplicationResponse response = AffiliateApplicationResponse.from(affiliateApplicationRepository.save(application));
+
+        // Send confirmation email to applicant
+        try {
+            String[] nameParts = request.fullName().trim().split("\\s+", 2);
+            String firstName = nameParts[0];
+            emailService.sendAffiliateApplicationConfirmation(request.email(), firstName);
+        } catch (Exception e) {
+            // Log but don't fail the submission
+        }
+
+        // Notify super-admins of new application
+        try {
+            List<User> superAdmins = userRepository.findByRoleName("SuperAdmin");
+            String safeName = request.fullName() != null ? request.fullName().replace("<", "&lt;").replace(">", "&gt;") : "";
+            String safeEmail = request.email() != null ? request.email().replace("<", "&lt;").replace(">", "&gt;") : "";
+            String html = "<p>A new affiliate application has been submitted by <strong>" + safeName + "</strong> (" + safeEmail + ").</p>"
+                    + "<p>Log in to the admin dashboard to review.</p>";
+            for (User admin : superAdmins) {
+                queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
+                        "to", admin.getEmail(),
+                        "subject", "New Affiliate Application: " + request.fullName(),
+                        "html", html
+                ));
+            }
+        } catch (Exception e) {
+            // Log but don't fail
+        }
+
+        return response;
     }
 
     public String generateReferralCodeForUser(User user) {
@@ -335,6 +385,24 @@ public class AffiliateService {
         if (link != null) {
             link.setCommissionEarned(nullToZero(link.getCommissionEarned()).add(commissionAmount));
             referralLinkRepository.save(link);
+        }
+
+        // Send commission earned email to affiliate
+        try {
+            User affiliateUser = profile.getUser();
+            if (affiliateUser != null && affiliateUser.getEmail() != null) {
+                String affiliateName = affiliateUser.getFirstName() != null ? affiliateUser.getFirstName() : "there";
+                String campaign = link != null ? link.getCampaign() : "General";
+                emailService.sendAffiliateCommissionEarned(
+                        affiliateUser.getEmail(),
+                        affiliateName,
+                        "$" + commissionAmount.toPlainString(),
+                        purchase.getUser().getEmail(),
+                        campaign
+                );
+            }
+        } catch (Exception e) {
+            // Log but don't fail
         }
     }
 

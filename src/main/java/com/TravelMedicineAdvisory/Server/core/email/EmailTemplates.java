@@ -582,10 +582,6 @@ public class EmailTemplates {
         return wrap("Update on your TMAG Affiliate application", content);
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
     private String wrap(String preheader, String content) {
         return WRAPPER
                 .replace("{preheader}", esc(preheader))
@@ -815,5 +811,47 @@ public class EmailTemplates {
                 divider() +
                 fine("Review the plan details for more information.");
         return wrap("Escalated Plan Notification — TMAG", content);
+    }
+
+    // Affirmation confirmation — sent when application is submitted
+    public String affiliateApplicationConfirmation(String firstName) {
+        String content
+                = badge("Application Received")
+                + heading("We received your affiliate application")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Thank you for applying to the TMAG Affiliate Program! Our team will review your application and get back to you within 2–3 business days.</p>"
+                + "<p style=\"" + P_STYLE + "\">If we need any additional information, we'll reach out to you directly. Meanwhile, feel free to explore the TMAG platform and learn more about what we offer.</p>"
+                + divider()
+                + fine("If you have any questions, contact us at <a href=\"mailto:affiliates@tmag.health\" style=\"color:#2a7a6a;\">affiliates@tmag.health</a>.");
+        return wrap("Application received — TMAG Affiliate Program", content);
+    }
+
+    //  Commission earned — sent when a referred purchase completes 
+    public String affiliateCommissionEarned(String firstName, String amount, String customerEmail, String campaign) {
+        String content
+                = badge("Commission Earned")
+                + heading("You earned a commission!")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Great news! A referral you made has completed a purchase and you've earned a commission.</p>"
+                + infoBox("Commission: <strong>" + esc(amount) + "</strong><br/>Customer: " + esc(customerEmail != null ? customerEmail : "N/A") + "<br/>Campaign: " + esc(campaign != null ? campaign : "General"))
+                + "<p style=\"" + P_STYLE + "\">Log in to your affiliate dashboard to view your full commission history and track your earnings.</p>"
+                + tealButton("View Dashboard", "{frontendUrl}/login")
+                + divider()
+                + fine("Keep sharing your referral links to earn more commissions!");
+        return wrap("You earned a commission on TMAG!", content);
+    }
+
+    // /** Payout processed — sent when admin processes a payout */
+    public String affiliatePayoutProcessed(String firstName, String amount, String paymentMethod) {
+        String content
+                = badge("Payout Processed")
+                + heading("Your payout has been processed")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Your payout request has been processed and the funds are on their way to you.</p>"
+                + infoBox("Amount: <strong>" + esc(amount) + "</strong><br/>Method: " + esc(paymentMethod))
+                + "<p style=\"" + P_STYLE + "\">Depending on your payment method, it may take a few business days for the funds to appear in your account.</p>"
+                + divider()
+                + fine("If you have any questions about this payout, contact us at <a href=\"mailto:affiliates@tmag.health\" style=\"color:#2a7a6a;\">affiliates@tmag.health</a>.");
+        return wrap("Your TMAG affiliate payout has been processed", content);
     }
 }

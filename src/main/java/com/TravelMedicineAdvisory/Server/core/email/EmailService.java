@@ -122,4 +122,31 @@ public class EmailService {
             throw new RuntimeException("Failed to send email with attachment", e);
         }
     }
+
+    public void sendAffiliateApplicationConfirmation(String to, String firstName) {
+        try {
+            sendHtmlEmail(to, "Application Received — TMAG Affiliate Program",
+                    emailTemplates.affiliateApplicationConfirmation(firstName));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate application confirmation to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliateCommissionEarned(String to, String firstName, String amount, String customerEmail, String campaign) {
+        try {
+            sendHtmlEmail(to, "You earned a commission on TMAG!",
+                    emailTemplates.affiliateCommissionEarned(firstName, amount, customerEmail, campaign));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate commission earned email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliatePayoutProcessed(String to, String firstName, String amount, String paymentMethod) {
+        try {
+            sendHtmlEmail(to, "Your TMAG affiliate payout has been processed",
+                    emailTemplates.affiliatePayoutProcessed(firstName, amount, paymentMethod));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout processed email to {}: {}", to, e.getMessage());
+        }
+    }
 }
