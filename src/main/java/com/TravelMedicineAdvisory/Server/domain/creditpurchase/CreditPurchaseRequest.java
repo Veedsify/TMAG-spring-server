@@ -1,9 +1,8 @@
 package com.TravelMedicineAdvisory.Server.domain.creditpurchase;
 
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
-
-
 
 public record CreditPurchaseRequest(
     @NotNull(message = "Credits is required")
@@ -12,5 +11,8 @@ public record CreditPurchaseRequest(
     Integer credits,
     
     @NotNull(message = "Currency is required")
-    BillingCurrency currency
+    BillingCurrency currency,
+
+    @JsonProperty("affiliate_referral_code")
+    String affiliateReferralCode
 ) {}

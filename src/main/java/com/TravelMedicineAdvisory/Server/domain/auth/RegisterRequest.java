@@ -14,6 +14,12 @@ public class RegisterRequest {
     private String password;
     private String planCode;
 
+    @JsonProperty("affiliate_referral_code")
+    private String affiliateReferralCode;
+
+    @JsonProperty("account_type")
+    private String accountType;
+
     @JsonProperty("billing_currency")
     private BillingCurrency billingCurrency;
 
@@ -77,6 +83,22 @@ public class RegisterRequest {
 
     public void setPlanCode(String planCode) {
         this.planCode = planCode;
+    }
+
+    public String getAffiliateReferralCode() {
+        return affiliateReferralCode;
+    }
+
+    public void setAffiliateReferralCode(String affiliateReferralCode) {
+        this.affiliateReferralCode = affiliateReferralCode;
+    }
+
+    public String getAccountType() {
+        return accountType;
+    }
+
+    public void setAccountType(String accountType) {
+        this.accountType = accountType;
     }
 
     public BillingCurrency getBillingCurrency() {

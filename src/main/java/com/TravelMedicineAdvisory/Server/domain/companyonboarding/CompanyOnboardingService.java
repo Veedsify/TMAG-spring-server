@@ -16,8 +16,6 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.Tier;
 import com.TravelMedicineAdvisory.Server.domain.companyonboarding.CompanyOnboardingSubmitRequest.TeamMemberRequest;
 import com.TravelMedicineAdvisory.Server.domain.companyonboarding.CompanyOnboardingSubmitRequest.PlatformEmployeeRequest;
-import com.TravelMedicineAdvisory.Server.domain.companyonboarding.OnboardingStatus;
-import com.TravelMedicineAdvisory.Server.domain.companyonboarding.OnboardingPaymentStatus;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;

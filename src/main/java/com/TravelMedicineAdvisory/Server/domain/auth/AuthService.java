@@ -27,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
@@ -65,6 +66,7 @@ public class AuthService {
     private final CreditPlanRepository userCreditPlanRepository;
     private final UserSettingService userSettingService;
     private final AvatarUrlService avatarUrlService;
+    private final AffiliateService affiliateService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -88,7 +90,8 @@ public class AuthService {
             AdminNotificationService adminNotificationService,
             CreditPlanRepository userCreditPlanRepository,
             UserSettingService userSettingService,
-            AvatarUrlService avatarUrlService) {
+            AvatarUrlService avatarUrlService,
+            AffiliateService affiliateService) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -102,6 +105,7 @@ public class AuthService {
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.userSettingService = userSettingService;
         this.avatarUrlService = avatarUrlService;
+        this.affiliateService = affiliateService;
 
     }
 
@@ -124,7 +128,7 @@ public class AuthService {
             throw new IllegalArgumentException("User already exists");
         }
 
-        Role role = determineUserRole();
+        Role role = determineUserRole(request.getAccountType());
 
         Credit newAssignedCredits = new Credit();
         Optional<CreditPlan> userCreditPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
@@ -140,10 +144,11 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         boolean isFamilySignup = request.getPlanCode() != null && request.getPlanCode().startsWith("FAMILY");
+        boolean isAffiliateSignup = request.getAccountType() != null && "AFFILIATE".equalsIgnoreCase(request.getAccountType().trim());
         user.setOnboardingStage(isFamilySignup ? 99 : 0);
         user.setOnboarded(isFamilySignup);
         user.setVerified(false);
-        user.setType(isFamilySignup ? "FAMILY" : "INDIVIDUAL");
+        user.setType(isFamilySignup ? "FAMILY" : isAffiliateSignup ? "AFFILIATE" : "INDIVIDUAL");
         user.setCredits(1);
         user.setCreditPlan(userCreditPlan.get());
         user.setBillingCurrency(
@@ -153,6 +158,7 @@ public class AuthService {
         user.setCreditPlan(resolveCreditPlan(request.getPlanCode()));
 
         User savedUser = userRepository.save(user);
+        affiliateService.registerReferralForUser(savedUser.getId(), request.getAffiliateReferralCode());
 
         newAssignedCredits.setUser(user);
         newAssignedCredits.setType("new-user-bonus");
@@ -232,7 +238,7 @@ public class AuthService {
 
     @Transactional
     @SuppressWarnings("unchecked")
-    public AuthResponse googleCallback(String code, String planCode) {
+    public AuthResponse googleCallback(String code, String planCode, String affiliateReferralCode) {
         if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null
                 || googleClientSecret.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
@@ -289,7 +295,7 @@ public class AuthService {
             }
 
             if (user == null) {
-                Role role = determineUserRole();
+                Role role = determineUserRole(null);
 
                 user = new User();
                 user.setFirstName(firstName);
@@ -314,6 +320,7 @@ public class AuthService {
                 }
 
                 user = userRepository.save(user);
+                affiliateService.registerReferralForUser(user.getId(), affiliateReferralCode);
 
                 Credit newAssignedCredits = new Credit();
                 newAssignedCredits.setUser(user);
@@ -518,11 +525,15 @@ public class AuthService {
                 .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD).orElse(null));
     }
 
-    private Role determineUserRole() {
+    private Role determineUserRole(String accountType) {
         long userCount = userRepository.count();
         if (userCount == 0) {
             return roleRepository.findByName("SuperAdmin")
                     .orElseGet(() -> roleRepository.findByName("Administrator").orElse(null));
+        }
+        if (accountType != null && "AFFILIATE".equalsIgnoreCase(accountType.trim())) {
+            return roleRepository.findByName("Affiliate")
+                    .orElseGet(() -> roleRepository.findByName("Individual").orElse(null));
         }
         return roleRepository.findByName("Individual").orElse(null);
     }

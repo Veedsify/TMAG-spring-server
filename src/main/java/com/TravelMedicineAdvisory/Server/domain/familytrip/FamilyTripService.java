@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -13,10 +12,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.*;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.ActivePackageAllowanceDto;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripMemberRequest;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripMemberResponse;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripPreviewResponse;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripRequest;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripResponse;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.PaymentBreakdownItem;
 import com.TravelMedicineAdvisory.Server.domain.plans.PlanGenerationService;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
-import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanResponse;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanService;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
@@ -282,7 +286,7 @@ public class FamilyTripService {
         }
         
         User user = trip.getUser();
-        LocalDate departureDate = extractDepartureDate(trip.getTripDetailsJson());
+        // LocalDate departureDate = extractDepartureDate(trip.getTripDetailsJson());
         
         long spouseCount = members.stream().filter(m -> m.getRelationship() == FamilyMemberRelationship.SPOUSE).count();
         if (spouseCount > 1) {
@@ -395,11 +399,11 @@ public class FamilyTripService {
         return purchaseRepository.findAvailableByUserId(userId).orElse(null);
     }
     
-    private ActivePackageAllowanceDto getActiveAllowance(Long userId) {
-        FamilyPackagePurchase p = findActiveAllowance(userId);
-        if (p == null) return null;
-        return new ActivePackageAllowanceDto(p.getPackageType().name(), p.getTripsAllowed() - p.getTripsUsed());
-    }
+    // private ActivePackageAllowanceDto getActiveAllowance(Long userId) {
+    //     FamilyPackagePurchase p = findActiveAllowance(userId);
+    //     if (p == null) return null;
+    //     return new ActivePackageAllowanceDto(p.getPackageType().name(), p.getTripsAllowed() - p.getTripsUsed());
+    // }
 
     private LocalDate extractDepartureDate(String tripDetailsJson) {
         if (tripDetailsJson == null || tripDetailsJson.isEmpty()) return null;

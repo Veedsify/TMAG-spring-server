@@ -1,21 +1,29 @@
 package com.TravelMedicineAdvisory.Server.domain.familytrip;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
-import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
-import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.*;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripRequest;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.dto.FamilyTripResponse;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanResponse;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanService;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 
 @RestController
 @RequestMapping("/api/v1/family-trips")
