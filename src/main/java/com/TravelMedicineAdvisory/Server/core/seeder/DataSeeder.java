@@ -3,8 +3,8 @@ package com.TravelMedicineAdvisory.Server.core.seeder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,13 +21,14 @@ import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlert;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlertRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItem;
@@ -46,7 +47,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingRepository;
-import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -1149,7 +1149,7 @@ public class DataSeeder implements CommandLineRunner {
                 createSetting("site_name", "TMAG", "string", "general", "Site Name", "The name of the platform", true));
         settings.add(createSetting("site_tagline", "Travel Medicine Advisory Global", "string", "general",
                 "Site Tagline", "The tagline displayed on the site", true));
-        settings.add(createSetting("support_email", "hello@tmag.health", "string", "general", "Support Email",
+        settings.add(createSetting("support_email", "admin@tmag.com", "string", "general", "Support Email",
                 "Main support email address", true));
         settings.add(createSetting("support_response_time", "24 hours", "string", "general", "Support Response Time",
                 "Typical support response time", true));

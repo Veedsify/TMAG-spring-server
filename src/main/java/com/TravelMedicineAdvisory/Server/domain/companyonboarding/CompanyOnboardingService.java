@@ -26,6 +26,7 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
@@ -84,7 +85,7 @@ public class CompanyOnboardingService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    @Value("${app.admin.superadmin-email:hello@tmag.health}")
+    @Value("${app.admin.email:hello@tmag.health}")
     private String superadminEmail;
 
     public CompanyOnboardingService(
@@ -126,6 +127,12 @@ public class CompanyOnboardingService {
         this.volumePricingService = volumePricingService;
         this.storageService = storageService;
         this.affiliateService = affiliateService;
+
+        List<User> AdminUser = userRepository.findByRoleName(Roles.SuperAdmin.name());
+        if (AdminUser.isEmpty()) {
+            throw new IllegalStateException("No super admin user found. At least one user with role SUPERADMIN is required to receive contact form submissions.");
+        }
+        this.superadminEmail = AdminUser.get(0).getEmail();
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {

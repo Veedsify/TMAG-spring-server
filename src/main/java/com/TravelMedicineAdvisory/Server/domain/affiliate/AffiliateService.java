@@ -1,24 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.affiliate;
 
-import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
-import com.TravelMedicineAdvisory.Server.core.email.EmailService;
-import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
-import com.TravelMedicineAdvisory.Server.core.queue.JobType;
-import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
-import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
-import com.TravelMedicineAdvisory.Server.domain.role.Role;
-import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
-import com.TravelMedicineAdvisory.Server.domain.user.User;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -32,6 +13,20 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
+import com.TravelMedicineAdvisory.Server.core.email.EmailService;
+import com.TravelMedicineAdvisory.Server.core.queue.JobType;
+import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 @Transactional
@@ -56,9 +51,7 @@ public class AffiliateService {
     private final CreditPlanRepository creditPlanRepository;
     private final AffiliateApplicationRepository affiliateApplicationRepository;
     private final EmailService emailService;
-    private final EmailTemplates emailTemplates;
     private final QueueService queueService;
-    private final RoleRepository roleRepository;
     private final AppLinksProperties appLinks;
 
     @Value("${app.frontend.url:http://localhost:3000}")
@@ -75,9 +68,7 @@ public class AffiliateService {
             CreditPlanRepository creditPlanRepository,
             AffiliateApplicationRepository affiliateApplicationRepository,
             EmailService emailService,
-            EmailTemplates emailTemplates,
             QueueService queueService,
-            RoleRepository roleRepository,
             AppLinksProperties appLinks) {
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.referralLinkRepository = referralLinkRepository;
@@ -89,9 +80,7 @@ public class AffiliateService {
         this.creditPlanRepository = creditPlanRepository;
         this.affiliateApplicationRepository = affiliateApplicationRepository;
         this.emailService = emailService;
-        this.emailTemplates = emailTemplates;
         this.queueService = queueService;
-        this.roleRepository = roleRepository;
         this.appLinks = appLinks;
     }
 
