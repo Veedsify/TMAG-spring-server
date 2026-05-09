@@ -2,8 +2,9 @@ package com.TravelMedicineAdvisory.Server.core.email;
 
 import java.time.Year;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 
 /**
  * TMAG branded email templates.
@@ -95,7 +96,7 @@ public class EmailTemplates {
                               </td>
                               <td style="color:#4a3e32;font-size:12px;">&bull;</td>
                               <td style="padding:0 10px;">
-                                <a href="{frontendUrl}/contact" style="font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#2a7a6a;text-decoration:none;">Contact</a>
+                                <a href="{supportAppUrl}/contact" style="font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#2a7a6a;text-decoration:none;">Contact</a>
                               </td>
                             </tr>
                           </table>
@@ -111,8 +112,11 @@ public class EmailTemplates {
             </html>
             """;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    private final AppLinksProperties appLinks;
+
+    public EmailTemplates(AppLinksProperties appLinks) {
+        this.appLinks = appLinks;
+    }
 
     // -------------------------------------------------------------------------
     // Public template methods
@@ -341,7 +345,7 @@ public class EmailTemplates {
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\">A new invoice from <strong>" + esc(companyName) + "</strong> is now available.</p>" +
                 infoBox("Invoice #: <strong>" + esc(invoiceNumber) + "</strong><br/>Amount: " + currencySymbol + " " + esc(amount)) +
-                tealButton("View Invoice", "{frontendUrl}/credits/invoices") +
+                tealButton("View Invoice", "{adminAppUrl}/credits/invoices") +
                 divider() +
                 fine("You can view and download your invoices from the billing section.");
 
@@ -356,7 +360,7 @@ public class EmailTemplates {
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\">" + esc(companyName) + " has invited you to TMAG, but you haven't completed your onboarding yet.</p>" +
                 "<p style=\"" + P_STYLE + "\">Complete your profile to start receiving personalized travel health recommendations.</p>" +
-                tealButton("Complete Onboarding", "{frontendUrl}/onboarding") +
+                tealButton("Complete Onboarding", "{adminAppUrl}/onboarding") +
                 divider() +
                 fine("If you already completed onboarding, you can safely ignore this email.");
 
@@ -413,6 +417,7 @@ public class EmailTemplates {
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\">A data export request for <strong>" + esc(companyName) + "</strong> has been processed.</p>" +
                 infoBox("Data type exported: <strong>" + esc(exportType) + "</strong>") +
+                tealButton("Open Admin Dashboard", "{adminAppUrl}") +
                 divider() +
                 fine("You can download your exported data from the admin dashboard. This export complies with GDPR requirements.");
 
@@ -427,7 +432,7 @@ public class EmailTemplates {
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(adminName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\"><strong>" + esc(employeeName) + "</strong> has accepted the invitation to join <strong>" + esc(companyName) + "</strong> on TMAG.</p>" +
                 infoBox("The employee has completed their registration and can now access the platform.") +
-                tealButton("View Team", "{frontendUrl}/team/members") +
+                tealButton("View Team", "{adminAppUrl}/team/members") +
                 divider() +
                 fine("Log in to the admin dashboard to manage your team.");
 
@@ -442,7 +447,7 @@ public class EmailTemplates {
                 "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(adminName) + "</strong>,</p>" +
                 "<p style=\"" + P_STYLE + "\"><strong>" + esc(employeeName) + "</strong> has submitted a credit request that requires your approval.</p>" +
                 infoBox("Credits requested: <strong>" + credits + "</strong>") +
-                tealButton("Review Request", "{frontendUrl}/hr/credit-requests") +
+                tealButton("Review Request", "{adminAppUrl}/hr/credit-requests") +
                 divider() +
                 fine("Log in to the HR dashboard to approve or reject this request.");
 
@@ -478,7 +483,7 @@ public class EmailTemplates {
                 + "<p><strong style=\"color:#1c3a2d;\">7. Settings</strong><br/>"
                 + "Configure billing currency, notification preferences, and security settings including 2FA.</p>"
                 + "</div>"
-                + tealButton("Go to Admin Dashboard", "{frontendUrl}/admin")
+                + tealButton("Go to Admin Dashboard", "{adminAppUrl}")
                 + divider()
                 + fine("If you have questions, contact our support team. We're here to help you keep your travelers safe!");
 
@@ -491,7 +496,7 @@ public class EmailTemplates {
                 + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Hi " + esc(firstName) + ",</p>"
                 + "<p style=\"margin:0 0 24px;font-family:'Hanken Grotesk',Helvetica,Arial,sans-serif;font-size:15px;font-weight:400;color:#5a4a3a;line-height:1.7;\">Thank you for reaching out to TMAG. We've received your message regarding <strong style=\"color:#3d2c1e;\">&ldquo;" + esc(subject) + "&rdquo;</strong> and our team will get back to you within 24&ndash;48 hours.</p>"
                 + infoBox("We take every inquiry seriously. A member of our team will review your message and respond as soon as possible.")
-                + tealButton("Visit TMAG", "{frontendUrl}/contact")
+                + tealButton("Visit Support", "{supportAppUrl}/contact")
                 + divider()
                 + fine("If you didn't send this message, you can safely ignore this email.");
 
@@ -513,7 +518,7 @@ public class EmailTemplates {
                         + "<strong style=\"color:#3d2c1e;\">Type:</strong> " + esc(typeLabel) + "<br/>"
                         + "<strong style=\"color:#3d2c1e;\">Subject:</strong> " + esc(subject) + "<br/><br/>"
                         + "<strong style=\"color:#3d2c1e;\">Message:</strong><br/>" + esc(message).replace("\n", "<br/>"))
-                + darkButton("Open Admin Dashboard", "{frontendUrl}/admin")
+                + darkButton("Open Admin Dashboard", "{superAdminAppUrl}")
                 + divider()
                 + fine("This is an internal notification sent to the TMAG admin team.");
 
@@ -585,8 +590,12 @@ public class EmailTemplates {
     private String wrap(String preheader, String content) {
         return WRAPPER
                 .replace("{preheader}", esc(preheader))
-                .replace("{frontendUrl}", frontendUrl)
                 .replace("{content}", content)
+                .replace("{frontendUrl}", appLinks.frontendUrl())
+                .replace("{adminAppUrl}", appLinks.adminAppUrl())
+                .replace("{superAdminAppUrl}", appLinks.superAdminAppUrl())
+                .replace("{affiliateAppUrl}", appLinks.affiliateAppUrl())
+                .replace("{supportAppUrl}", appLinks.supportAppUrl())
                 .replace("{year}", String.valueOf(Year.now().getValue()));
     }
 
@@ -674,7 +683,7 @@ public class EmailTemplates {
     /** Family member invite — access code */
     public String familyMemberInviteEmail(String memberFirstName, String leadName, String destination,
                                            String loginCode, String tripId) {
-        String loginUrl = frontendUrl + "/auth/family/login?trip=" + tripId;
+        String loginUrl = appLinks.frontendUrl() + "/auth/family/login?trip=" + tripId;
         String content =
                 badge("Family Travel Plan") +
                 heading("You've been added to a family trip") +
@@ -723,7 +732,7 @@ public class EmailTemplates {
     // ─── Doctor-related emails ────────────────────────────────────────────────
 
     public String doctorPlanReadyEmail(String firstName, String destination, String planId) {
-        String reviewLink = frontendUrl + "/doctor/plans/" + planId;
+        String reviewLink = appLinks.frontendUrl() + "/doctor/plans/" + planId;
         String content =
                 badge("Review Required") +
                 heading("New travel plan pending review") +
@@ -808,6 +817,7 @@ public class EmailTemplates {
                 infoBox("<strong>Traveller:</strong> " + esc(travellerName) + "<br/><strong>Destination:</strong> " + esc(destination)) +
                 infoBox("<strong>Doctor Feedback:</strong><br/>" + esc(doctorFeedback)) +
                 "<p style=\"" + P_STYLE + "\">Please review this plan in the admin dashboard and provide a final determination.</p>" +
+                darkButton("Open Admin Dashboard", "{superAdminAppUrl}") +
                 divider() +
                 fine("Review the plan details for more information.");
         return wrap("Escalated Plan Notification — TMAG", content);
@@ -835,7 +845,7 @@ public class EmailTemplates {
                 + "<p style=\"" + P_STYLE + "\">Great news! A referral you made has completed a purchase and you've earned a commission.</p>"
                 + infoBox("Commission: <strong>" + esc(amount) + "</strong><br/>Customer: " + esc(customerEmail != null ? customerEmail : "N/A") + "<br/>Campaign: " + esc(campaign != null ? campaign : "General"))
                 + "<p style=\"" + P_STYLE + "\">Log in to your affiliate dashboard to view your full commission history and track your earnings.</p>"
-                + tealButton("View Dashboard", "{frontendUrl}/login")
+                + tealButton("View Dashboard", "{affiliateAppUrl}/login")
                 + divider()
                 + fine("Keep sharing your referral links to earn more commissions!");
         return wrap("You earned a commission on TMAG!", content);
@@ -855,7 +865,7 @@ public class EmailTemplates {
                         + "Payment details: " + esc(paymentDetails) + "<br/>"
                         + "Status: <strong>Pending</strong>")
                 + "<p style=\"" + P_STYLE + "\">You will receive another email once your payout has been processed and the funds are on their way.</p>"
-                + tealButton("View Payout History", "{frontendUrl}/affiliate/payouts")
+                + tealButton("View Payout History", "{affiliateAppUrl}/affiliate/payouts")
                 + divider()
                 + fine("If you have questions about this request, contact us at <a href=\"mailto:affiliates@tmag.health\" style=\"color:#2a7a6a;\">affiliates@tmag.health</a>.");
         return wrap("Payout request received — TMAG Affiliates", content);
@@ -876,7 +886,7 @@ public class EmailTemplates {
                         + "Payment method: " + esc(paymentMethod) + "<br/>"
                         + "Payment details: " + esc(paymentDetails) + "<br/>"
                         + "Status: <strong>Pending</strong>")
-                + darkButton("Open Admin Dashboard", "{frontendUrl}/admin/affiliates/payouts")
+                + darkButton("Open Admin Dashboard", "{superAdminAppUrl}/affiliates/payouts")
                 + divider()
                 + fine("This is an internal notification sent to the TMAG super-admin team.");
         return wrap("New affiliate payout request: " + affiliateName, content);

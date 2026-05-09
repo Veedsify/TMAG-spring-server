@@ -1,5 +1,26 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.affiliate;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 import com.TravelMedicineAdvisory.Server.core.email.EmailService;
 import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateApplication;
@@ -17,29 +38,9 @@ import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateProfileReposi
 import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateReferralRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
-import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -57,9 +58,7 @@ public class AdminAffiliateService {
     private final EmailTemplates emailTemplates;
     private final AffiliateAuditLogRepository affiliateAuditLogRepository;
     private final AffiliateClickRepository affiliateClickRepository;
-
-    @Value("${app.frontend.url:http://localhost:3000}")
-    private String frontendUrl;
+    private final AppLinksProperties appLinks;
 
     public AdminAffiliateService(
             AffiliateApplicationRepository affiliateApplicationRepository,
@@ -73,7 +72,8 @@ public class AdminAffiliateService {
             EmailService emailService,
             EmailTemplates emailTemplates,
             AffiliateAuditLogRepository affiliateAuditLogRepository,
-            AffiliateClickRepository affiliateClickRepository) {
+            AffiliateClickRepository affiliateClickRepository,
+            AppLinksProperties appLinks) {
         this.affiliateApplicationRepository = affiliateApplicationRepository;
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.affiliateCommissionRepository = affiliateCommissionRepository;
@@ -86,6 +86,7 @@ public class AdminAffiliateService {
         this.emailTemplates = emailTemplates;
         this.affiliateAuditLogRepository = affiliateAuditLogRepository;
         this.affiliateClickRepository = affiliateClickRepository;
+        this.appLinks = appLinks;
     }
 
     // -------------------------------------------------------------------------
@@ -137,7 +138,7 @@ public class AdminAffiliateService {
         String lastName = nameParts.length > 1 ? nameParts[1] : "";
 
         // Find AFFILIATE role
-        Role affiliateRole = roleRepository.findByName("AFFILIATE")
+        Role affiliateRole = roleRepository.findByName(Roles.Affiliate.name())
                 .orElseThrow(() -> new NoSuchElementException("AFFILIATE role not found"));
 
         // Create user
@@ -169,7 +170,7 @@ public class AdminAffiliateService {
 
         // Send welcome email
         try {
-            String loginUrl = trimTrailingSlash(frontendUrl) + "/login";
+            String loginUrl = appLinks.affiliateAppUrl() + "/login";
             emailService.sendHtmlEmail(
                     app.getEmail(),
                     "Welcome to TMAG Affiliate Program",
@@ -595,10 +596,4 @@ public class AdminAffiliateService {
         return code;
     }
 
-    private String trimTrailingSlash(String value) {
-        if (value == null || value.isBlank()) {
-            return "http://localhost:3000";
-        }
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
-    }
 }

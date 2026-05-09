@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.affiliate;
 
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 import com.TravelMedicineAdvisory.Server.core.email.EmailService;
 import com.TravelMedicineAdvisory.Server.core.email.EmailTemplates;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
@@ -58,6 +59,7 @@ public class AffiliateService {
     private final EmailTemplates emailTemplates;
     private final QueueService queueService;
     private final RoleRepository roleRepository;
+    private final AppLinksProperties appLinks;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -75,7 +77,8 @@ public class AffiliateService {
             EmailService emailService,
             EmailTemplates emailTemplates,
             QueueService queueService,
-            RoleRepository roleRepository) {
+            RoleRepository roleRepository,
+            AppLinksProperties appLinks) {
         this.affiliateProfileRepository = affiliateProfileRepository;
         this.referralLinkRepository = referralLinkRepository;
         this.affiliateReferralRepository = affiliateReferralRepository;
@@ -89,6 +92,7 @@ public class AffiliateService {
         this.emailTemplates = emailTemplates;
         this.queueService = queueService;
         this.roleRepository = roleRepository;
+        this.appLinks = appLinks;
     }
 
     public record AffiliatePurchaseDiscount(BigDecimal rate, String referralCode) {}
@@ -346,29 +350,48 @@ public class AffiliateService {
     }
 
     public AffiliateTrackingResponse trackClick(String shortCode, String ipAddress, String userAgent) {
-        ReferralLink link = referralLinkRepository.findByShortCodeAndIsActiveTrueAndDeletedAtIsNull(normalizeCode(shortCode))
+        String normalizedCode = normalizeCode(shortCode);
+        Optional<ReferralLink> linkOpt = referralLinkRepository.findByShortCodeAndIsActiveTrueAndDeletedAtIsNull(normalizedCode);
+        if (linkOpt.isPresent()) {
+            ReferralLink link = linkOpt.get();
+            AffiliateProfile profile = link.getAffiliateProfile();
+            if (!isActive(profile)) {
+                throw new NoSuchElementException("Referral link not found");
+            }
+
+            link.setClicks((link.getClicks() != null ? link.getClicks() : 0) + 1);
+            profile.setTotalClicks((profile.getTotalClicks() != null ? profile.getTotalClicks() : 0) + 1);
+            referralLinkRepository.save(link);
+            affiliateProfileRepository.save(profile);
+
+            AffiliateClick click = new AffiliateClick();
+            click.setAffiliateProfile(profile);
+            click.setReferralLink(link);
+            click.setIpAddress(truncate(ipAddress, 80));
+            click.setUserAgent(userAgent);
+            affiliateClickRepository.save(click);
+
+            return new AffiliateTrackingResponse(
+                    link.getShortCode(),
+                    profile.getReferralCode(),
+                    link.getDestinationUrl(),
+                    safeRate(profile.getDiscountRate(), DEFAULT_DISCOUNT_RATE),
+                    COOKIE_DAYS
+            );
+        }
+
+        AffiliateProfile profile = affiliateProfileRepository.findByReferralCodeAndDeletedAtIsNull(normalizedCode)
                 .orElseThrow(() -> new NoSuchElementException("Referral link not found"));
-        AffiliateProfile profile = link.getAffiliateProfile();
         if (!isActive(profile)) {
             throw new NoSuchElementException("Referral link not found");
         }
-
-        link.setClicks((link.getClicks() != null ? link.getClicks() : 0) + 1);
         profile.setTotalClicks((profile.getTotalClicks() != null ? profile.getTotalClicks() : 0) + 1);
-        referralLinkRepository.save(link);
         affiliateProfileRepository.save(profile);
 
-        AffiliateClick click = new AffiliateClick();
-        click.setAffiliateProfile(profile);
-        click.setReferralLink(link);
-        click.setIpAddress(truncate(ipAddress, 80));
-        click.setUserAgent(userAgent);
-        affiliateClickRepository.save(click);
-
         return new AffiliateTrackingResponse(
-                link.getShortCode(),
+                null,
                 profile.getReferralCode(),
-                link.getDestinationUrl(),
+                trimTrailingSlash(frontendUrl) + "/pricing",
                 safeRate(profile.getDiscountRate(), DEFAULT_DISCOUNT_RATE),
                 COOKIE_DAYS
         );
@@ -438,7 +461,7 @@ public class AffiliateService {
             String safeName = request.fullName() != null ? request.fullName().replace("<", "&lt;").replace(">", "&gt;") : "";
             String safeEmail = request.email() != null ? request.email().replace("<", "&lt;").replace(">", "&gt;") : "";
             String html = "<p>A new affiliate application has been submitted by <strong>" + safeName + "</strong> (" + safeEmail + ").</p>"
-                    + "<p>Log in to the admin dashboard to review.</p>";
+                    + "<p><a href=\"" + appLinks.superAdminAppUrl() + "/affiliates/applications\">Open the admin dashboard to review.</a></p>";
             for (User admin : superAdmins) {
                 queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
                         "to", admin.getEmail(),
@@ -615,7 +638,14 @@ public class AffiliateService {
             return request.destinationUrl().trim();
         }
         if (creditPlan != null) {
-            return trimTrailingSlash(frontendUrl) + "/register?plan=" + creditPlan.getCode();
+            String frontend = trimTrailingSlash(frontendUrl);
+            if (Boolean.TRUE.equals(creditPlan.getIsCompanyPlan())) {
+                return frontend + "/company-onboarding?plan=" + creditPlan.getCode();
+            }
+            if (Boolean.TRUE.equals(creditPlan.getIsFamilyPlan())) {
+                return frontend + "/family-checkout?plan=FAMILY_" + creditPlan.getId();
+            }
+            return frontend + "/pricing?plan=" + creditPlan.getCode();
         }
         throw new IllegalArgumentException("Either destination_url or credit_plan_id is required");
     }
