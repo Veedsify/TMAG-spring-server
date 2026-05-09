@@ -22,9 +22,11 @@ import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 import com.TravelMedicineAdvisory.Server.core.email.EmailService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.companyonboarding.CompanyOnboardingEntity;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchase;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyPackagePurchase;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
@@ -37,6 +39,8 @@ public class AffiliateService {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final int COOKIE_DAYS = 90;
     private static final String CREDIT_PURCHASE_REFERENCE = "credit_purchase";
+    private static final String COMPANY_ONBOARDING_REFERENCE = "company_onboarding";
+    private static final String FAMILY_PACKAGE_REFERENCE = "family_package";
 
     private static final BigDecimal MIN_PAYOUT_USD = BigDecimal.valueOf(200);
     private static final BigDecimal MIN_PAYOUT_NGN = BigDecimal.valueOf(200_000);
@@ -398,24 +402,37 @@ public class AffiliateService {
     }
 
     public Optional<AffiliatePurchaseDiscount> resolveDiscountForUser(User user, String referralCode) {
-        if (user == null) {
-            return Optional.empty();
-        }
-
-        Optional<AffiliateReferral> existingReferral = affiliateReferralRepository.findByReferredUserIdAndDeletedAtIsNull(user.getId());
-        if (existingReferral.isPresent() && isActive(existingReferral.get().getAffiliateProfile())) {
-            AffiliateProfile profile = existingReferral.get().getAffiliateProfile();
-            return Optional.of(new AffiliatePurchaseDiscount(
-                    safeRate(profile.getDiscountRate(), DEFAULT_DISCOUNT_RATE),
-                    existingReferral.get().getReferralCode()
-            ));
-        }
-
-        return createReferralIfMissing(user, referralCode)
-                .map(referral -> new AffiliatePurchaseDiscount(
-                        safeRate(referral.getAffiliateProfile().getDiscountRate(), DEFAULT_DISCOUNT_RATE),
-                        referral.getReferralCode()
+        if (user != null) {
+            Optional<AffiliateReferral> existingReferral = affiliateReferralRepository.findByReferredUserIdAndDeletedAtIsNull(user.getId());
+            if (existingReferral.isPresent() && isActive(existingReferral.get().getAffiliateProfile())) {
+                AffiliateProfile profile = existingReferral.get().getAffiliateProfile();
+                return Optional.of(new AffiliatePurchaseDiscount(
+                        safeRate(profile.getDiscountRate(), DEFAULT_DISCOUNT_RATE),
+                        existingReferral.get().getReferralCode()
                 ));
+            }
+
+            Optional<AffiliateReferral> newReferral = createReferralIfMissing(user, referralCode);
+            if (newReferral.isPresent()) {
+                return Optional.of(new AffiliatePurchaseDiscount(
+                        safeRate(newReferral.get().getAffiliateProfile().getDiscountRate(), DEFAULT_DISCOUNT_RATE),
+                        newReferral.get().getReferralCode()
+                ));
+            }
+        }
+
+        // For guest checkouts (user is null) or when no user-based referral was found,
+        // resolve discount directly from the referral code
+        if (referralCode != null && !referralCode.isBlank()) {
+            return resolveReferralTarget(referralCode)
+                    .filter(target -> isActive(target.affiliateProfile()))
+                    .map(target -> new AffiliatePurchaseDiscount(
+                            safeRate(target.affiliateProfile().getDiscountRate(), DEFAULT_DISCOUNT_RATE),
+                            target.referralLink() != null ? target.referralLink().getShortCode() : target.affiliateProfile().getReferralCode()
+                    ));
+        }
+
+        return Optional.empty();
     }
 
     public AffiliateApplicationResponse submitApplication(AffiliateApplicationRequest request) {
@@ -537,11 +554,210 @@ public class AffiliateService {
             if (affiliateUser != null && affiliateUser.getEmail() != null) {
                 String affiliateName = affiliateUser.getFirstName() != null ? affiliateUser.getFirstName() : "there";
                 String campaign = link != null ? link.getCampaign() : "General";
+                String displayAmount = "NGN".equals(purchaseCurrency) ? "\u20a6" + commissionAmount.toPlainString() : "$" + commissionAmount.toPlainString();
                 emailService.sendAffiliateCommissionEarned(
                         affiliateUser.getEmail(),
                         affiliateName,
-                        "$" + commissionAmount.toPlainString(),
+                        displayAmount,
                         purchase.getUser().getEmail(),
+                        campaign
+                );
+            }
+        } catch (Exception e) {
+            // Log but don't fail
+        }
+    }
+
+    /**
+     * Record affiliate commission for a company onboarding purchase.
+     * The referral code is stored on the entity; no referred user exists yet at payment time.
+     */
+    public void recordCommissionForCompanyOnboarding(CompanyOnboardingEntity entity) {
+        if (entity == null || entity.getId() == null || entity.getAffiliateReferralCode() == null) {
+            return;
+        }
+        if (affiliateCommissionRepository.existsByReferenceTypeAndReferenceIdAndDeletedAtIsNull(COMPANY_ONBOARDING_REFERENCE, entity.getId())) {
+            return;
+        }
+
+        var targetOpt = resolveReferralTarget(entity.getAffiliateReferralCode())
+                .filter(target -> isActive(target.affiliateProfile()));
+        if (targetOpt.isEmpty()) {
+            return;
+        }
+
+        ReferralTarget target = targetOpt.get();
+        BigDecimal baseAmount = money(entity.getPaymentAmount() != null ? entity.getPaymentAmount() : BigDecimal.ZERO);
+        if (baseAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        String currency = entity.getPaymentCurrency() != null ? entity.getPaymentCurrency() : "USD";
+
+        BigDecimal rate = safeRate(target.affiliateProfile().getCommissionRate(), DEFAULT_COMMISSION_RATE);
+        BigDecimal commissionAmount = money(baseAmount.multiply(rate).divide(ONE_HUNDRED, 4, RoundingMode.HALF_UP));
+
+        AffiliateCommission commission = new AffiliateCommission();
+        commission.setAffiliateProfile(target.affiliateProfile());
+        commission.setReferralLink(target.referralLink());
+        commission.setReferredUser(null);
+        commission.setAmount(commissionAmount);
+        commission.setBaseAmount(baseAmount);
+        commission.setRate(rate);
+        commission.setStatus("approved");
+        commission.setCurrency(currency);
+        commission.setCustomerEmail(entity.getContactEmail());
+        commission.setReferenceType(COMPANY_ONBOARDING_REFERENCE);
+        commission.setReferenceId(entity.getId());
+        affiliateCommissionRepository.save(commission);
+
+        // Track currency-specific totals
+        if ("NGN".equals(currency)) {
+            target.affiliateProfile().setTotalCommissionEarnedNgn(nullToZero(target.affiliateProfile().getTotalCommissionEarnedNgn()).add(commissionAmount));
+            target.affiliateProfile().setPendingCommissionNgn(nullToZero(target.affiliateProfile().getPendingCommissionNgn()).add(commissionAmount));
+        } else {
+            target.affiliateProfile().setTotalCommissionEarned(nullToZero(target.affiliateProfile().getTotalCommissionEarned()).add(commissionAmount));
+            target.affiliateProfile().setPendingCommission(nullToZero(target.affiliateProfile().getPendingCommission()).add(commissionAmount));
+        }
+        affiliateProfileRepository.save(target.affiliateProfile());
+
+        ReferralLink link = target.referralLink();
+        if (link != null) {
+            link.setCommissionEarned(nullToZero(link.getCommissionEarned()).add(commissionAmount));
+            referralLinkRepository.save(link);
+        }
+
+        // Send commission earned email to affiliate
+        try {
+            User affiliateUser = target.affiliateProfile().getUser();
+            if (affiliateUser != null && affiliateUser.getEmail() != null) {
+                String affiliateName = affiliateUser.getFirstName() != null ? affiliateUser.getFirstName() : "there";
+                String campaign = link != null ? link.getCampaign() : "Company Referral";
+                String displayAmount = "NGN".equals(currency) ? "\u20a6" + commissionAmount.toPlainString() : "$" + commissionAmount.toPlainString();
+                emailService.sendAffiliateCommissionEarned(
+                        affiliateUser.getEmail(),
+                        affiliateName,
+                        displayAmount,
+                        entity.getContactEmail(),
+                        campaign
+                );
+            }
+        } catch (Exception e) {
+            // Log but don't fail
+        }
+    }
+
+    /**
+     * Record affiliate commission for a family package purchase.
+     * Registers the referral for the purchase user if not already registered.
+     */
+    public void recordCommissionForFamilyPackagePurchase(FamilyPackagePurchase purchase) {
+        if (purchase == null || purchase.getId() == null) {
+            return;
+        }
+        if (purchase.getStatus() != com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyPackagePurchaseStatus.ACTIVE) {
+            return;
+        }
+        if (affiliateCommissionRepository.existsByReferenceTypeAndReferenceIdAndDeletedAtIsNull(FAMILY_PACKAGE_REFERENCE, purchase.getId())) {
+            return;
+        }
+
+        // Register referral for the user if not already done
+        User user = purchase.getUser();
+        if (user != null && purchase.getAffiliateReferralCode() != null) {
+            registerReferralForUser(user.getId(), purchase.getAffiliateReferralCode());
+        }
+
+        // Resolve affiliate — either via user's existing referral or via stored code
+        Optional<AffiliateReferral> referralOpt = Optional.empty();
+        if (user != null) {
+            referralOpt = affiliateReferralRepository.findByReferredUserIdAndDeletedAtIsNull(user.getId());
+        }
+
+        AffiliateProfile profile;
+        ReferralLink referralLink;
+        String referralCode;
+        String customerEmail;
+
+        if (referralOpt.isPresent() && isActive(referralOpt.get().getAffiliateProfile())) {
+            AffiliateReferral referral = referralOpt.get();
+            profile = referral.getAffiliateProfile();
+            referralLink = referral.getReferralLink();
+            referralCode = referral.getReferralCode();
+            customerEmail = user.getEmail();
+        } else if (purchase.getAffiliateReferralCode() != null) {
+            // Fall back to the stored referral code if no user referral exists
+            var targetOpt = resolveReferralTarget(purchase.getAffiliateReferralCode())
+                    .filter(target -> isActive(target.affiliateProfile()));
+            if (targetOpt.isEmpty()) {
+                return;
+            }
+            ReferralTarget target = targetOpt.get();
+            profile = target.affiliateProfile();
+            referralLink = target.referralLink();
+            referralCode = purchase.getAffiliateReferralCode();
+            customerEmail = user != null ? user.getEmail() : purchase.getGuestEmail();
+        } else {
+            return;
+        }
+
+        if (!isActive(profile)) {
+            return;
+        }
+
+        // Convert amountPaidMinor (minor units) to major units
+        BigDecimal baseAmount = money(BigDecimal.valueOf(purchase.getAmountPaidMinor() != null ? purchase.getAmountPaidMinor() : 0L));
+        if (baseAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        String currency = purchase.getCurrency() != null ? purchase.getCurrency() : "USD";
+
+        BigDecimal rate = safeRate(profile.getCommissionRate(), DEFAULT_COMMISSION_RATE);
+        BigDecimal commissionAmount = money(baseAmount.multiply(rate).divide(ONE_HUNDRED, 4, RoundingMode.HALF_UP));
+
+        AffiliateCommission commission = new AffiliateCommission();
+        commission.setAffiliateProfile(profile);
+        commission.setReferralLink(referralLink);
+        commission.setReferredUser(user);
+        commission.setAmount(commissionAmount);
+        commission.setBaseAmount(baseAmount);
+        commission.setRate(rate);
+        commission.setStatus("approved");
+        commission.setCurrency(currency);
+        commission.setCustomerEmail(customerEmail);
+        commission.setReferenceType(FAMILY_PACKAGE_REFERENCE);
+        commission.setReferenceId(purchase.getId());
+        affiliateCommissionRepository.save(commission);
+
+        // Track currency-specific totals
+        if ("NGN".equals(currency)) {
+            profile.setTotalCommissionEarnedNgn(nullToZero(profile.getTotalCommissionEarnedNgn()).add(commissionAmount));
+            profile.setPendingCommissionNgn(nullToZero(profile.getPendingCommissionNgn()).add(commissionAmount));
+        } else {
+            profile.setTotalCommissionEarned(nullToZero(profile.getTotalCommissionEarned()).add(commissionAmount));
+            profile.setPendingCommission(nullToZero(profile.getPendingCommission()).add(commissionAmount));
+        }
+        affiliateProfileRepository.save(profile);
+
+        ReferralLink link = referralLink;
+        if (link != null) {
+            link.setCommissionEarned(nullToZero(link.getCommissionEarned()).add(commissionAmount));
+            referralLinkRepository.save(link);
+        }
+
+        // Send commission earned email to affiliate
+        try {
+            User affiliateUser = profile.getUser();
+            if (affiliateUser != null && affiliateUser.getEmail() != null) {
+                String affiliateName = affiliateUser.getFirstName() != null ? affiliateUser.getFirstName() : "there";
+                String campaign = link != null ? link.getCampaign() : "Family Plan Referral";
+                String displayAmount = "NGN".equals(currency) ? "\u20a6" + commissionAmount.toPlainString() : "$" + commissionAmount.toPlainString();
+                emailService.sendAffiliateCommissionEarned(
+                        affiliateUser.getEmail(),
+                        affiliateName,
+                        displayAmount,
+                        customerEmail,
                         campaign
                 );
             }

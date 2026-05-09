@@ -266,6 +266,14 @@ public class FamilyPackagePurchaseService {
         purchaseRepository.save(purchase);
         logger.info("Family package purchase completed: txRef={}, packageType={}", purchase.getTxRef(),
                 purchase.getPackageType());
+
+        // Record affiliate commission
+        try {
+            affiliateService.recordCommissionForFamilyPackagePurchase(purchase);
+        } catch (Exception e) {
+            logger.error("Failed to record affiliate commission for family purchase: id={}, error={}", purchase.getId(), e.getMessage(), e);
+        }
+
         return FamilyPackagePurchaseResponse.from(purchase);
     }
 
@@ -301,6 +309,14 @@ public class FamilyPackagePurchaseService {
 
             purchaseRepository.save(purchase);
             logger.info("Family package purchase completed from webhook: txRef={}", txRef);
+
+            // Record affiliate commission
+            try {
+                affiliateService.recordCommissionForFamilyPackagePurchase(purchase);
+            } catch (Exception e) {
+                logger.error("Failed to record affiliate commission for family purchase (webhook): id={}, error={}", purchase.getId(), e.getMessage(), e);
+            }
+
             return FamilyPackagePurchaseResponse.from(purchase);
         } else {
             purchase.setStatus(FamilyPackagePurchaseStatus.REFUNDED);

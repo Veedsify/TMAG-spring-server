@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
@@ -68,6 +69,8 @@ public class AuthService {
     private final AvatarUrlService avatarUrlService;
     private final AffiliateService affiliateService;
 
+    private final AppLinksProperties appLinks;
+
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
@@ -91,7 +94,8 @@ public class AuthService {
             CreditPlanRepository userCreditPlanRepository,
             UserSettingService userSettingService,
             AvatarUrlService avatarUrlService,
-            AffiliateService affiliateService) {
+            AffiliateService affiliateService,
+            AppLinksProperties appLinks) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -106,6 +110,7 @@ public class AuthService {
         this.userSettingService = userSettingService;
         this.avatarUrlService = avatarUrlService;
         this.affiliateService = affiliateService;
+        this.appLinks = appLinks;
 
     }
 
@@ -174,7 +179,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", savedUser.getId()), userDetails);
 
-        return buildAuthResponse(savedUser, jwtToken);
+        AuthResponse response = buildAuthResponse(savedUser, jwtToken);
+        applyRoleRedirect(savedUser, response);
+        return response;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -196,7 +203,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-        return buildAuthResponse(user, jwtToken);
+        AuthResponse response = buildAuthResponse(user, jwtToken);
+        applyRoleRedirect(user, response);
+        return response;
     }
 
     private void sendLoginAlertEmail(User user) {
@@ -344,7 +353,9 @@ public class AuthService {
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
             String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-            return buildAuthResponse(user, jwtToken);
+            AuthResponse response = buildAuthResponse(user, jwtToken);
+            applyRoleRedirect(user, response);
+            return response;
 
         } catch (IllegalArgumentException e) {
             throw e;
@@ -454,7 +465,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-        return buildAuthResponse(user, jwtToken);
+        AuthResponse response = buildAuthResponse(user, jwtToken);
+        applyRoleRedirect(user, response);
+        return response;
     }
 
     private void sendInvitationAcceptedEmail(User user) {
@@ -536,6 +549,37 @@ public class AuthService {
                     .orElseGet(() -> roleRepository.findByName("Individual").orElse(null));
         }
         return roleRepository.findByName("Individual").orElse(null);
+    }
+
+    /**
+     * Check if the user's role requires redirecting to a different app.
+     * Sets redirectTo and redirectMessage on the response when applicable.
+     */
+    private void applyRoleRedirect(User user, AuthResponse response) {
+        if (user == null || user.getRole() == null) {
+            return;
+        }
+        String roleName = user.getRole().getName();
+        if (roleName == null) {
+            return;
+        }
+        switch (roleName.toLowerCase().trim()) {
+            case "superadmin" -> {
+                response.setRedirectTo(appLinks.superAdminAppUrl());
+                response.setRedirectMessage("Super admin accounts must be accessed from the Super Admin Dashboard. Please log in there instead.");
+            }
+            case "administrator", "admin" -> {
+                response.setRedirectTo(appLinks.adminAppUrl());
+                response.setRedirectMessage("Admin accounts must be accessed from the Admin Dashboard. Please log in there instead.");
+            }
+            case "affiliate" -> {
+                response.setRedirectTo(appLinks.affiliateAppUrl());
+                response.setRedirectMessage("Affiliate accounts must be accessed from the Affiliate Portal. Please log in there instead.");
+            }
+            default -> {
+                // No redirect needed for Individual, Hr, Doctor, CustomerSupport, etc.
+            }
+        }
     }
 
     private AuthResponse buildAuthResponse(User user, String jwtToken) {

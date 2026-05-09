@@ -7,6 +7,7 @@ import com.TravelMedicineAdvisory.Server.core.pricing.VolumePricingService;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
@@ -53,6 +54,7 @@ public class CompanyAdminCreditPurchaseService {
     private final CacheManager cacheManager;
     private final CallbackRegistry callbackRegistry;
     private final VolumePricingService volumePricingService;
+    private final AffiliateService affiliateService;
 
     public CompanyAdminCreditPurchaseService(
             CompanyRepository companyRepository,
@@ -66,7 +68,8 @@ public class CompanyAdminCreditPurchaseService {
             CreditPlanRepository userCreditPlanRepository,
             CacheManager cacheManager,
             CallbackRegistry callbackRegistry,
-            VolumePricingService volumePricingService) {
+            VolumePricingService volumePricingService,
+            AffiliateService affiliateService) {
         this.companyRepository = companyRepository;
         this.settingRepository = settingRepository;
         this.creditRepository = creditRepository;
@@ -79,6 +82,7 @@ public class CompanyAdminCreditPurchaseService {
         this.cacheManager = cacheManager;
         this.callbackRegistry = callbackRegistry;
         this.volumePricingService = volumePricingService;
+        this.affiliateService = affiliateService;
     }
 
     public record CompanyPricingResult(
@@ -377,12 +381,26 @@ public class CompanyAdminCreditPurchaseService {
             invoice.setCompany(company);
             invoiceRepository.save(invoice);
 
-            logger.info("Company credit purchase completed: txRef={}, companyId={}, credits={}, invoiceId={}",
+            // Record affiliate commission for company credit top-up
+        try {
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
+        } catch (Exception e) {
+            logger.error("Failed to record affiliate commission for company credit top-up: purchaseId={}, error={}", purchase.getId(), e.getMessage(), e);
+        }
+
+        logger.info("Company credit purchase completed: txRef={}, companyId={}, credits={}, invoiceId={}",
                     purchase.getTxRef(), purchase.getCompanyId(), purchase.getCreditsPurchased(), invoice.getId());
         } else {
             User user = purchase.getUser();
             user.setCredits(user.getCredits() + purchase.getCreditsPurchased());
             userRepository.save(user);
+
+            // Record affiliate commission for user credit top-up
+            try {
+                affiliateService.recordCommissionForCompletedPurchase(purchase);
+            } catch (Exception e) {
+                logger.error("Failed to record affiliate commission for user credit top-up: purchaseId={}, error={}", purchase.getId(), e.getMessage(), e);
+            }
 
             Credit creditEntry = new Credit();
             creditEntry.setUser(user);

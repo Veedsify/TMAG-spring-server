@@ -367,6 +367,15 @@ public class CompanyOnboardingService {
                 creditPurchaseRepository.save(purchase);
             }
 
+            // Record affiliate commission for this company onboarding
+            if (entity.getAffiliateReferralCode() != null) {
+                try {
+                    affiliateService.recordCommissionForCompanyOnboarding(entity);
+                } catch (Exception e) {
+                    logger.error("Failed to record affiliate commission for company onboarding: id={}, error={}", entity.getId(), e.getMessage(), e);
+                }
+            }
+
             queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
                     "to", superadminEmail,
                     "subject", "New Company Registration Pending Approval - " + entity.getCompanyName(),
@@ -423,6 +432,18 @@ public class CompanyOnboardingService {
         }
 
         Company company = createCompanyFromRequest(entity);
+
+        // Register affiliate referral for the admin user if an affiliate code was used during onboarding.
+        // This ensures future purchases (e.g., top-ups) by this user earn commissions for the affiliate.
+        if (entity.getAffiliateReferralCode() != null) {
+            userRepository.findByEmail(entity.getContactEmail()).ifPresent(adminUser -> {
+                try {
+                    affiliateService.registerReferralForUser(adminUser.getId(), entity.getAffiliateReferralCode());
+                } catch (Exception e) {
+                    logger.error("Failed to register affiliate referral for admin user: userId={}, error={}", adminUser.getId(), e.getMessage(), e);
+                }
+            });
+        }
 
         entity.setStatus(OnboardingStatus.APPROVED);
         entity.setReviewedBy(adminEmail);
