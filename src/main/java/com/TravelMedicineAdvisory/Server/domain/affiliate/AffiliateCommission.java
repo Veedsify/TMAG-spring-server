@@ -58,6 +58,9 @@ public class AffiliateCommission extends BaseEntity {
     @Column(name = "reference_id", nullable = false)
     private Long referenceId;
 
+    @Column(nullable = false, length = 10)
+    private String currency = "USD";
+
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
@@ -147,5 +150,13 @@ public class AffiliateCommission extends BaseEntity {
 
     public void setPaidAt(LocalDateTime paidAt) {
         this.paidAt = paidAt;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 }

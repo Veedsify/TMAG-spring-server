@@ -149,4 +149,34 @@ public class EmailService {
             logger.error("Failed to send affiliate payout processed email to {}: {}", to, e.getMessage());
         }
     }
+
+    /**
+     * Sent to the affiliate immediately after they submit a payout request.
+     */
+    public void sendAffiliatePayoutRequested(String to, String firstName,
+                                              String amount, String currency,
+                                              String paymentMethod, String paymentDetails) {
+        try {
+            sendHtmlEmail(to, "Payout request received \u2014 TMAG Affiliates",
+                    emailTemplates.affiliatePayoutRequested(firstName, amount, currency, paymentMethod, paymentDetails));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout-requested email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Sent to every super-admin when an affiliate submits a payout request.
+     */
+    public void sendAffiliatePayoutRequestedAdmin(String to,
+                                                   String affiliateName, String affiliateEmail,
+                                                   String amount, String currency,
+                                                   String paymentMethod, String paymentDetails) {
+        try {
+            sendHtmlEmail(to, "New affiliate payout request: " + affiliateName,
+                    emailTemplates.affiliatePayoutRequestedAdmin(
+                            affiliateName, affiliateEmail, amount, currency, paymentMethod, paymentDetails));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout-requested admin email to {}: {}", to, e.getMessage());
+        }
+    }
 }

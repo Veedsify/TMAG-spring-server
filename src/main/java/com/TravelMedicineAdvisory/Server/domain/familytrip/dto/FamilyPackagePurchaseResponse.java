@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.familytrip.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyPackagePurchase;
@@ -23,7 +24,10 @@ public record FamilyPackagePurchaseResponse(
         LocalDateTime paidAt,
         String flutterwaveStatus,
         String failedReason,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String affiliateReferralCode,
+        BigDecimal affiliateDiscountRate,
+        BigDecimal affiliateDiscountAmount
         ) {
 
     public static FamilyPackagePurchaseResponse from(FamilyPackagePurchase entity) {
@@ -46,7 +50,10 @@ public record FamilyPackagePurchaseResponse(
                 entity.getPaidAt(),
                 entity.getFlutterwaveStatus(),
                 entity.getFailedReason(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getAffiliateReferralCode(),
+                entity.getAffiliateDiscountRate(),
+                entity.getAffiliateDiscountAmount()
         );
     }
 }

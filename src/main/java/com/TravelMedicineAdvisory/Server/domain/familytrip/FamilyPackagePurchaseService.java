@@ -22,6 +22,7 @@ import com.TravelMedicineAdvisory.Server.config.CallbackRegistry;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentRequest;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse;
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
@@ -52,6 +53,7 @@ public class FamilyPackagePurchaseService {
     private final PasswordEncoder passwordEncoder;
     private final QueueService queueService;
     private final RoleRepository roleRepo;
+    private final AffiliateService affiliateService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -63,7 +65,8 @@ public class FamilyPackagePurchaseService {
             CallbackRegistry callbackRegistry,
             PasswordEncoder passwordEncoder,
             RoleRepository roleRepo,
-            QueueService queueService) {
+            QueueService queueService,
+            AffiliateService affiliateService) {
         this.purchaseRepository = purchaseRepository;
         this.userRepository = userRepository;
         this.flutterwaveService = flutterwaveService;
@@ -71,6 +74,7 @@ public class FamilyPackagePurchaseService {
         this.passwordEncoder = passwordEncoder;
         this.roleRepo = roleRepo;
         this.queueService = queueService;
+        this.affiliateService = affiliateService;
     }
 
     public record CheckoutResult(
@@ -79,6 +83,8 @@ public class FamilyPackagePurchaseService {
             String packageType,
             Integer tripsAllowed,
             BigDecimal amountMinor,
+            BigDecimal baseAmount,
+            BigDecimal discountAmount,
             String currency,
             String currencySymbol,
             Long purchaseId,
@@ -127,7 +133,16 @@ public class FamilyPackagePurchaseService {
         }
 
         BigDecimal extraCost = additionalMemberPriceMinor.multiply(BigDecimal.valueOf(additionalMembers));
-        BigDecimal priceMinor = basePriceMinor.add(extraCost);
+        BigDecimal baseAmount = basePriceMinor.add(extraCost);
+
+        // Resolve affiliate discount
+        var affiliateDiscount = affiliateService.resolveDiscountForUser(user, request.affiliateReferralCode());
+        BigDecimal discountRate = affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::rate).orElse(BigDecimal.ZERO);
+        BigDecimal discountAmount = discountRate.compareTo(BigDecimal.ZERO) > 0
+                ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP).setScale(2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal priceMinor = baseAmount.subtract(discountAmount);
+
         int totalMembers = BASE_INCLUDED_MEMBERS + additionalMembers;
 
         String txRef = "TMAG_FAMILY_" + java.util.UUID.randomUUID().toString();
@@ -143,6 +158,9 @@ public class FamilyPackagePurchaseService {
         purchase.setCurrency(currency.name());
         purchase.setStatus(FamilyPackagePurchaseStatus.PENDING);
         purchase.setTxRef(txRef);
+        purchase.setAffiliateReferralCode(affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::referralCode).orElse(null));
+        purchase.setAffiliateDiscountRate(discountRate);
+        purchase.setAffiliateDiscountAmount(discountAmount);
 
         if (userId == null) {
             purchase.setGuestEmail(customerEmail);
@@ -152,8 +170,8 @@ public class FamilyPackagePurchaseService {
 
         purchaseRepository.save(purchase);
 
-        logger.info("Initiating family package checkout: txRef={}, packageType={}, amount={}, guest={}, additionalMembers={}, totalMembers={}",
-                txRef, packageType, priceMinor, userId == null, additionalMembers, totalMembers);
+        logger.info("Initiating family package checkout: txRef={}, packageType={}, baseAmount={}, discountRate={}, discountAmount={}, totalAmount={}, guest={}, additionalMembers={}, totalMembers={}",
+                txRef, packageType, baseAmount, discountRate, discountAmount, priceMinor, userId == null, additionalMembers, totalMembers);
 
         String description = "TMAG Family Plan - " + totalMembers + " member" + (totalMembers > 1 ? "s" : "") + ", " + tripsAllowed + " trip";
 
@@ -181,6 +199,8 @@ public class FamilyPackagePurchaseService {
                     packageType.name(),
                     tripsAllowed,
                     priceMinor,
+                    baseAmount,
+                    discountAmount,
                     currency.name(),
                     currencySymbol,
                     purchase.getId(),

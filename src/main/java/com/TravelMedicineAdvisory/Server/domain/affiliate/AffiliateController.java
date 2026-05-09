@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Affiliate")
@@ -43,8 +44,12 @@ public class AffiliateController {
     }
 
     @GetMapping("/commissions")
-    public ResponseEntity<SuccessResponse> commissions(@AuthenticationPrincipal AppUserDetails userDetails) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", affiliateService.getCommissions(userDetails.getUserId())));
+    public ResponseEntity<SuccessResponse> commissions(
+            @AuthenticationPrincipal AppUserDetails userDetails,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+                affiliateService.getCommissions(userDetails.getUserId(), startDate, endDate)));
     }
 
     @GetMapping("/payouts")
@@ -60,7 +65,11 @@ public class AffiliateController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<SuccessResponse> stats(@AuthenticationPrincipal AppUserDetails userDetails) {
-        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", affiliateService.getStats(userDetails.getUserId())));
+    public ResponseEntity<SuccessResponse> stats(
+            @AuthenticationPrincipal AppUserDetails userDetails,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+                affiliateService.getStats(userDetails.getUserId(), startDate, endDate)));
     }
 }

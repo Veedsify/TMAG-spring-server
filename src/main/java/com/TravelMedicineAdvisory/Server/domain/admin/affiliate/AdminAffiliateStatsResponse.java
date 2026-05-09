@@ -17,11 +17,11 @@ public record AdminAffiliateStatsResponse(
         List<TopAffiliateItem> topAffiliates
 ) {
     public record TopAffiliateItem(
-            Long affiliateProfileId,
+            @JsonProperty("id") Long affiliateProfileId,
             String userName,
-            String userEmail,
-            String referralCode,
-            BigDecimal totalCommissionEarned
+            @JsonProperty("commissionEarned") BigDecimal totalCommissionEarned,
+            @JsonProperty("commissionEarnedNgn") BigDecimal totalCommissionEarnedNgn,
+            Integer conversions
     ) {}
 
     public record ClicksChartPoint(

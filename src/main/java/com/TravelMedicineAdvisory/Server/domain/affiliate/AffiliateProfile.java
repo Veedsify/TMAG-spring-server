@@ -50,6 +50,15 @@ public class AffiliateProfile extends BaseEntity {
     @Column(name = "pending_commission", nullable = false, precision = 12, scale = 2)
     private BigDecimal pendingCommission = BigDecimal.ZERO;
 
+    @Column(name = "total_commission_earned_ngn", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalCommissionEarnedNgn = BigDecimal.ZERO;
+
+    @Column(name = "pending_commission_ngn", nullable = false, precision = 12, scale = 2)
+    private BigDecimal pendingCommissionNgn = BigDecimal.ZERO;
+
+    @Column(name = "total_paid_out_ngn", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalPaidOutNgn = BigDecimal.ZERO;
+
     @Column(nullable = false, length = 20)
     private String status = "active";
 
@@ -131,5 +140,29 @@ public class AffiliateProfile extends BaseEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public BigDecimal getTotalCommissionEarnedNgn() {
+        return totalCommissionEarnedNgn;
+    }
+
+    public void setTotalCommissionEarnedNgn(BigDecimal totalCommissionEarnedNgn) {
+        this.totalCommissionEarnedNgn = totalCommissionEarnedNgn;
+    }
+
+    public BigDecimal getPendingCommissionNgn() {
+        return pendingCommissionNgn;
+    }
+
+    public void setPendingCommissionNgn(BigDecimal pendingCommissionNgn) {
+        this.pendingCommissionNgn = pendingCommissionNgn;
+    }
+
+    public BigDecimal getTotalPaidOutNgn() {
+        return totalPaidOutNgn;
+    }
+
+    public void setTotalPaidOutNgn(BigDecimal totalPaidOutNgn) {
+        this.totalPaidOutNgn = totalPaidOutNgn;
     }
 }

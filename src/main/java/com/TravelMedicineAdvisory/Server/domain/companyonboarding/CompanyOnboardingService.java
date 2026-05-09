@@ -30,6 +30,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -78,6 +79,7 @@ public class CompanyOnboardingService {
     private final CallbackRegistry callbackRegistry;
     private final VolumePricingService volumePricingService;
     private final StorageService storageService;
+    private final AffiliateService affiliateService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -103,7 +105,8 @@ public class CompanyOnboardingService {
             ExchangeRateService exchangeRateService,
             CallbackRegistry callbackRegistry,
             VolumePricingService volumePricingService,
-            StorageService storageService) {
+            StorageService storageService,
+            AffiliateService affiliateService) {
         this.onboardingRepository = onboardingRepository;
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
@@ -122,6 +125,7 @@ public class CompanyOnboardingService {
         this.callbackRegistry = callbackRegistry;
         this.volumePricingService = volumePricingService;
         this.storageService = storageService;
+        this.affiliateService = affiliateService;
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {
@@ -174,6 +178,10 @@ public class CompanyOnboardingService {
         } catch (JsonProcessingException e) {
             entity.setPlatformEmployees("[]");
         }
+
+        // Store affiliate referral code if present
+        entity.setAffiliateReferralCode(req.affiliateReferralCode() != null && !req.affiliateReferralCode().isBlank()
+                ? req.affiliateReferralCode().trim() : null);
 
         if (teamMembersCsv != null && !teamMembersCsv.isEmpty()) {
             if (teamMembersCsv.getOriginalFilename() == null || !teamMembersCsv.getOriginalFilename().toLowerCase().endsWith(".csv")) {
@@ -228,7 +236,24 @@ public class CompanyOnboardingService {
         }
 
         BigDecimal pricePerCredit = tier.pricePerCredit();
-        BigDecimal price = pricePerCredit.multiply(BigDecimal.valueOf(creditCount));
+        BigDecimal baseAmount = pricePerCredit.multiply(BigDecimal.valueOf(creditCount));
+
+        // Apply affiliate discount if referral code is present
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (entity.getAffiliateReferralCode() != null) {
+            var affiliateDiscount = affiliateService.getDiscount(entity.getAffiliateReferralCode());
+            if (affiliateDiscount.isPresent() && affiliateDiscount.get().active()) {
+                discountRate = affiliateDiscount.get().discountRate();
+                discountAmount = discountRate.compareTo(BigDecimal.ZERO) > 0
+                        ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+            }
+        }
+        BigDecimal price = baseAmount.subtract(discountAmount);
+
+        entity.setAffiliateDiscountRate(discountRate);
+        entity.setAffiliateDiscountAmount(discountAmount);
         String currencyCode = currency.name();
 
         // Essential plan (free) — skip payment if price is zero
@@ -773,6 +798,10 @@ public class CompanyOnboardingService {
                 entity.getTxRef(),
                 entity.getPaymentStatus() != null ? entity.getPaymentStatus().name().toLowerCase() : "pending",
                 entity.getPaymentAmount(),
+                entity.getPaymentAmount() != null && entity.getAffiliateDiscountAmount() != null
+                        ? entity.getPaymentAmount().add(entity.getAffiliateDiscountAmount())
+                        : entity.getPaymentAmount(),
+                entity.getAffiliateDiscountAmount(),
                 entity.getPaymentCurrency(),
                 entity.getStatus() != null ? entity.getStatus().name().toLowerCase() : "pending_payment",
                 entity.getRejectionReason(),

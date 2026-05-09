@@ -16,6 +16,9 @@ public record AffiliateProfileResponse(
         @JsonProperty("total_commission_earned") BigDecimal totalCommissionEarned,
         @JsonProperty("total_paid_out") BigDecimal totalPaidOut,
         @JsonProperty("pending_commission") BigDecimal pendingCommission,
+        @JsonProperty("total_commission_earned_ngn") BigDecimal totalCommissionEarnedNgn,
+        @JsonProperty("total_paid_out_ngn") BigDecimal totalPaidOutNgn,
+        @JsonProperty("pending_commission_ngn") BigDecimal pendingCommissionNgn,
         String status,
         @JsonProperty("created_at") LocalDateTime createdAt,
         @JsonProperty("updated_at") LocalDateTime updatedAt
@@ -32,6 +35,9 @@ public record AffiliateProfileResponse(
                 entity.getTotalCommissionEarned(),
                 entity.getTotalPaidOut(),
                 entity.getPendingCommission(),
+                entity.getTotalCommissionEarnedNgn() != null ? entity.getTotalCommissionEarnedNgn() : BigDecimal.ZERO,
+                entity.getTotalPaidOutNgn() != null ? entity.getTotalPaidOutNgn() : BigDecimal.ZERO,
+                entity.getPendingCommissionNgn() != null ? entity.getPendingCommissionNgn() : BigDecimal.ZERO,
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

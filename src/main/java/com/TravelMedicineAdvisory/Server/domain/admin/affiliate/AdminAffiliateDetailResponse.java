@@ -23,6 +23,9 @@ public record AdminAffiliateDetailResponse(
         BigDecimal totalCommissionEarned,
         BigDecimal totalPaidOut,
         BigDecimal pendingCommission,
+        BigDecimal totalCommissionEarnedNgn,
+        BigDecimal totalPaidOutNgn,
+        BigDecimal pendingCommissionNgn,
         String status,
         String createdAt,
         List<CommissionItem> commissions,
@@ -35,6 +38,7 @@ public record AdminAffiliateDetailResponse(
             BigDecimal baseAmount,
             BigDecimal rate,
             String status,
+            String currency,
             String customerEmail,
             String referenceType,
             Long referenceId,
@@ -47,6 +51,7 @@ public record AdminAffiliateDetailResponse(
                     c.getBaseAmount(),
                     c.getRate(),
                     c.getStatus(),
+                    c.getCurrency() != null ? c.getCurrency() : "USD",
                     c.getCustomerEmail(),
                     c.getReferenceType(),
                     c.getReferenceId(),
@@ -58,8 +63,11 @@ public record AdminAffiliateDetailResponse(
     public record PayoutItem(
             Long id,
             BigDecimal amount,
+            String currency,
             String paymentMethod,
+            String paymentDetails,
             String status,
+            String notes,
             String requestedAt,
             String processedAt
     ) {
@@ -67,8 +75,11 @@ public record AdminAffiliateDetailResponse(
             return new PayoutItem(
                     p.getId(),
                     p.getAmount(),
+                    p.getCurrency() != null ? p.getCurrency() : "USD",
                     p.getPaymentMethod(),
+                    p.getPaymentDetails(),
                     p.getStatus(),
+                    p.getNotes(),
                     p.getRequestedAt() != null ? p.getRequestedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null,
                     p.getProcessedAt() != null ? p.getProcessedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null
             );
@@ -108,6 +119,9 @@ public record AdminAffiliateDetailResponse(
                 p.getTotalCommissionEarned() != null ? p.getTotalCommissionEarned() : BigDecimal.ZERO,
                 p.getTotalPaidOut() != null ? p.getTotalPaidOut() : BigDecimal.ZERO,
                 p.getPendingCommission() != null ? p.getPendingCommission() : BigDecimal.ZERO,
+                p.getTotalCommissionEarnedNgn() != null ? p.getTotalCommissionEarnedNgn() : BigDecimal.ZERO,
+                p.getTotalPaidOutNgn() != null ? p.getTotalPaidOutNgn() : BigDecimal.ZERO,
+                p.getPendingCommissionNgn() != null ? p.getPendingCommissionNgn() : BigDecimal.ZERO,
                 p.getStatus(),
                 p.getCreatedAt() != null ? p.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null,
                 commissions.stream().map(CommissionItem::from).toList(),

@@ -22,6 +22,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,6 +41,9 @@ public class AffiliateService {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final int COOKIE_DAYS = 90;
     private static final String CREDIT_PURCHASE_REFERENCE = "credit_purchase";
+
+    private static final BigDecimal MIN_PAYOUT_USD = BigDecimal.valueOf(200);
+    private static final BigDecimal MIN_PAYOUT_NGN = BigDecimal.valueOf(200_000);
 
     private final AffiliateProfileRepository affiliateProfileRepository;
     private final ReferralLinkRepository referralLinkRepository;
@@ -136,9 +141,16 @@ public class AffiliateService {
     }
 
     public List<CommissionRecordResponse> getCommissions(Long userId) {
+        return getCommissions(userId, null, null);
+    }
+
+    public List<CommissionRecordResponse> getCommissions(Long userId, String startDate, String endDate) {
         AffiliateProfile profile = getOrCreateAffiliateProfile(userId);
+        LocalDateTime from = parseStartDate(startDate);
+        LocalDateTime to = parseEndDate(endDate);
         return affiliateCommissionRepository.findByAffiliateProfileIdAndDeletedAtIsNullOrderByCreatedAtDesc(profile.getId())
                 .stream()
+                .filter(c -> c.getCreatedAt() != null && isWithinRange(c.getCreatedAt(), from, to))
                 .map(CommissionRecordResponse::from)
                 .toList();
     }
@@ -154,34 +166,140 @@ public class AffiliateService {
     public PayoutRecordResponse requestPayout(Long userId, PayoutRequest request) {
         AffiliateProfile profile = getOrCreateAffiliateProfile(userId);
         BigDecimal amount = money(request.amount());
+        String payoutCurrency = request.currency() != null ? request.currency().toUpperCase() : "USD";
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payout amount must be greater than zero");
         }
-        if (amount.compareTo(nullToZero(profile.getPendingCommission())) > 0) {
+
+        // ── Enforce minimum payout ────────────────────────────────────────
+        BigDecimal minAmount = "NGN".equals(payoutCurrency) ? MIN_PAYOUT_NGN : MIN_PAYOUT_USD;
+        if (amount.compareTo(minAmount) < 0) {
+            String sym = "NGN".equals(payoutCurrency) ? "\u20a6" : "$";
+            throw new IllegalArgumentException(
+                    "Minimum payout is " + sym + minAmount.toPlainString()
+                            + " for " + payoutCurrency + " payouts");
+        }
+
+        BigDecimal available = "NGN".equals(payoutCurrency)
+                ? nullToZero(profile.getPendingCommissionNgn())
+                : nullToZero(profile.getPendingCommission());
+        if (amount.compareTo(available) > 0) {
             throw new IllegalArgumentException("Payout amount exceeds available commission");
         }
 
         AffiliatePayout payout = new AffiliatePayout();
         payout.setAffiliateProfile(profile);
         payout.setAmount(amount);
+        payout.setCurrency(payoutCurrency);
         payout.setPaymentMethod(request.paymentMethod().trim());
         payout.setPaymentDetails(request.paymentDetails().trim());
         payout.setStatus("pending");
         payout.setRequestedAt(LocalDateTime.now());
 
-        profile.setPendingCommission(nullToZero(profile.getPendingCommission()).subtract(amount));
+        if ("NGN".equals(payoutCurrency)) {
+            profile.setPendingCommissionNgn(nullToZero(profile.getPendingCommissionNgn()).subtract(amount));
+        } else {
+            profile.setPendingCommission(nullToZero(profile.getPendingCommission()).subtract(amount));
+        }
         affiliateProfileRepository.save(profile);
 
-        return PayoutRecordResponse.from(affiliatePayoutRepository.save(payout));
+        AffiliatePayout saved = affiliatePayoutRepository.save(payout);
+
+        // ── Notify affiliate: payout request received ─────────────────────────
+        try {
+            User affiliateUser = profile.getUser();
+            if (affiliateUser != null && affiliateUser.getEmail() != null) {
+                String firstName = affiliateUser.getFirstName() != null ? affiliateUser.getFirstName() : "there";
+                emailService.sendAffiliatePayoutRequested(
+                        affiliateUser.getEmail(),
+                        firstName,
+                        amount.toPlainString(),
+                        payoutCurrency,
+                        payout.getPaymentMethod(),
+                        payout.getPaymentDetails()
+                );
+            }
+        } catch (Exception e) {
+            // Log but don't fail the payout request
+        }
+
+        // ── Notify every super-admin: new payout request ──────────────────────
+        try {
+            User affiliateUser = profile.getUser();
+            String affiliateName = affiliateUser != null ? affiliateUser.getFullName() : "Unknown Affiliate";
+            String affiliateEmail = affiliateUser != null && affiliateUser.getEmail() != null
+                    ? affiliateUser.getEmail() : "unknown";
+
+            List<User> superAdmins = userRepository.findByRoleName("SuperAdmin");
+            for (User admin : superAdmins) {
+                emailService.sendAffiliatePayoutRequestedAdmin(
+                        admin.getEmail(),
+                        affiliateName,
+                        affiliateEmail,
+                        amount.toPlainString(),
+                        payoutCurrency,
+                        payout.getPaymentMethod(),
+                        payout.getPaymentDetails()
+                );
+            }
+        } catch (Exception e) {
+            // Log but don't fail the payout request
+        }
+
+        return PayoutRecordResponse.from(saved);
     }
 
     public AffiliateStatsResponse getStats(Long userId) {
+        return getStats(userId, null, null);
+    }
+
+    public AffiliateStatsResponse getStats(Long userId, String startDate, String endDate) {
         AffiliateProfile profile = getOrCreateAffiliateProfile(userId);
         List<ReferralLink> links = referralLinkRepository.findByAffiliateProfileIdAndDeletedAtIsNullOrderByCreatedAtDesc(profile.getId());
         List<AffiliateCommission> commissions = affiliateCommissionRepository.findByAffiliateProfileIdAndDeletedAtIsNullOrderByCreatedAtDesc(profile.getId());
+        LocalDateTime from = parseStartDate(startDate);
+        LocalDateTime to = parseEndDate(endDate);
+        boolean isPeriodFiltered = from != null || to != null;
 
-        int clicks = profile.getTotalClicks() != null ? profile.getTotalClicks() : 0;
-        int conversions = profile.getTotalConversions() != null ? profile.getTotalConversions() : 0;
+        // Filter commissions by date range
+        List<AffiliateCommission> filteredCommissions = isPeriodFiltered
+                ? commissions.stream()
+                        .filter(c -> c.getCreatedAt() != null && isWithinRange(c.getCreatedAt(), from, to))
+                        .toList()
+                : commissions;
+
+        // Compute clicks for the period (overall or date-filtered)
+        long periodClicks;
+        if (isPeriodFiltered) {
+            periodClicks = affiliateClickRepository
+                    .countByAffiliateProfileIdAndCreatedAtBetweenAndDeletedAtIsNull(
+                            profile.getId(), from != null ? from : LocalDateTime.MIN,
+                            to != null ? to : LocalDateTime.MAX);
+        } else {
+            periodClicks = profile.getTotalClicks() != null ? profile.getTotalClicks() : 0;
+        }
+
+        // Compute conversions for the period
+        long periodConversions;
+        if (isPeriodFiltered) {
+            periodConversions = filteredCommissions.size();
+        } else {
+            periodConversions = profile.getTotalConversions() != null ? profile.getTotalConversions() : 0;
+        }
+
+        // Commission totals for the period
+        BigDecimal periodTotalCommission = filteredCommissions.stream()
+                .filter(c -> !"NGN".equals(c.getCurrency()))
+                .map(c -> nullToZero(c.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal periodTotalCommissionNgn = filteredCommissions.stream()
+                .filter(c -> "NGN".equals(c.getCurrency()))
+                .map(c -> nullToZero(c.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long clicks = isPeriodFiltered ? periodClicks : (profile.getTotalClicks() != null ? profile.getTotalClicks() : 0);
+        long conversions = isPeriodFiltered ? periodConversions : (profile.getTotalConversions() != null ? profile.getTotalConversions() : 0);
         BigDecimal conversionRate = clicks > 0
                 ? BigDecimal.valueOf(conversions).multiply(ONE_HUNDRED).divide(BigDecimal.valueOf(clicks), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -203,18 +321,23 @@ public class AffiliateService {
                 ))
                 .toList();
 
-        List<CommissionRecordResponse> recentCommissions = commissions.stream()
+        List<CommissionRecordResponse> recentCommissions = filteredCommissions.stream()
                 .limit(5)
                 .map(CommissionRecordResponse::from)
                 .toList();
 
+        // For period-filtered stats, use the profile's overall totals for pending/paid
+        // (those are not per-period concepts, they represent the overall balance)
         return new AffiliateStatsResponse(
-                clicks,
-                conversions,
+                (int) clicks,
+                (int) conversions,
                 conversionRate,
-                nullToZero(profile.getTotalCommissionEarned()),
+                isPeriodFiltered ? periodTotalCommission : nullToZero(profile.getTotalCommissionEarned()),
                 nullToZero(profile.getPendingCommission()),
                 nullToZero(profile.getTotalPaidOut()),
+                isPeriodFiltered ? periodTotalCommissionNgn : nullToZero(profile.getTotalCommissionEarnedNgn()),
+                nullToZero(profile.getPendingCommissionNgn()),
+                nullToZero(profile.getTotalPaidOutNgn()),
                 referralLinkRepository.countByAffiliateProfileIdAndIsActiveTrueAndDeletedAtIsNull(profile.getId()),
                 topCampaigns,
                 recentCommissions,
@@ -361,6 +484,8 @@ public class AffiliateService {
             return;
         }
 
+        String purchaseCurrency = purchase.getCurrency() != null ? purchase.getCurrency().name() : "USD";
+
         BigDecimal rate = safeRate(profile.getCommissionRate(), DEFAULT_COMMISSION_RATE);
         BigDecimal commissionAmount = money(baseAmount.multiply(rate).divide(ONE_HUNDRED, 4, RoundingMode.HALF_UP));
 
@@ -372,13 +497,20 @@ public class AffiliateService {
         commission.setBaseAmount(baseAmount);
         commission.setRate(rate);
         commission.setStatus("approved");
+        commission.setCurrency(purchaseCurrency);
         commission.setCustomerEmail(purchase.getUser().getEmail());
         commission.setReferenceType(CREDIT_PURCHASE_REFERENCE);
         commission.setReferenceId(purchase.getId());
         affiliateCommissionRepository.save(commission);
 
-        profile.setTotalCommissionEarned(nullToZero(profile.getTotalCommissionEarned()).add(commissionAmount));
-        profile.setPendingCommission(nullToZero(profile.getPendingCommission()).add(commissionAmount));
+        // Track currency-specific totals
+        if ("NGN".equals(purchaseCurrency)) {
+            profile.setTotalCommissionEarnedNgn(nullToZero(profile.getTotalCommissionEarnedNgn()).add(commissionAmount));
+            profile.setPendingCommissionNgn(nullToZero(profile.getPendingCommissionNgn()).add(commissionAmount));
+        } else {
+            profile.setTotalCommissionEarned(nullToZero(profile.getTotalCommissionEarned()).add(commissionAmount));
+            profile.setPendingCommission(nullToZero(profile.getPendingCommission()).add(commissionAmount));
+        }
         affiliateProfileRepository.save(profile);
 
         ReferralLink link = referral.getReferralLink();
@@ -593,6 +725,30 @@ public class AffiliateService {
             return value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private LocalDateTime parseStartDate(String startDate) {
+        if (startDate == null || startDate.isBlank()) return null;
+        try {
+            return LocalDate.parse(startDate, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseEndDate(String endDate) {
+        if (endDate == null || endDate.isBlank()) return null;
+        try {
+            return LocalDate.parse(endDate, DateTimeFormatter.ISO_LOCAL_DATE).plusDays(1).atStartOfDay();
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private boolean isWithinRange(LocalDateTime dateTime, LocalDateTime from, LocalDateTime to) {
+        if (from != null && dateTime.isBefore(from)) return false;
+        if (to != null && dateTime.isAfter(to)) return false;
+        return true;
     }
 
     private record ReferralTarget(AffiliateProfile affiliateProfile, ReferralLink referralLink) {}

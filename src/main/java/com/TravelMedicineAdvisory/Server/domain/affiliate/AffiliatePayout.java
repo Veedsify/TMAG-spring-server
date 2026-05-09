@@ -35,6 +35,9 @@ public class AffiliatePayout extends BaseEntity {
     @Column(name = "payment_details", nullable = false, columnDefinition = "TEXT")
     private String paymentDetails;
 
+    @Column(nullable = false, length = 10)
+    private String currency = "USD";
+
     @Column(nullable = false, length = 20)
     private String status = "pending";
 
@@ -109,5 +112,13 @@ public class AffiliatePayout extends BaseEntity {
 
     public void setProcessedAt(LocalDateTime processedAt) {
         this.processedAt = processedAt;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 }

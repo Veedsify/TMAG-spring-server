@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.familytrip;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
@@ -86,6 +87,15 @@ public class FamilyPackagePurchase extends BaseEntity {
 
   @Column(name = "paid_at")
   private LocalDateTime paidAt;
+
+  @Column(name = "affiliate_referral_code", length = 40)
+  private String affiliateReferralCode;
+
+  @Column(name = "affiliate_discount_rate", precision = 5, scale = 2)
+  private BigDecimal affiliateDiscountRate;
+
+  @Column(name = "affiliate_discount_amount", precision = 10, scale = 2)
+  private BigDecimal affiliateDiscountAmount;
 
   public User getUser() {
     return user;
@@ -245,5 +255,29 @@ public class FamilyPackagePurchase extends BaseEntity {
 
   public void setPaidAt(LocalDateTime paidAt) {
     this.paidAt = paidAt;
+  }
+
+  public String getAffiliateReferralCode() {
+    return affiliateReferralCode;
+  }
+
+  public void setAffiliateReferralCode(String affiliateReferralCode) {
+    this.affiliateReferralCode = affiliateReferralCode;
+  }
+
+  public BigDecimal getAffiliateDiscountRate() {
+    return affiliateDiscountRate;
+  }
+
+  public void setAffiliateDiscountRate(BigDecimal affiliateDiscountRate) {
+    this.affiliateDiscountRate = affiliateDiscountRate;
+  }
+
+  public BigDecimal getAffiliateDiscountAmount() {
+    return affiliateDiscountAmount;
+  }
+
+  public void setAffiliateDiscountAmount(BigDecimal affiliateDiscountAmount) {
+    this.affiliateDiscountAmount = affiliateDiscountAmount;
   }
 }

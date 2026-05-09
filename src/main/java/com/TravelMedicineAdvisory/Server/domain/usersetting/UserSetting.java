@@ -52,6 +52,9 @@ public class UserSetting extends BaseEntity {
     @Column(name = "consent_ip")
     private String consentIp;
 
+    @Column(name = "affiliate_referral_code", length = 40)
+    private String affiliateReferralCode;
+
     public User getUser() {
         return user;
     }
@@ -138,5 +141,13 @@ public class UserSetting extends BaseEntity {
 
     public void setConsentIp(String consentIp) {
         this.consentIp = consentIp;
+    }
+
+    public String getAffiliateReferralCode() {
+        return affiliateReferralCode;
+    }
+
+    public void setAffiliateReferralCode(String affiliateReferralCode) {
+        this.affiliateReferralCode = affiliateReferralCode;
     }
 }

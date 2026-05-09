@@ -88,6 +88,15 @@ public class AdminAffiliateController {
         return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.getAffiliateDetail(id)));
     }
 
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<SuccessResponse> getAffiliateStats(
+            @PathVariable Long id,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully",
+                service.getAffiliatePeriodStats(id, startDate, endDate)));
+    }
+
     @PostMapping("/{id}/suspend")
     public ResponseEntity<SuccessResponse> suspend(@PathVariable Long id) {
         return ResponseEntity.ok(new SuccessResponse("Affiliate suspended", service.suspendAffiliate(id)));
@@ -104,5 +113,31 @@ public class AdminAffiliateController {
             @RequestBody Map<String, Object> body) {
         BigDecimal rate = new BigDecimal(body.get("rate").toString());
         return ResponseEntity.ok(new SuccessResponse("Commission rate updated", service.updateCommissionRate(id, rate)));
+    }
+
+    // ---- Payout management -------------------------------------------------
+
+    @GetMapping("/payouts")
+    public ResponseEntity<SuccessResponse> listAllPayouts(
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(new SuccessResponse("Fetched successfully", service.listAllPayouts(status)));
+    }
+
+    @PostMapping("/payouts/{payoutId}/approve")
+    public ResponseEntity<SuccessResponse> approvePayout(@PathVariable Long payoutId) {
+        return ResponseEntity.ok(new SuccessResponse("Payout approved", service.approvePayout(payoutId)));
+    }
+
+    @PostMapping("/payouts/{payoutId}/reject")
+    public ResponseEntity<SuccessResponse> rejectPayout(
+            @PathVariable Long payoutId,
+            @RequestBody Map<String, String> body) {
+        String reason = body.getOrDefault("reason", "");
+        return ResponseEntity.ok(new SuccessResponse("Payout rejected", service.rejectPayout(payoutId, reason)));
+    }
+
+    @PostMapping("/payouts/{payoutId}/complete")
+    public ResponseEntity<SuccessResponse> completePayout(@PathVariable Long payoutId) {
+        return ResponseEntity.ok(new SuccessResponse("Payout marked complete", service.completePayout(payoutId)));
     }
 }

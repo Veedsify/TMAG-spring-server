@@ -64,6 +64,8 @@ public class FamilyPackagePurchaseController {
             data.put("purchaseId", result.purchaseId());
             data.put("additionalMembers", result.additionalMembers());
             data.put("totalMembers", result.totalMembers());
+            data.put("baseAmount", result.baseAmount());
+            data.put("discountAmount", result.discountAmount());
             return ResponseEntity.ok(new SuccessResponse("Payment initiated successfully", data));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(new SuccessResponse(e.getMessage(), Map.of("success", false, "errorType", "COMPANY_USER_ERROR")));

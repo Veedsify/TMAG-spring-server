@@ -11,6 +11,7 @@ public record PayoutRequest(
         @NotNull(message = "Amount is required")
         @DecimalMin(value = "1.00", message = "Minimum payout amount is 1.00")
         BigDecimal amount,
+        String currency,
         @NotBlank(message = "Payment method is required")
         @JsonProperty("payment_method") String paymentMethod,
         @NotBlank(message = "Payment details are required")

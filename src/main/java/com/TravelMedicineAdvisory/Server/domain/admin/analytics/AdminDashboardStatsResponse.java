@@ -32,6 +32,10 @@ public class AdminDashboardStatsResponse {
     /** AI logs with status error in the last 7 days. */
     private Long failedAiCallsLast7Days;
 
+    private Double affiliateCommissionPaid;
+    private Double affiliateCommissionPending;
+    private Long totalActiveAffiliates;
+
     public AdminDashboardStatsResponse() {}
 
     public Long getTotalUsers() { return totalUsers; }
@@ -75,4 +79,11 @@ public class AdminDashboardStatsResponse {
     public void setTokensUsedToday(Long tokensUsedToday) { this.tokensUsedToday = tokensUsedToday; }
     public Long getFailedAiCallsLast7Days() { return failedAiCallsLast7Days; }
     public void setFailedAiCallsLast7Days(Long failedAiCallsLast7Days) { this.failedAiCallsLast7Days = failedAiCallsLast7Days; }
+
+    public Double getAffiliateCommissionPaid() { return affiliateCommissionPaid; }
+    public void setAffiliateCommissionPaid(Double affiliateCommissionPaid) { this.affiliateCommissionPaid = affiliateCommissionPaid; }
+    public Double getAffiliateCommissionPending() { return affiliateCommissionPending; }
+    public void setAffiliateCommissionPending(Double affiliateCommissionPending) { this.affiliateCommissionPending = affiliateCommissionPending; }
+    public Long getTotalActiveAffiliates() { return totalActiveAffiliates; }
+    public void setTotalActiveAffiliates(Long totalActiveAffiliates) { this.totalActiveAffiliates = totalActiveAffiliates; }
 }

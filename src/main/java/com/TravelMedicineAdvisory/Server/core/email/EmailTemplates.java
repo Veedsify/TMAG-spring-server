@@ -841,6 +841,47 @@ public class EmailTemplates {
         return wrap("You earned a commission on TMAG!", content);
     }
 
+    /** Payout requested — sent to the affiliate immediately after they submit a payout request */
+    public String affiliatePayoutRequested(String firstName, String amount, String currency, String paymentMethod, String paymentDetails) {
+        String currencySymbol = "NGN".equalsIgnoreCase(currency) ? "&#8358;" : "$";
+        String content
+                = badge("Payout Request Received")
+                + heading("We received your payout request")
+                + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
+                + "<p style=\"" + P_STYLE + "\">Your payout request has been submitted and is now pending review by our team. We typically process requests within 2&ndash;5 business days.</p>"
+                + infoBox(
+                        "Amount requested: <strong>" + currencySymbol + esc(amount) + " " + esc(currency.toUpperCase()) + "</strong><br/>"
+                        + "Payment method: " + esc(paymentMethod) + "<br/>"
+                        + "Payment details: " + esc(paymentDetails) + "<br/>"
+                        + "Status: <strong>Pending</strong>")
+                + "<p style=\"" + P_STYLE + "\">You will receive another email once your payout has been processed and the funds are on their way.</p>"
+                + tealButton("View Payout History", "{frontendUrl}/affiliate/payouts")
+                + divider()
+                + fine("If you have questions about this request, contact us at <a href=\"mailto:affiliates@tmag.health\" style=\"color:#2a7a6a;\">affiliates@tmag.health</a>.");
+        return wrap("Payout request received — TMAG Affiliates", content);
+    }
+
+    /** Payout requested — internal alert sent to every super-admin */
+    public String affiliatePayoutRequestedAdmin(String affiliateName, String affiliateEmail,
+                                                 String amount, String currency,
+                                                 String paymentMethod, String paymentDetails) {
+        String currencySymbol = "NGN".equalsIgnoreCase(currency) ? "&#8358;" : "$";
+        String content
+                = badge("New Payout Request")
+                + heading("An affiliate has requested a payout")
+                + "<p style=\"" + P_STYLE + "\">A TMAG affiliate has just submitted a new payout request that requires your attention.</p>"
+                + infoBox(
+                        "Affiliate: <strong>" + esc(affiliateName) + "</strong> (<" + esc(affiliateEmail) + ">)<br/>"
+                        + "Amount: <strong>" + currencySymbol + esc(amount) + " " + esc(currency.toUpperCase()) + "</strong><br/>"
+                        + "Payment method: " + esc(paymentMethod) + "<br/>"
+                        + "Payment details: " + esc(paymentDetails) + "<br/>"
+                        + "Status: <strong>Pending</strong>")
+                + darkButton("Open Admin Dashboard", "{frontendUrl}/admin/affiliates/payouts")
+                + divider()
+                + fine("This is an internal notification sent to the TMAG super-admin team.");
+        return wrap("New affiliate payout request: " + affiliateName, content);
+    }
+
     // /** Payout processed — sent when admin processes a payout */
     public String affiliatePayoutProcessed(String firstName, String amount, String paymentMethod) {
         String content
