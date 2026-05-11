@@ -6,19 +6,26 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
+import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Storage service backed by Cloudflare R2.
+ * StorageService backed by Cloudflare R2.
  *
  * <p>R2 is S3-compatible, so this service uses the AWS SDK v2 with a custom
  * endpoint override pointing at the R2 account endpoint
  * ({@code https://<ACCOUNT_ID>.r2.cloudflarestorage.com}).
+ *
+ * <p>Files at or above {@code multipartThresholdBytes} (default 100 MB) are
+ * uploaded using the S3 multipart upload API, streaming each part from the
+ * temp file that Spring wrote to disk. This avoids heap exhaustion and
+ * connection timeouts for large files.
  *
  * <p>Public access URLs are resolved in one of two ways:
  * <ol>
@@ -30,31 +37,41 @@ import java.util.UUID;
  */
 public class CloudflareR2StorageService implements StorageService {
 
+    /** Minimum part size enforced by R2 / S3 (5 MiB). */
+    private static final long MIN_PART_SIZE = 5L * 1024L * 1024L;
+
     private final String bucket;
     private final String accountId;
     private final String accessKey;
     private final String secretKey;
     private final String publicUrl;
+    private final long multipartThresholdBytes;
+    private final long partSizeBytes;
 
     /**
-     * @param bucket     R2 bucket name
-     * @param accountId  Cloudflare account ID (used to build the endpoint URL)
-     * @param accessKey  R2 API token – Access Key ID
-     * @param secretKey  R2 API token – Secret Access Key
-     * @param publicUrl  Optional public base URL (custom domain or R2 public URL).
-     *                   Leave blank to derive from the endpoint.
+     * @param bucket                  R2 bucket name
+     * @param accountId               Cloudflare account ID (builds the endpoint URL)
+     * @param accessKey               R2 API token – Access Key ID
+     * @param secretKey               R2 API token – Secret Access Key
+     * @param publicUrl               Optional public base URL (custom domain or R2 public URL)
+     * @param multipartThresholdBytes File size (bytes) above which multipart upload is used
+     * @param partSizeBytes           Size of each individual part (must be ≥ 5 MiB)
      */
     public CloudflareR2StorageService(
             String bucket,
             String accountId,
             String accessKey,
             String secretKey,
-            String publicUrl) {
+            String publicUrl,
+            long multipartThresholdBytes,
+            long partSizeBytes) {
         this.bucket = bucket;
         this.accountId = accountId;
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.publicUrl = publicUrl;
+        this.multipartThresholdBytes = multipartThresholdBytes;
+        this.partSizeBytes = Math.max(partSizeBytes, MIN_PART_SIZE);
     }
 
     // -------------------------------------------------------------------------
@@ -67,7 +84,7 @@ public class CloudflareR2StorageService implements StorageService {
 
     private S3Client buildClient() {
         return S3Client.builder()
-                // R2 uses auto region; "auto" is the Cloudflare-recommended value
+                // R2 uses "auto" as the recommended region value
                 .region(Region.of("auto"))
                 .endpointOverride(URI.create(r2Endpoint()))
                 .credentialsProvider(StaticCredentialsProvider.create(
@@ -85,14 +102,17 @@ public class CloudflareR2StorageService implements StorageService {
             String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
             String key = path + "/" + filename;
 
-            try (S3Client client = buildClient()) {
-                client.putObject(
-                        PutObjectRequest.builder()
-                                .bucket(bucket)
-                                .key(key)
-                                .contentType(file.getContentType())
-                                .build(),
-                        RequestBody.fromBytes(file.getBytes()));
+            if (file.getSize() >= multipartThresholdBytes) {
+                doMultipartUpload(file.getInputStream(), file.getSize(), key, file.getContentType());
+            } else {
+                try (S3Client client = buildClient()) {
+                    client.putObject(
+                            PutObjectRequest.builder()
+                                    .bucket(bucket).key(key)
+                                    .contentType(file.getContentType())
+                                    .build(),
+                            RequestBody.fromBytes(file.getBytes()));
+                }
             }
 
             Attachment attachment = new Attachment();
@@ -114,11 +134,30 @@ public class CloudflareR2StorageService implements StorageService {
         try (S3Client client = buildClient()) {
             client.putObject(
                     PutObjectRequest.builder()
-                            .bucket(bucket)
-                            .key(key)
+                            .bucket(bucket).key(key)
                             .contentType(contentType)
                             .build(),
                     RequestBody.fromBytes(content));
+        }
+        return key;
+    }
+
+    @Override
+    public String storeStream(InputStream inputStream, long contentLength, String path,
+                               String filename, String contentType) {
+        String key = path + "/" + filename;
+        if (contentLength >= multipartThresholdBytes || contentLength < 0) {
+            doMultipartUpload(inputStream, contentLength, key, contentType);
+        } else {
+            try (S3Client client = buildClient()) {
+                client.putObject(
+                        PutObjectRequest.builder()
+                                .bucket(bucket).key(key)
+                                .contentType(contentType)
+                                .contentLength(contentLength)
+                                .build(),
+                        RequestBody.fromInputStream(inputStream, contentLength));
+            }
         }
         return key;
     }
@@ -128,8 +167,7 @@ public class CloudflareR2StorageService implements StorageService {
         try (S3Client client = buildClient()) {
             return client.getObjectAsBytes(
                     GetObjectRequest.builder()
-                            .bucket(bucket)
-                            .key(path)
+                            .bucket(bucket).key(path)
                             .build()).asByteArray();
         }
     }
@@ -139,8 +177,7 @@ public class CloudflareR2StorageService implements StorageService {
         try (S3Client client = buildClient()) {
             client.deleteObject(
                     DeleteObjectRequest.builder()
-                            .bucket(bucket)
-                            .key(path)
+                            .bucket(bucket).key(path)
                             .build());
         }
     }
@@ -152,5 +189,90 @@ public class CloudflareR2StorageService implements StorageService {
         }
         // Fall back to: https://<accountId>.r2.cloudflarestorage.com/<bucket>/<path>
         return r2Endpoint() + "/" + bucket + "/" + path;
+    }
+
+    // -------------------------------------------------------------------------
+    // Multipart upload
+    // -------------------------------------------------------------------------
+
+    /**
+     * Executes a multipart upload, reading {@code inputStream} in
+     * {@code partSizeBytes} chunks. The upload is aborted automatically if
+     * any part fails.
+     *
+     * @param inputStream   the source data stream
+     * @param contentLength total byte count, or {@code -1} if unknown
+     * @param key           object key in the bucket
+     * @param contentType   MIME type of the object
+     */
+    private void doMultipartUpload(InputStream inputStream, long contentLength,
+                                    String key, String contentType) {
+        try (S3Client client = buildClient()) {
+            CreateMultipartUploadResponse init = client.createMultipartUpload(
+                    CreateMultipartUploadRequest.builder()
+                            .bucket(bucket).key(key)
+                            .contentType(contentType)
+                            .build());
+            String uploadId = init.uploadId();
+
+            List<CompletedPart> completedParts = new ArrayList<>();
+            byte[] buffer = new byte[(int) partSizeBytes];
+            int partNumber = 1;
+
+            try {
+                int offset = 0;
+                while (true) {
+                    int remaining = buffer.length - offset;
+                    int bytesRead = inputStream.read(buffer, offset, remaining);
+                    boolean endOfStream = bytesRead == -1;
+                    if (!endOfStream) offset += bytesRead;
+
+                    boolean bufferFull = offset == buffer.length;
+                    if ((bufferFull || endOfStream) && offset > 0) {
+                        byte[] partData = offset == buffer.length ? buffer : Arrays.copyOf(buffer, offset);
+                        UploadPartResponse partResp = client.uploadPart(
+                                UploadPartRequest.builder()
+                                        .bucket(bucket).key(key)
+                                        .uploadId(uploadId)
+                                        .partNumber(partNumber)
+                                        .contentLength((long) partData.length)
+                                        .build(),
+                                RequestBody.fromBytes(partData));
+                        completedParts.add(CompletedPart.builder()
+                                .partNumber(partNumber)
+                                .eTag(partResp.eTag())
+                                .build());
+                        partNumber++;
+                        offset = 0;
+                    }
+
+                    if (endOfStream) break;
+                }
+
+                client.completeMultipartUpload(
+                        CompleteMultipartUploadRequest.builder()
+                                .bucket(bucket).key(key)
+                                .uploadId(uploadId)
+                                .multipartUpload(CompletedMultipartUpload.builder()
+                                        .parts(completedParts)
+                                        .build())
+                                .build());
+            } catch (Exception e) {
+                try {
+                    client.abortMultipartUpload(
+                            AbortMultipartUploadRequest.builder()
+                                    .bucket(bucket).key(key)
+                                    .uploadId(uploadId)
+                                    .build());
+                } catch (Exception abort) {
+                    // ignore abort failure
+                }
+                throw new RuntimeException("Multipart upload failed for key: " + key, e);
+            }
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initiate multipart upload for key: " + key, e);
+        }
     }
 }

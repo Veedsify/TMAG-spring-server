@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 @Service
@@ -63,6 +64,19 @@ public class GcsStorageService implements StorageService {
                 .setContentType(contentType)
                 .build();
         storage.create(blobInfo, content);
+        return objectName;
+    }
+
+    @Override
+    public String storeStream(InputStream inputStream, long contentLength, String customPath,
+                               String filename, String contentType) {
+        String objectName = customPath + "/" + filename;
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(contentType)
+                .build();
+        // GCS client streams from InputStream natively — no heap buffering required
+        storage.createFrom(blobInfo, inputStream);
         return objectName;
     }
 

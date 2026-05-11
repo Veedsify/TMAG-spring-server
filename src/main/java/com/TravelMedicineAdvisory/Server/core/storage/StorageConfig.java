@@ -12,8 +12,15 @@ public class StorageConfig {
     private String provider;
 
     // -------------------------------------------------------------------------
-    // Local / base
+    // Multipart upload thresholds
     // -------------------------------------------------------------------------
+    /** Files >= this size (bytes) are uploaded via S3/R2 multipart API. Default: 100 MB. */
+    @Value("${app.storage.multipart-threshold-bytes:104857600}")
+    private long multipartThresholdBytes;
+
+    /** Size of each individual part during a multipart upload. Default: 10 MB. */
+    @Value("${app.storage.multipart-part-size-bytes:10485760}")
+    private long multipartPartSizeBytes;
 
     // -------------------------------------------------------------------------
     // AWS S3
@@ -60,8 +67,10 @@ public class StorageConfig {
                                           @Lazy GcsStorageService gcsStorageService) {
         return switch (provider.toLowerCase()) {
             case "gcs" -> gcsStorageService;
-            case "s3"  -> new S3StorageService(s3Bucket, s3Region, s3AccessKey, s3SecretKey, s3Endpoint);
-            case "r2"  -> new CloudflareR2StorageService(r2Bucket, r2AccountId, r2AccessKey, r2SecretKey, r2PublicUrl);
+            case "s3"  -> new S3StorageService(s3Bucket, s3Region, s3AccessKey, s3SecretKey,
+                                               s3Endpoint, multipartThresholdBytes, multipartPartSizeBytes);
+            case "r2"  -> new CloudflareR2StorageService(r2Bucket, r2AccountId, r2AccessKey, r2SecretKey,
+                                                         r2PublicUrl, multipartThresholdBytes, multipartPartSizeBytes);
             default    -> localStorageService;
         };
     }
