@@ -22,6 +22,8 @@ public record CompanyOnboardingResponse(
         String txRef,
         String paymentStatus,
         BigDecimal paymentAmount,
+        BigDecimal baseAmount,
+        BigDecimal discountAmount,
         String paymentCurrency,
         String status,
         String rejectionReason,

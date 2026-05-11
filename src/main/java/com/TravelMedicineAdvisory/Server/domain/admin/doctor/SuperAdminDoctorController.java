@@ -84,6 +84,8 @@ public class SuperAdminDoctorController {
                             null,
                             a.getSignatureUrl(),
                             a.getProfilePictureUrl(),
+                            a.getPracticingLicenseUrl(),
+                            a.getTravelMedicineCertificateUrl(),
                             a.isConfidentialityAgreementAccepted(),
                             a.isConductAgreementAccepted(),
                             a.getBio(),
@@ -151,6 +153,8 @@ public class SuperAdminDoctorController {
                             valueOrEmpty(settings.getMedicalLicenseNumber()),
                             "",
                             avatarUrlService.toFullUrl(u.getAvatarUrl()),
+                            settings.getPracticingLicenseUrl(),
+                            settings.getTravelMedicineCertificateUrl(),
                             valueOrEmpty(u.getBio()),
                             validatedCount,
                             u.getCreatedAt() != null ? u.getCreatedAt().toString() : null);

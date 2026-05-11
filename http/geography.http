@@ -1,0 +1,149 @@
+### ============================================================================
+### GEOGRAPHY — /api/v1/countries + /api/v1/country-accommodations + /api/v1/country-health-alerts
+### ============================================================================
+
+### ─── Countries ─────────────────────────────────────────────
+
+### List countries (paginated)
+GET {{baseUrl}}/api/v1/countries?page=0&size=20
+
+### List all countries (unpaginated)
+GET {{baseUrl}}/api/v1/countries/all
+
+### Get country by ID
+GET {{baseUrl}}/api/v1/countries/{{countryId}}
+
+### Create country
+POST {{baseUrl}}/api/v1/countries
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Nigeria",
+  "code": "NG",
+  "region": "West Africa",
+  "continent": "Africa",
+  "riskLevel": "MODERATE",
+  "visaInfo": "Visa required for most nationalities",
+  "currency": "NGN",
+  "language": "English",
+  "timezone": "UTC+1",
+  "healthAdvisory": "Malaria is endemic. Yellow fever vaccination required.",
+  "travelAdvisory": "Exercise increased caution due to crime.",
+  "emergencyNumber": "112",
+  "isActive": true
+}
+
+### Update country
+PUT {{baseUrl}}/api/v1/countries/{{countryId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Nigeria",
+  "code": "NG",
+  "riskLevel": "HIGH",
+  "isActive": true
+}
+
+### Delete country
+DELETE {{baseUrl}}/api/v1/countries/{{countryId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Country Accommodations ────────────────────────────────
+
+### List accommodations (paginated)
+GET {{baseUrl}}/api/v1/country-accommodations?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get accommodation by ID
+GET {{baseUrl}}/api/v1/country-accommodations/{{countryAccommodationId}}
+Authorization: Bearer {{authToken}}
+
+### Create accommodation
+POST {{baseUrl}}/api/v1/country-accommodations
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "city": "Lagos",
+  "type": "HOTEL",
+  "name": "Eko Hotels & Suites",
+  "avgPricePerNight": 250.00,
+  "currency": "USD",
+  "rating": 4.5,
+  "sourceUrl": "https://ekohotels.com",
+  "countryId": {{countryId}}
+}
+
+### Update accommodation
+PUT {{baseUrl}}/api/v1/country-accommodations/{{countryAccommodationId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "city": "Lagos",
+  "type": "HOTEL",
+  "name": "Eko Hotels & Suites",
+  "avgPricePerNight": 275.00,
+  "rating": 4.6,
+  "countryId": {{countryId}}
+}
+
+### Delete accommodation
+DELETE {{baseUrl}}/api/v1/country-accommodations/{{countryAccommodationId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Country Health Alerts ─────────────────────────────────
+
+### List health alerts (paginated)
+GET {{baseUrl}}/api/v1/country-health-alerts?page=0&size=20
+
+### Get health alert by ID
+GET {{baseUrl}}/api/v1/country-health-alerts/{{healthAlertId}}
+
+### Create health alert
+POST {{baseUrl}}/api/v1/country-health-alerts
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Lassa Fever Outbreak",
+  "description": "Lassa fever cases reported in Ondo State.",
+  "severity": "HIGH",
+  "alertType": "DISEASE_OUTBREAK",
+  "source": "Nigeria CDC",
+  "sourceUrl": "https://ncdc.gov.ng",
+  "startsAt": "2025-01-15T00:00:00",
+  "expiresAt": "2025-04-15T00:00:00",
+  "isActive": true,
+  "countryId": {{countryId}}
+}
+
+### Update health alert
+PUT {{baseUrl}}/api/v1/country-health-alerts/{{healthAlertId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Lassa Fever Outbreak — Updated",
+  "description": "Updated: Outbreak contained in most areas.",
+  "severity": "MODERATE",
+  "isActive": true,
+  "countryId": {{countryId}}
+}
+
+### Delete health alert
+DELETE {{baseUrl}}/api/v1/country-health-alerts/{{healthAlertId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Exchange Rates ────────────────────────────────────────
+
+### Get exchange rates
+GET {{baseUrl}}/api/v1/exchange-rates
+
+### Convert currency
+GET {{baseUrl}}/api/v1/exchange-rates/convert?amount=100&from=USD&to=NGN
+
+### Get supported currencies
+GET {{baseUrl}}/api/v1/exchange-rates/currencies

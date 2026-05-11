@@ -3,8 +3,8 @@ package com.TravelMedicineAdvisory.Server.core.seeder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,13 +21,14 @@ import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
-import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.country.Country;
 import com.TravelMedicineAdvisory.Server.domain.country.CountryRepository;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlert;
 import com.TravelMedicineAdvisory.Server.domain.countryhealthalert.CountryHealthAlertRepository;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.faqitem.FaqItem;
@@ -46,7 +47,6 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSetting;
 import com.TravelMedicineAdvisory.Server.domain.usersetting.UserSettingRepository;
-import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorApplicationStatus;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -135,16 +135,19 @@ public class DataSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedRoles() {
-        if (roleRepository.count() == 6) {
-            return;
-        }
         // logger.info("Seeding roles...");
 
         List<String> roleNames = List.of("SuperAdmin", "Administrator", "HR", "CustomerSupport", "Individual",
-                "Doctor");
+                "Doctor", "Affiliate");
+
+        Set<String> existingRoleNames = new HashSet<>();
+        roleRepository.findAll().forEach(role -> existingRoleNames.add(role.getName()));
 
         List<Role> roles = new ArrayList<>();
         for (String name : roleNames) {
+            if (existingRoleNames.contains(name)) {
+                continue;
+            }
             Role role = new Role();
             role.setName(name);
             roles.add(role);
@@ -160,9 +163,10 @@ public class DataSeeder implements CommandLineRunner {
             "ai_request_log", "api_key", "blog_post", "company", "company_user",
             "country", "country_accommodation", "country_health_alert",
             "credit", "data_export", "doctor", "ebook", "employee", "faq_item",
+            "family",
             "health_profile", "invoice", "notification", "plan_generation_context",
             "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
-            "travel_plan", "travel_request", "user_onboarding"
+            "travel_plan", "travel_request", "user_onboarding", "affiliate"
     };
 
     private static final String[] ACTIONS = { "create", "read", "update", "delete", "list" };
@@ -228,7 +232,7 @@ public class DataSeeder implements CommandLineRunner {
                 "country_health_alert", "credit", "data_export", "doctor", "ebook", "employee",
                 "faq_item", "health_profile", "invoice", "notification", "plan_generation_context",
                 "plan_usage_ledger", "pricing_plan", "report", "system_log", "system_setting",
-                "travel_plan", "travel_request", "user_onboarding"
+                "travel_plan", "travel_request", "user_onboarding", "affiliate"
         };
 
         for (String resource : adminResources) {
@@ -286,6 +290,7 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, individual, permMap, "blog_post", "read");
         addPermissions(assignments, individual, permMap, "ebook", "read", "list");
         addPermissions(assignments, individual, permMap, "faq_item", "read");
+        addPermissions(assignments, individual, permMap, "family", "read");
         addPermissions(assignments, individual, permMap, "pricing_plan", "read", "list");
         addPermissions(assignments, individual, permMap, "report", "read");
         addPermissions(assignments, individual, permMap, "notification", "read");
@@ -304,6 +309,12 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, doctor, permMap, "notification", "read", "list");
         addPermissions(assignments, doctor, permMap, "pricing_plan", "read", "list");
         addPermissions(assignments, doctor, permMap, "user_onboarding", "read");
+
+        // Affiliate
+        Role affiliate = roleMap.get("Affiliate");
+        addPermissions(assignments, affiliate, permMap, "profile", "read", "update");
+        addPermissions(assignments, affiliate, permMap, "affiliate", "create", "read", "update", "list");
+        addPermissions(assignments, affiliate, permMap, "pricing_plan", "read", "list");
 
         List<RolePermission> newAssignments = assignments.stream()
                 .filter(rp -> rp.getRole() != null && rp.getPermission() != null)
@@ -1138,7 +1149,7 @@ public class DataSeeder implements CommandLineRunner {
                 createSetting("site_name", "TMAG", "string", "general", "Site Name", "The name of the platform", true));
         settings.add(createSetting("site_tagline", "Travel Medicine Advisory Global", "string", "general",
                 "Site Tagline", "The tagline displayed on the site", true));
-        settings.add(createSetting("support_email", "hello@tmag.health", "string", "general", "Support Email",
+        settings.add(createSetting("support_email", "admin@tmag.com", "string", "general", "Support Email",
                 "Main support email address", true));
         settings.add(createSetting("support_response_time", "24 hours", "string", "general", "Support Response Time",
                 "Typical support response time", true));

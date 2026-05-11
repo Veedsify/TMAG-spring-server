@@ -6,6 +6,7 @@ import com.TravelMedicineAdvisory.Server.core.payment.FlutterwavePaymentResponse
 import com.TravelMedicineAdvisory.Server.core.payment.FlutterwaveService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
 import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ public class CreditPurchaseService {
     private final ExchangeRateService exchangeRateService;
     private final CreditPlanRepository userCreditPlanRepository;
     private final CallbackRegistry callbackRegistry;
+    private final AffiliateService affiliateService;
 
     public CreditPurchaseService(
             CreditPurchaseRepository purchaseRepository,
@@ -50,7 +53,8 @@ public class CreditPurchaseService {
             QueueService queueService,
             ExchangeRateService exchangeRateService,
             CreditPlanRepository userCreditPlanRepository,
-            CallbackRegistry callbackRegistry) {
+            CallbackRegistry callbackRegistry,
+            AffiliateService affiliateService) {
         this.purchaseRepository = purchaseRepository;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
@@ -59,6 +63,7 @@ public class CreditPurchaseService {
         this.exchangeRateService = exchangeRateService;
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.callbackRegistry = callbackRegistry;
+        this.affiliateService = affiliateService;
     }
 
     public record PurchaseInitiationResult(
@@ -104,7 +109,13 @@ public class CreditPurchaseService {
             pricePerCredit = creditPlan.getBasePriceUsd();
         }
 
-        BigDecimal totalAmount = pricePerCredit.multiply(BigDecimal.valueOf(request.credits()));
+        BigDecimal baseAmount = pricePerCredit.multiply(BigDecimal.valueOf(request.credits())).setScale(2, RoundingMode.HALF_UP);
+        var affiliateDiscount = affiliateService.resolveDiscountForUser(user, request.affiliateReferralCode());
+        BigDecimal discountRate = affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::rate).orElse(BigDecimal.ZERO);
+        BigDecimal discountAmount = discountRate.compareTo(BigDecimal.ZERO) > 0
+                ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalAmount = baseAmount.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
 
         String txRef = flutterwaveService.generateTransactionReference();
 
@@ -116,6 +127,9 @@ public class CreditPurchaseService {
         purchase.setCurrencySymbol(currencySymbol);
         purchase.setPricePerCredit(pricePerCredit);
         purchase.setAmount(totalAmount);
+        purchase.setAffiliateReferralCode(affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::referralCode).orElse(null));
+        purchase.setAffiliateDiscountRate(discountRate);
+        purchase.setAffiliateDiscountAmount(discountAmount);
         purchase.setStatus("pending");
         purchaseRepository.save(purchase);
 
@@ -145,8 +159,8 @@ public class CreditPurchaseService {
                     txRef,
                     paymentResponse.paymentLink(),
                     request.credits(),
-                    totalAmount,
-                    BigDecimal.ZERO,
+                    baseAmount,
+                    discountAmount,
                     totalAmount,
                     currency,
                     currencySymbol,
@@ -168,6 +182,7 @@ public class CreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found with txRef: " + txRef));
 
         if ("completed".equalsIgnoreCase(purchase.getStatus())) {
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -218,6 +233,7 @@ public class CreditPurchaseService {
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found with txRef: " + txRef));
 
         if ("completed".equalsIgnoreCase(purchase.getStatus())) {
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -231,15 +247,16 @@ public class CreditPurchaseService {
             logger.info("Credit entry already exists for txRef={}, skipping duplicate", txRef);
             purchase.setStatus("completed");
             purchase.setFlwRef(flwRef);
-            purchase.setAmountPaid(amountPaid);
+            purchase.setAmountPaid(amountPaid != null ? amountPaid : purchase.getAmount());
             purchase.setPaidAt(LocalDateTime.now());
             purchase.setFlutterwaveStatus("successful");
             purchaseRepository.save(purchase);
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
         purchase.setFlwRef(flwRef);
-        purchase.setAmountPaid(amountPaid);
+        purchase.setAmountPaid(amountPaid != null ? amountPaid : purchase.getAmount());
         purchase.setStatus("completed");
         purchase.setPaidAt(LocalDateTime.now());
         purchase.setFlutterwaveStatus("successful");
@@ -260,6 +277,8 @@ public class CreditPurchaseService {
         logger.info("Credit purchase completed: txRef={}, credits={}, userId={}",
                 txRef, purchase.getCreditsPurchased(), user.getId());
 
+        affiliateService.recordCommissionForCompletedPurchase(purchase);
+
         return CreditPurchaseResponse.from(purchase);
     }
 
@@ -274,6 +293,7 @@ public class CreditPurchaseService {
         }
 
         if ("completed".equalsIgnoreCase(purchase.getStatus())) {
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -300,12 +320,15 @@ public class CreditPurchaseService {
 
     private CreditPurchaseResponse completePurchase(CreditPurchase purchase, FlutterwavePaymentResponse verification) {
         purchase.setStatus("completed");
+        purchase.setFlwRef(verification.flwRef());
+        purchase.setAmountPaid(verification.amount() != null ? verification.amount() : purchase.getAmount());
         purchase.setPaidAt(LocalDateTime.now());
         purchase.setFlutterwaveStatus(verification.status());
         purchaseRepository.save(purchase);
 
         if (creditRepository.existsByTypeAndReference("purchase", purchase.getTxRef())) {
             logger.info("Credit entry already exists for txRef={}, skipping duplicate", purchase.getTxRef());
+            affiliateService.recordCommissionForCompletedPurchase(purchase);
             return CreditPurchaseResponse.from(purchase);
         }
 
@@ -333,6 +356,8 @@ public class CreditPurchaseService {
                         "credits", String.valueOf(purchase.getCreditsPurchased()),
                         "currencySymbol", purchase.getCurrencySymbol(),
                         "amount", purchase.getAmount().toString())));
+
+        affiliateService.recordCommissionForCompletedPurchase(purchase);
 
         return CreditPurchaseResponse.from(purchase);
     }

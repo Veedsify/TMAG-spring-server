@@ -4,6 +4,7 @@ public enum CreditPlanCode {
     ESSENTIAL,
     STANDARD,
     PREMIUM,
+    FAMILY_STANDARD,
     ENTERPRISE_SILVER,
     ENTERPRISE_PLUS,
     ENTERPRISE_GOLD,

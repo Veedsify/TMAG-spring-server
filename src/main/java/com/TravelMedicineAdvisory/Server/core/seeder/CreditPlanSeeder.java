@@ -32,8 +32,6 @@ public class CreditPlanSeeder implements CommandLineRunner {
 
     @Transactional
     protected void seedCreditPlans() {
-        if (repository.count() > 0) return;
-
         logger.info("Seeding user credit plans...");
 
         List<CreditPlan> plans = List.of(
@@ -52,6 +50,12 @@ public class CreditPlanSeeder implements CommandLineRunner {
                         new BigDecimal("100.00"), new BigDecimal("100000.00"),
                         "Everything in Standard plus a Pre-Travel Checklist, Medication Packing List, and Doctor-Ready Clinical Summary Letter.",
                         false, false, null, null),
+
+                // Standalone family plan
+                createFamilyPlan(CreditPlanCode.FAMILY_STANDARD, "Family Plan",
+                        new BigDecimal("180.00"), new BigDecimal("180000.00"),
+                        "One family travel health plan for up to 6 family members. Additional family members are billed separately.",
+                        1),
 
                 // Enterprise company plans — 0-100 signups
                 createPlan(CreditPlanCode.ENTERPRISE_SILVER, "Enterprise Silver",
@@ -87,8 +91,29 @@ public class CreditPlanSeeder implements CommandLineRunner {
                         false, true, ">500", "PREMIUM")
         );
 
-        repository.saveAll(plans);
+        repository.saveAll(plans.stream()
+                .map(this::mergePlan)
+                .toList());
         logger.info("Seeded {} user credit plan entries.", plans.size());
+    }
+
+    private CreditPlan mergePlan(CreditPlan seededPlan) {
+        CreditPlan plan = repository.findByCode(seededPlan.getCode()).orElse(seededPlan);
+        plan.setDisplayName(seededPlan.getDisplayName());
+        plan.setBasePriceUsd(seededPlan.getBasePriceUsd());
+        plan.setBasePriceNgn(seededPlan.getBasePriceNgn());
+        plan.setDescription(seededPlan.getDescription());
+        plan.setIsDefault(seededPlan.getIsDefault());
+        plan.setIsCompanyPlan(seededPlan.getIsCompanyPlan());
+        plan.setIsFamilyPlan(seededPlan.getIsFamilyPlan());
+        plan.setSignupRangeLabel(seededPlan.getSignupRangeLabel());
+        plan.setServiceLevel(seededPlan.getServiceLevel());
+        plan.setVisibility(seededPlan.getVisibility());
+        plan.setPlanCount(seededPlan.getPlanCount());
+        plan.setIncludedFamilyMembers(seededPlan.getIncludedFamilyMembers());
+        plan.setAdditionalMemberPriceUsd(seededPlan.getAdditionalMemberPriceUsd());
+        plan.setAdditionalMemberPriceNgn(seededPlan.getAdditionalMemberPriceNgn());
+        return plan;
     }
 
     private CreditPlan createPlan(CreditPlanCode code, String displayName,
@@ -104,9 +129,23 @@ public class CreditPlanSeeder implements CommandLineRunner {
         plan.setDescription(description);
         plan.setIsDefault(isDefault);
         plan.setIsCompanyPlan(isCompanyPlan);
+        plan.setIsFamilyPlan(false);
         plan.setSignupRangeLabel(signupRangeLabel);
         plan.setServiceLevel(serviceLevel);
         plan.setVisibility("PUBLIC");
+        return plan;
+    }
+
+    private CreditPlan createFamilyPlan(CreditPlanCode code, String displayName,
+                                        BigDecimal basePriceUsd, BigDecimal basePriceNgn,
+                                        String description, Integer planCount) {
+        CreditPlan plan = createPlan(code, displayName, basePriceUsd, basePriceNgn,
+                description, false, false, null, null);
+        plan.setIsFamilyPlan(true);
+        plan.setPlanCount(planCount);
+        plan.setIncludedFamilyMembers(6);
+        plan.setAdditionalMemberPriceUsd(new BigDecimal("30.00"));
+        plan.setAdditionalMemberPriceNgn(new BigDecimal("25000.00"));
         return plan;
     }
 }

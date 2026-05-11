@@ -1,0 +1,143 @@
+### ============================================================================
+### FAMILY TRIPS — /api/v1/family-trips + /api/v1/family-package-purchases
+### ============================================================================
+
+### ─── Family Trips ──────────────────────────────────────────
+
+### Get my family trips
+GET {{baseUrl}}/api/v1/family-trips
+Authorization: Bearer {{authToken}}
+
+### Preview family trip
+POST {{baseUrl}}/api/v1/family-trips/preview
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "packageType": "FAMILY_5",
+  "destination": "London, UK",
+  "country": "United Kingdom",
+  "duration": 10,
+  "purpose": "Family vacation",
+  "tripType": "LEISURE",
+  "members": [
+    {"firstName": "John", "lastName": "Doe", "relationship": "SELF"},
+    {"firstName": "Jane", "lastName": "Doe", "relationship": "SPOUSE"},
+    {"firstName": "Jimmy", "lastName": "Doe", "relationship": "CHILD"}
+  ]
+}
+
+### Save family trip draft
+POST {{baseUrl}}/api/v1/family-trips/drafts
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "packageType": "FAMILY_3",
+  "destination": "Paris, France",
+  "country": "France",
+  "duration": 7,
+  "purpose": "Family vacation",
+  "tripType": "LEISURE",
+  "members": [
+    {"firstName": "John", "lastName": "Doe", "relationship": "SELF"},
+    {"firstName": "Jane", "lastName": "Doe", "relationship": "SPOUSE"}
+  ]
+}
+
+### Get latest draft
+GET {{baseUrl}}/api/v1/family-trips/drafts/latest
+Authorization: Bearer {{authToken}}
+
+### Get family trip by ID
+GET {{baseUrl}}/api/v1/family-trips/{{familyTripId}}
+Authorization: Bearer {{authToken}}
+
+### Update family trip
+PUT {{baseUrl}}/api/v1/family-trips/{{familyTripId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "packageType": "FAMILY_5",
+  "destination": "Paris, France",
+  "country": "France",
+  "duration": 10,
+  "purpose": "Extended family vacation",
+  "tripType": "LEISURE",
+  "members": [
+    {"firstName": "John", "lastName": "Doe", "relationship": "SELF"},
+    {"firstName": "Jane", "lastName": "Doe", "relationship": "SPOUSE"},
+    {"firstName": "Jimmy", "lastName": "Doe", "relationship": "CHILD"}
+  ]
+}
+
+### Submit family trip
+POST {{baseUrl}}/api/v1/family-trips/{{familyTripId}}/submit
+Authorization: Bearer {{authToken}}
+
+### Delete family trip
+DELETE {{baseUrl}}/api/v1/family-trips/{{familyTripId}}
+Authorization: Bearer {{authToken}}
+
+### Get trip plans
+GET {{baseUrl}}/api/v1/family-trips/{{familyTripId}}/plans
+Authorization: Bearer {{authToken}}
+
+### Regenerate member code
+POST {{baseUrl}}/api/v1/family-trips/{{familyTripId}}/members/{{familyMemberId}}/regenerate-code
+Authorization: Bearer {{authToken}}
+
+### ─── Family Members ────────────────────────────────────────
+
+### Member login
+POST {{baseUrl}}/api/v1/family-trips/members/login
+Content-Type: application/json
+
+{
+  "mainApplicantEmail": "john.doe@example.com",
+  "code": "MEMBER-LOGIN-CODE-123"
+}
+
+### Member logout
+POST {{baseUrl}}/api/v1/family-trips/members/logout
+X-Family-Member-Token: <family-member-token>
+
+### Get current member info
+GET {{baseUrl}}/api/v1/family-trips/members/me
+X-Family-Member-Token: <family-member-token>
+
+### Get member plans
+GET {{baseUrl}}/api/v1/family-trips/members/plans
+X-Family-Member-Token: <family-member-token>
+
+### Get member plan detail
+GET {{baseUrl}}/api/v1/family-trips/members/plans/{{planId}}
+X-Family-Member-Token: <family-member-token>
+
+### ─── Family Package Purchases ──────────────────────────────
+
+### Checkout family package
+POST {{baseUrl}}/api/v1/family-package-purchases/checkout
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "packageType": "FAMILY_5",
+  "currency": "USD",
+  "additionalMembers": 0,
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+2348012345678"
+}
+
+### Family package payment callback
+GET {{baseUrl}}/api/v1/family-package-purchases/callback?tx_ref={{txRef}}&status=successful
+
+### Get active purchases
+GET {{baseUrl}}/api/v1/family-package-purchases/active
+Authorization: Bearer {{authToken}}
+
+### Purchase history
+GET {{baseUrl}}/api/v1/family-package-purchases/history
+Authorization: Bearer {{authToken}}

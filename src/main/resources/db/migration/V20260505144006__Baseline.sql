@@ -787,11 +787,15 @@ CREATE TABLE user_credit_plans
     description         TEXT,
     is_default          BOOLEAN                                 NOT NULL,
     is_company_plan     BOOLEAN                                 NOT NULL,
+    is_family_plan      BOOLEAN                                 NOT NULL DEFAULT FALSE,
     signup_range_label  VARCHAR(20),
     service_level       VARCHAR(20),
     visibility          VARCHAR(20)                             NOT NULL,
     assigned_company_id BIGINT,
     plan_count          INTEGER,
+    included_family_members INTEGER,
+    additional_member_price_usd DECIMAL(10, 2),
+    additional_member_price_ngn DECIMAL(12, 2),
     CONSTRAINT pk_user_credit_plans PRIMARY KEY (id)
 );
 

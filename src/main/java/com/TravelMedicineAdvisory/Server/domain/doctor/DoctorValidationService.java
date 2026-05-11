@@ -106,6 +106,7 @@ public class DoctorValidationService {
     public DoctorApplication applyToBecomeDoctor(String firstName, String lastName, String email,
             String specialty, String country, String licenseNumber, MultipartFile profilePictureFile,
             MultipartFile signatureFile, MultipartFile stampFile,
+            MultipartFile practicingLicenseFile, MultipartFile travelMedicineCertificateFile,
             boolean confidentialityAgreementAccepted, boolean conductAgreementAccepted) {
         String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
         if (normalizedEmail.isBlank()) {
@@ -147,6 +148,14 @@ public class DoctorValidationService {
             String stampPath = storeDoctorApplicationFile(stampFile, "doctor-stamps");
             application.setStampUrl(storageService.getUrl(stampPath));
         }
+        if (practicingLicenseFile != null && !practicingLicenseFile.isEmpty()) {
+            String practicingLicensePath = storeDoctorApplicationFile(practicingLicenseFile, "doctor-practicing-licenses");
+            application.setPracticingLicenseUrl(storageService.getUrl(practicingLicensePath));
+        }
+        if (travelMedicineCertificateFile != null && !travelMedicineCertificateFile.isEmpty()) {
+            String certPath = storeDoctorApplicationFile(travelMedicineCertificateFile, "doctor-travel-medicine-certificates");
+            application.setTravelMedicineCertificateUrl(storageService.getUrl(certPath));
+        }
         application.setConfidentialityAgreementAccepted(confidentialityAgreementAccepted);
         application.setConductAgreementAccepted(conductAgreementAccepted);
 
@@ -171,7 +180,8 @@ public class DoctorValidationService {
 
     public DoctorProfileResponse updateDoctorProfile(Long userId, String firstName, String lastName,
             String profilePictureOption, String licenseNumber, MultipartFile signatureFile,
-            MultipartFile stampFile) {
+            MultipartFile stampFile,
+            MultipartFile practicingLicenseFile, MultipartFile travelMedicineCertificateFile) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("Doctor not found"));
 
@@ -214,10 +224,30 @@ public class DoctorValidationService {
             settings.setStampUrl(storageService.getUrl(path));
         }
 
+        if (practicingLicenseFile != null && !practicingLicenseFile.isEmpty()) {
+            String path = storageService.storeBytes(
+                    readMultipartFile(practicingLicenseFile),
+                    "doctor-practicing-licenses",
+                    UUID.randomUUID() + "_" + practicingLicenseFile.getOriginalFilename(),
+                    practicingLicenseFile.getContentType());
+            settings.setPracticingLicenseUrl(storageService.getUrl(path));
+        }
+
+        if (travelMedicineCertificateFile != null && !travelMedicineCertificateFile.isEmpty()) {
+            String path = storageService.storeBytes(
+                    readMultipartFile(travelMedicineCertificateFile),
+                    "doctor-travel-medicine-certificates",
+                    UUID.randomUUID() + "_" + travelMedicineCertificateFile.getOriginalFilename(),
+                    travelMedicineCertificateFile.getContentType());
+            settings.setTravelMedicineCertificateUrl(storageService.getUrl(path));
+        }
+
         userSettingService.updateDoctorFields(userId,
                 settings.getMedicalLicenseNumber(),
                 settings.getSignatureUrl(),
                 settings.getStampUrl(),
+                settings.getPracticingLicenseUrl(),
+                settings.getTravelMedicineCertificateUrl(),
                 null);
 
         log.info("Doctor profile updated: userId={}", userId);
@@ -288,6 +318,8 @@ public class DoctorValidationService {
                 application.getMedicalLicenseNumber(),
                 application.getSignatureUrl(),
                 application.getStampUrl(),
+                application.getPracticingLicenseUrl(),
+                application.getTravelMedicineCertificateUrl(),
                 DoctorApplicationStatus.APPROVED);
 
         application.setStatus(DoctorApplicationStatus.APPROVED);
@@ -629,6 +661,8 @@ public class DoctorValidationService {
                 settings.getMedicalLicenseNumber(),
                 settings.getSignatureUrl(),
                 settings.getStampUrl(),
+                settings.getPracticingLicenseUrl(),
+                settings.getTravelMedicineCertificateUrl(),
                 settings.getDoctorApplicationStatus() != null ? settings.getDoctorApplicationStatus().name() : null,
                 doctor.getCreatedAt());
     }

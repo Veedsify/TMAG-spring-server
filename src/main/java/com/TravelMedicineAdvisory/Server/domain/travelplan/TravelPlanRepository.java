@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
@@ -288,4 +289,8 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     @Query("SELECT COUNT(tp) FROM TravelPlan tp WHERE tp.validatedBy.id = :doctorId AND tp.doctorValidationStatus = 'APPROVED' AND tp.deletedAt IS NULL")
     long countApprovedByDoctor(@Param("doctorId") Long doctorId);
+
+    Optional<TravelPlan> findByIdAndFamilyTripMemberIdAndDeletedAtIsNull(Long id, Long memberId);
+    
+    List<TravelPlan> findByFamilyTripMemberIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long memberId);
 }

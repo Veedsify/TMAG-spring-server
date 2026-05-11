@@ -1,0 +1,394 @@
+{
+  "info": {
+    "name": "TMAG API",
+    "description": "Travel Medicine Advisory Global — Complete REST API Collection\nBase URL: http://localhost:8080\n\nUpdate the collection variables (baseUrl, authToken, etc.) before testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "tmag"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "companyAdminToken", "value": "", "type": "string" },
+    { "key": "doctorToken", "value": "", "type": "string" },
+    { "key": "txRef", "value": "TX-REF-HERE", "type": "string" },
+    { "key": "userId", "value": "1", "type": "string" },
+    { "key": "companyId", "value": "1", "type": "string" },
+    { "key": "planId", "value": "1", "type": "string" },
+    { "key": "employeeId", "value": "1", "type": "string" },
+    { "key": "notificationId", "value": "1", "type": "string" },
+    { "key": "countryId", "value": "1", "type": "string" },
+    { "key": "blogPostId", "value": "1", "type": "string" },
+    { "key": "healthProfileId", "value": "1", "type": "string" },
+    { "key": "faqItemId", "value": "1", "type": "string" },
+    { "key": "roleId", "value": "1", "type": "string" },
+    { "key": "permissionId", "value": "1", "type": "string" },
+    { "key": "abuseFlagId", "value": "1", "type": "string" },
+    { "key": "invoiceId", "value": "1", "type": "string" },
+    { "key": "familyTripId", "value": "1", "type": "string" },
+    { "key": "draftPlanId", "value": "1", "type": "string" },
+    { "key": "creditRequestId", "value": "1", "type": "string" },
+    { "key": "creditPlanId", "value": "1", "type": "string" },
+    { "key": "ebookId", "value": "1", "type": "string" },
+    { "key": "versionId", "value": "1", "type": "string" },
+    { "key": "cartItemId", "value": "1", "type": "string" },
+    { "key": "companyUserId", "value": "1", "type": "string" },
+    { "key": "companyOnboardingId", "value": "1", "type": "string" },
+    { "key": "apiKeyId", "value": "1", "type": "string" },
+    { "key": "doctorUserId", "value": "1", "type": "string" },
+    { "key": "planContextId", "value": "1", "type": "string" },
+    { "key": "adminUserId", "value": "1", "type": "string" },
+    { "key": "onboardingRecordId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        { "name": "Register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Dike\",\n  \"last_name\": \"Thomas\",\n  \"username\": \"dikethomas\",\n  \"email\": \"dikethomas@example.com\",\n  \"password\": \"Str0ng!Pass123\",\n  \"plan_code\": \"STANDARD\",\n  \"billing_currency\": \"NGN\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] } } },
+        { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"dikethomas@example.com\",\n  \"password\": \"Str0ng!Pass123\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] } } },
+        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "logout"] } } },
+        { "name": "Forgot Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"dikethomas@example.com\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "forgot-password"] } } },
+        { "name": "Reset Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"dikethomas@example.com\",\n  \"token\": \"reset-token-here\",\n  \"new_password\": \"NewStr0ng!Pass456\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "reset-password"] } } },
+        { "name": "Resend Verification", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"dikethomas@example.com\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/resend-verification", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "resend-verification"] } } },
+        { "name": "Verify Email", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"dikethomas@example.com\",\n  \"code\": \"123456\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/verify-email", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "verify-email"] } } },
+        { "name": "Accept Invitation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"token\": \"invitation-token-here\",\n  \"new_password\": \"MyStr0ng!Pass789\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/accept-invitation", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "accept-invitation"] } } },
+        { "name": "Google Auth URL", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/auth/google/url", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "google", "url"] } } },
+        { "name": "Google Callback", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"code\": \"google-auth-code-here\",\n  \"plan_code\": \"STANDARD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/auth/google/callback", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "google", "callback"] } } }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        { "name": "Get My Companies", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/profile/companies", "host": ["{{baseUrl}}"], "path": ["api", "v1", "profile", "companies"] } } },
+        { "name": "Get Profile", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/profile", "host": ["{{baseUrl}}"], "path": ["api", "v1", "profile"] } } },
+        { "name": "Update Profile", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Dike\",\n  \"last_name\": \"Thomas\",\n  \"username\": \"dikethomas\",\n  \"phone\": \"+2348012345678\",\n  \"billing_currency\": \"NGN\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/profile", "host": ["{{baseUrl}}"], "path": ["api", "v1", "profile"] } } },
+        { "name": "Change Password", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"current_password\": \"Str0ng!Pass123\",\n  \"new_password\": \"NewStr0ng!Pass456\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/profile/password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "profile", "password"] } } },
+        { "name": "Upgrade Plan", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"plan_code\": \"PREMIUM\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/profile/upgrade-plan", "host": ["{{baseUrl}}"], "path": ["api", "v1", "profile", "upgrade-plan"] } } }
+      ]
+    },
+    {
+      "name": "Travel Plans",
+      "item": [
+        { "name": "List Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/travel-plans?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Get Plan by ID", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans", "{{planId}}"] } } },
+        { "name": "Create Plan", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"destination\": \"Lagos, Nigeria\",\n  \"country\": \"Nigeria\",\n  \"duration\": 14,\n  \"purpose\": \"Business trip\",\n  \"tripType\": \"BUSINESS\",\n  \"planTier\": \"STANDARD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/travel-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans"] } } },
+        { "name": "Update Plan", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"destination\": \"Abuja, Nigeria\",\n  \"country\": \"Nigeria\",\n  \"duration\": 10,\n  \"purpose\": \"Conference\",\n  \"tripType\": \"BUSINESS\",\n  \"planTier\": \"STANDARD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans", "{{planId}}"] } } },
+        { "name": "Delete Plan", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans", "{{planId}}"] } } },
+        { "name": "Download PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}/pdf", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans", "{{planId}}", "pdf"] } } },
+        { "name": "Download Summary PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/travel-plans/{{planId}}/summary-pdf", "host": ["{{baseUrl}}"], "path": ["api", "v1", "travel-plans", "{{planId}}", "summary-pdf"] } } }
+      ]
+    },
+    {
+      "name": "Test Travel Plans",
+      "item": [
+        { "name": "Duplicate Plan", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/{{planId}}/duplicate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "{{planId}}", "duplicate"] } } },
+        { "name": "Approve (Test)", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/{{planId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "{{planId}}", "approve"] } } },
+        { "name": "Reject (Test)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"rejectionReason\": \"Insufficient medical data\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/{{planId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "{{planId}}", "reject"] } } },
+        { "name": "Validate (Test)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"planId\": {{planId}},\n  \"approved\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/{{planId}}/validate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "{{planId}}", "validate"] } } },
+        { "name": "Get Pending (Test)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/pending", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "pending"] } } },
+        { "name": "Get Plan for Review (Test)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/test/travel-plans/{{planId}}/review", "host": ["{{baseUrl}}"], "path": ["api", "v1", "test", "travel-plans", "{{planId}}", "review"] } } }
+      ]
+    },
+    {
+      "name": "Draft Plans",
+      "item": [
+        { "name": "List Drafts", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/draft-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "draft-plans"] } } },
+        { "name": "Get Draft", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "draft-plans", "{{draftPlanId}}"] } } },
+        { "name": "Save Draft", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"country\": \"Nigeria\",\n  \"answersJson\": \"{\\\"age\\\":35}\",\n  \"categoryIndex\": 2,\n  \"riskConsentGiven\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/draft-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "draft-plans"] } } },
+        { "name": "Update Draft", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"country\": \"Nigeria\",\n  \"categoryIndex\": 3,\n  \"showVerify\": true,\n  \"riskConsentGiven\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "draft-plans", "{{draftPlanId}}"] } } },
+        { "name": "Delete Draft", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "draft-plans", "{{draftPlanId}}"] } } }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        { "name": "Initiate Payment", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"amount\": 5000,\n  \"currency\": \"NGN\",\n  \"customerEmail\": \"dikethomas@example.com\",\n  \"customerName\": \"Dike Thomas\",\n  \"description\": \"Credit purchase - 50 credits\",\n  \"txRef\": \"{{txRef}}\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/payments/initiate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "initiate"] } } },
+        { "name": "Verify Transaction", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/verify/{{txRef}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "verify", "{{txRef}}"] } } },
+        { "name": "Verify by Reference", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/verify-by-reference/{{txRef}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "verify-by-reference", "{{txRef}}"] } } },
+        { "name": "Refund Transaction", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/payments/refund/{{txRef}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "refund", "{{txRef}}"] } } },
+        { "name": "Webhook Handler", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "verif-hash", "value": "your-webhook-secret-hash" }], "body": { "mode": "raw", "raw": "{\n  \"event\": \"charge.completed\",\n  \"data\": {\n    \"tx_ref\": \"{{txRef}}\",\n    \"flw_ref\": \"FLW-REF-123\",\n    \"status\": \"successful\",\n    \"amount\": 5000\n  }\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/payments/webhook/flutterwave", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "webhook", "flutterwave"] } } },
+        { "name": "Payment Config", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/config", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "config"] } } },
+        { "name": "Generate Ref", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/generate-reference", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "generate-reference"] } } }
+      ]
+    },
+    {
+      "name": "Credit Purchases",
+      "item": [
+        { "name": "Initiate Purchase", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"credits\": 50,\n  \"currency\": \"NGN\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/credit-purchases/initiate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-purchases", "initiate"] } } },
+        { "name": "Verify Purchase", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/credit-purchases/verify/{{txRef}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-purchases", "verify", "{{txRef}}"] } } },
+        { "name": "Purchase Callback", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/credit-purchases/callback?tx_ref={{txRef}}&status=successful", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-purchases", "callback"], "query": [{ "key": "tx_ref", "value": "{{txRef}}" }, { "key": "status", "value": "successful" }] } } },
+        { "name": "Purchase History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/credit-purchases/history", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-purchases", "history"] } } },
+        { "name": "Get Purchase by TxRef", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/credit-purchases/{{txRef}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-purchases", "{{txRef}}"] } } }
+      ]
+    },
+    {
+      "name": "Doctor",
+      "item": [
+        { "name": "Get Profile", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/profile", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "profile"] } } },
+        { "name": "Get Reviewers", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/doctor/reviewers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "reviewers"] } } },
+        { "name": "Dashboard", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/dashboard", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "dashboard"] } } },
+        { "name": "Pending Plans (Paginated)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/pending?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "pending"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Validated Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/validated?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "validated"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Pending (Legacy)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/pending", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "pending"] } } },
+        { "name": "Approved Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/approved", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "approved"] } } },
+        { "name": "Rejected Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/rejected", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "rejected"] } } },
+        { "name": "Get Plan Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/{{planId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "{{planId}}"] } } },
+        { "name": "Validate Plan", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"planId\": {{planId}},\n  \"approved\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/doctor/validate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "validate"] } } },
+        { "name": "Approve Plan", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/{{planId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "{{planId}}", "approve"] } } },
+        { "name": "Reject Plan", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"rejectionReason\": \"Missing vaccination data\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/{{planId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "{{planId}}", "reject"] } } },
+        { "name": "Download Signed PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{doctorToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/doctor/plans/{{planId}}/signed-pdf", "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor", "plans", "{{planId}}", "signed-pdf"] } } }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        { "name": "List Companies", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/companies?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Get Company", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies", "{{companyId}}"] } } },
+        { "name": "Create Company", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"TravelSafe Inc.\",\n  \"industry\": \"Travel\",\n  \"companyCode\": \"TRAVELSAFE01\",\n  \"billing_currency\": \"USD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/companies", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies"] } } },
+        { "name": "Update Company", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"TravelSafe Inc. Updated\",\n  \"industry\": \"Travel & Tourism\",\n  \"billing_currency\": \"USD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies", "{{companyId}}"] } } },
+        { "name": "Purchase Credits", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"amount\": 200,\n  \"reference\": \"Bulk purchase Q1 2025\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}/purchase-credits", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies", "{{companyId}}", "purchase-credits"] } } },
+        { "name": "Validate Code", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/companies/validate-code?code=TRAVELSAFE01", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies", "validate-code"], "query": [{ "key": "code", "value": "TRAVELSAFE01" }] } } },
+        { "name": "Delete Company", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "companies", "{{companyId}}"] } } }
+      ]
+    },
+    {
+      "name": "Company Users",
+      "item": [
+        { "name": "List Company Users", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-users?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-users"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Create Company User", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{userId}},\n  \"company_id\": {{companyId}},\n  \"role\": \"EMPLOYEE\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/company-users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-users"] } } }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        { "name": "List Employees", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/employees?companyId={{companyId}}&page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "employees"], "query": [{ "key": "companyId", "value": "{{companyId}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Invite Employee", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@company.com\",\n  \"department\": \"Engineering\",\n  \"creditsAllocated\": 50,\n  \"companyId\": {{companyId}}\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/employees/invite", "host": ["{{baseUrl}}"], "path": ["api", "v1", "employees", "invite"] } } },
+        { "name": "Allocate Credits", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"creditsAllocated\": 75,\n  \"companyId\": {{companyId}}\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}/credits", "host": ["{{baseUrl}}"], "path": ["api", "v1", "employees", "{{employeeId}}", "credits"] } } },
+        { "name": "Remind Onboarding", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}/remind-onboarding", "host": ["{{baseUrl}}"], "path": ["api", "v1", "employees", "{{employeeId}}", "remind-onboarding"] } } }
+      ]
+    },
+    {
+      "name": "Credits",
+      "item": [
+        { "name": "List Credits", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/credits?companyId={{companyId}}&page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credits"], "query": [{ "key": "companyId", "value": "{{companyId}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "List Credit Plans", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/user-credit-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "user-credit-plans"] } } }
+      ]
+    },
+    {
+      "name": "Credit Requests",
+      "item": [
+        { "name": "List Requests", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/credit-requests?companyId={{companyId}}&page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-requests"], "query": [{ "key": "companyId", "value": "{{companyId}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Create Request", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"creditsRequested\": 30,\n  \"reason\": \"Need additional credits\",\n  \"companyId\": {{companyId}},\n  \"employeeId\": {{employeeId}}\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/credit-requests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-requests"] } } },
+        { "name": "Approve Request", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-requests", "{{creditRequestId}}", "approve"] } } },
+        { "name": "Reject Request", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Insufficient budget this quarter\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "credit-requests", "{{creditRequestId}}", "reject"] } } }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "List Notifications", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/notifications?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Create Notification", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Travel Plan Approved\",\n  \"message\": \"Your travel plan has been approved.\",\n  \"type\": \"APPROVAL\",\n  \"userId\": {{userId}}\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"] } } }
+      ]
+    },
+    {
+      "name": "Onboarding",
+      "item": [
+        { "name": "Get My Onboarding", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/onboarding", "host": ["{{baseUrl}}"], "path": ["api", "v1", "onboarding"] } } },
+        { "name": "Upsert Onboarding", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"userType\": \"INDIVIDUAL\",\n  \"nationality\": \"Nigerian\",\n  \"companyCode\": \"TRAVELSAFE01\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/onboarding", "host": ["{{baseUrl}}"], "path": ["api", "v1", "onboarding"] } } },
+        { "name": "Advance Stage", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"stage\": 3\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/onboarding/stage", "host": ["{{baseUrl}}"], "path": ["api", "v1", "onboarding", "stage"] } } },
+        { "name": "Get Questions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/onboarding/questions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "onboarding", "questions"] } } },
+        { "name": "Save Questionnaire", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"responses\": {\"age\": 35, \"gender\": \"male\"},\n  \"complete\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/onboarding/questionnaire", "host": ["{{baseUrl}}"], "path": ["api", "v1", "onboarding", "questionnaire"] } } }
+      ]
+    },
+    {
+      "name": "Geography",
+      "item": [
+        { "name": "List Countries", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/countries?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "countries"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "All Countries", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/countries/all", "host": ["{{baseUrl}}"], "path": ["api", "v1", "countries", "all"] } } },
+        { "name": "Create Country", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Nigeria\",\n  \"code\": \"NG\",\n  \"region\": \"West Africa\",\n  \"continent\": \"Africa\",\n  \"riskLevel\": \"MODERATE\",\n  \"currency\": \"NGN\",\n  \"language\": \"English\",\n  \"isActive\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/countries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "countries"] } } },
+        { "name": "Exchange Rates", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/exchange-rates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange-rates"] } } },
+        { "name": "Convert Currency", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/exchange-rates/convert?amount=100&from=USD&to=NGN", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange-rates", "convert"], "query": [{ "key": "amount", "value": "100" }, { "key": "from", "value": "USD" }, { "key": "to", "value": "NGN" }] } } }
+      ]
+    },
+    {
+      "name": "Content",
+      "item": [
+        { "name": "List Blog Posts", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/blog-posts?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "blog-posts"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "List FAQ Items", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/faq-items?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "faq-items"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Subscribe Newsletter", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"subscriber@example.com\",\n  \"name\": \"Subscriber Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/newsletter/subscribe", "host": ["{{baseUrl}}"], "path": ["api", "v1", "newsletter", "subscribe"] } } },
+        { "name": "Submit Contact", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"subject\": \"Partnership inquiry\",\n  \"message\": \"Interested in partnering.\",\n  \"inquiryType\": \"PARTNERSHIP\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/contact", "host": ["{{baseUrl}}"], "path": ["api", "v1", "contact"] } } }
+      ]
+    },
+    {
+      "name": "Health Profiles",
+      "item": [
+        { "name": "Get My Profile", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/health-profiles/my", "host": ["{{baseUrl}}"], "path": ["api", "v1", "health-profiles", "my"] } } },
+        { "name": "Create Profile", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"conditions\": \"None\",\n  \"medications\": \"None\",\n  \"allergies\": \"Penicillin\",\n  \"userId\": {{userId}}\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/health-profiles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "health-profiles"] } } }
+      ]
+    },
+    {
+      "name": "Ebooks",
+      "item": [
+        { "name": "List Ebooks (Public)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/ebooks", "host": ["{{baseUrl}}"], "path": ["api", "v1", "ebooks"] } } },
+        { "name": "Get Ebook by Slug", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/ebooks/nigeria-travel-health-guide", "host": ["{{baseUrl}}"], "path": ["api", "v1", "ebooks", "nigeria-travel-health-guide"] } } },
+        { "name": "Checkout Ebook", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"ebookVersionId\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/ebooks/checkout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "ebooks", "checkout"] } } },
+        { "name": "My Orders", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/ebooks/my-orders", "host": ["{{baseUrl}}"], "path": ["api", "v1", "ebooks", "my-orders"] } } }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        { "name": "Get Cart", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/cart", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cart"] } } },
+        { "name": "Add to Cart", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"ebookVersionId\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/cart/add", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cart", "add"] } } },
+        { "name": "Clear Cart", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/cart", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cart"] } } },
+        { "name": "Cart Checkout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"ebookVersionIds\": [1, 2]\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/cart/checkout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cart", "checkout"] } } }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        { "name": "List Invoices", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/invoices?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "invoices"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Download PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/invoices/{{invoiceId}}/pdf", "host": ["{{baseUrl}}"], "path": ["api", "v1", "invoices", "{{invoiceId}}", "pdf"] } } }
+      ]
+    },
+    {
+      "name": "Family Trips",
+      "item": [
+        { "name": "Get My Trips", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/family-trips", "host": ["{{baseUrl}}"], "path": ["api", "v1", "family-trips"] } } },
+        { "name": "Preview Trip", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"packageType\": \"FAMILY_5\",\n  \"destination\": \"London, UK\",\n  \"country\": \"United Kingdom\",\n  \"duration\": 10,\n  \"purpose\": \"Family vacation\",\n  \"tripType\": \"LEISURE\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/family-trips/preview", "host": ["{{baseUrl}}"], "path": ["api", "v1", "family-trips", "preview"] } } },
+        { "name": "Family Package Checkout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"packageType\": \"FAMILY_5\",\n  \"currency\": \"USD\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/family-package-purchases/checkout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "family-package-purchases", "checkout"] } } }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        { "name": "List System Logs", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/system-logs?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "system-logs"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "Get My Settings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] } } }
+      ]
+    },
+    {
+      "name": "Roles & Permissions",
+      "item": [
+        { "name": "List Roles", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/roles?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roles"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+        { "name": "List Permissions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/permissions?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "permissions"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        { "name": "Dashboard Analytics", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/reports/dashboard/analytics?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reports", "dashboard", "analytics"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Usage Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/reports/usage?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reports", "usage"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Plan History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/reports/plans?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reports", "plans"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            { "name": "Admin Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"AdminPass123!\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "auth", "login"] } } },
+            { "name": "Admin Me", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "auth", "me"] } } }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            { "name": "List Users", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"] } } },
+            { "name": "Suspend User", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/suspend", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{userId}}", "suspend"] } } },
+            { "name": "Activate User", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{userId}}", "activate"] } } }
+          ]
+        },
+        {
+          "name": "Companies",
+          "item": [
+            { "name": "List Companies", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/companies", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "companies"] } } },
+            { "name": "Freeze Company", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/companies/{{companyId}}/freeze", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "companies", "{{companyId}}", "freeze"] } } },
+            { "name": "Add Credits", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"amount\": 500\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/companies/{{companyId}}/add-credits", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "companies", "{{companyId}}", "add-credits"] } } }
+          ]
+        },
+        {
+          "name": "Doctors",
+          "item": [
+            { "name": "Applications", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/doctors/applications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "doctors", "applications"] } } },
+            { "name": "Stats", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/doctors/stats", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "doctors", "stats"] } } }
+          ]
+        },
+        {
+          "name": "Plans (Escalated)",
+          "item": [
+            { "name": "Escalated Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/plans/escalated?page=0&size=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "plans", "escalated"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "20" }] } } },
+            { "name": "Approve Escalated", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/plans/{{planId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "plans", "{{planId}}", "approve"] } } },
+            { "name": "Reject Escalated", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Does not meet guidelines\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/plans/{{planId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "plans", "{{planId}}", "reject"] } } }
+          ]
+        },
+        {
+          "name": "System",
+          "item": [
+            { "name": "System Status", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/system/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "system", "status"] } } },
+            { "name": "Toggle Maintenance", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/system/settings/toggle-maintenance", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "system", "settings", "toggle-maintenance"] } } },
+            { "name": "Fetch Live Rates", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/system/settings/fetch-live-rates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "system", "settings", "fetch-live-rates"] } } }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            { "name": "Dashboard Stats", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/dashboard/stats", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "dashboard", "stats"] } } },
+            { "name": "Analytics", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/analytics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "analytics"] } } }
+          ]
+        },
+        {
+          "name": "Roles",
+          "item": [
+            { "name": "List Roles", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/roles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "roles"] } } }
+          ]
+        },
+        {
+          "name": "Credit Ledger",
+          "item": [
+            { "name": "Get Ledger", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/ledger?userId=&companyId=", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "ledger"], "query": [{ "key": "userId", "value": "" }, { "key": "companyId", "value": "" }] } } },
+            { "name": "Adjust Credits", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"amount\": 100,\n  \"reason\": \"Manual adjustment\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/ledger/adjust", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "ledger", "adjust"] } } }
+          ]
+        },
+        {
+          "name": "Plan Contexts",
+          "item": [
+            { "name": "List Contexts", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/plan-contexts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "plan-contexts"] } } },
+            { "name": "Set Active", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/plan-contexts/{{planContextId}}/active?active=true", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "plan-contexts", "{{planContextId}}", "active"], "query": [{ "key": "active", "value": "true" }] } } }
+          ]
+        },
+        {
+          "name": "Ebooks (Admin)",
+          "item": [
+            { "name": "List All Ebooks", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/ebooks", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "ebooks"] } } },
+            { "name": "Create Ebook", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Nigeria Travel Health Guide\",\n  \"slug\": \"nigeria-travel-health-guide\",\n  \"isActive\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/ebooks", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "ebooks"] } } },
+            { "name": "Ebook Stats", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/ebooks/stats", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "ebooks", "stats"] } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Company Admin",
+      "item": [
+        { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"companyadmin@example.com\",\n  \"password\": \"CompanyAdmin123!\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/company-admin/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "auth", "login"] } } },
+        { "name": "Team Members", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/team-members?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "team-members"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Credit Plans", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "plans"] } } },
+        { "name": "Initiate Purchase", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"companyId\": {{companyId}},\n  \"credits\": 100\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/company-admin/credits/purchase", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "credits", "purchase"] } } },
+        { "name": "Purchase History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/credits/history?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "credits", "history"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Usage Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/reports/usage?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "reports", "usage"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Get Settings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/settings?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "settings"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } },
+        { "name": "Export Employees", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{companyAdminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/company-admin/data-export/employees?companyId={{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "company-admin", "data-export", "employees"], "query": [{ "key": "companyId", "value": "{{companyId}}" }] } } }
+      ]
+    },
+    {
+      "name": "Company Onboarding",
+      "item": [
+        { "name": "Pricing Preview", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/public/company-onboarding/pricing?credits=100", "host": ["{{baseUrl}}"], "path": ["api", "v1", "public", "company-onboarding", "pricing"], "query": [{ "key": "credits", "value": "100" }] } } },
+        { "name": "Initiate Payment", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/public/company-onboarding/{{companyOnboardingId}}/pay", "host": ["{{baseUrl}}"], "path": ["api", "v1", "public", "company-onboarding", "{{companyOnboardingId}}", "pay"] } } },
+        { "name": "Get Status", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/public/company-onboarding/{{companyOnboardingId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "public", "company-onboarding", "{{companyOnboardingId}}", "status"] } } },
+        { "name": "Admin List", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": { "raw": "{{baseUrl}}/api/v1/admin/company-onboarding?status=PENDING", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "company-onboarding"], "query": [{ "key": "status", "value": "PENDING" }] } } },
+        { "name": "Approve Registration", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"adminEmail\": \"admin@tmag.com\"\n}" }, "url": { "raw": "{{baseUrl}}/api/v1/admin/company-onboarding/{{companyOnboardingId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "company-onboarding", "{{companyOnboardingId}}", "approve"] } } }
+      ]
+    }
+  ]
+}

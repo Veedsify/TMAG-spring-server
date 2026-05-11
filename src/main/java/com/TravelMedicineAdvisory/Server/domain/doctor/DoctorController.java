@@ -59,10 +59,13 @@ public class DoctorController {
       @RequestParam(value = "profilePicture", required = false) MultipartFile profilePicture,
       @RequestParam("signature") MultipartFile signature,
       @RequestParam(value = "stamp", required = false) MultipartFile stamp,
+      @RequestParam(value = "practicingLicense", required = false) MultipartFile practicingLicense,
+      @RequestParam(value = "travelMedicineCertificate", required = false) MultipartFile travelMedicineCertificate,
       @RequestParam("confidentialityAgreementAccepted") boolean confidentialityAgreementAccepted,
       @RequestParam("conductAgreementAccepted") boolean conductAgreementAccepted) {
     doctorValidationService.applyToBecomeDoctor(firstName, lastName, email, specialty, country,
         medicalLicenseNumber, profilePicture, signature, stamp,
+        practicingLicense, travelMedicineCertificate,
         confidentialityAgreementAccepted, conductAgreementAccepted);
     return ResponseEntity.ok(new SuccessResponse("Application submitted successfully. Your application will be reviewed within 24 hours.", null));
   }
@@ -76,10 +79,13 @@ public class DoctorController {
       @RequestParam(required = false) String profilePictureOption,
       @RequestParam(required = false) String medicalLicenseNumber,
       @RequestParam(value = "signature", required = false) MultipartFile signature,
-      @RequestParam(value = "stamp", required = false) MultipartFile stamp) {
+      @RequestParam(value = "stamp", required = false) MultipartFile stamp,
+      @RequestParam(value = "practicingLicense", required = false) MultipartFile practicingLicense,
+      @RequestParam(value = "travelMedicineCertificate", required = false) MultipartFile travelMedicineCertificate) {
     return ResponseEntity.ok(new SuccessResponse("Profile updated successfully",
         doctorValidationService.updateDoctorProfile(
-            user.getUserId(), firstName, lastName, profilePictureOption, medicalLicenseNumber, signature, stamp)));
+            user.getUserId(), firstName, lastName, profilePictureOption, medicalLicenseNumber, signature, stamp,
+            practicingLicense, travelMedicineCertificate)));
   }
 
   // ─── Dashboard ────────────────────────────────────────────

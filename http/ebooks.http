@@ -1,0 +1,139 @@
+### ============================================================================
+### EBOOKS — /api/v1/ebooks + /api/v1/admin/ebooks
+### ============================================================================
+
+### ─── Public: Shop ──────────────────────────────────────────
+
+### List active ebooks
+GET {{baseUrl}}/api/v1/ebooks
+
+### Get ebook by slug
+GET {{baseUrl}}/api/v1/ebooks/nigeria-travel-health-guide
+
+### Checkout single ebook
+POST {{baseUrl}}/api/v1/ebooks/checkout
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "ebookVersionId": 1
+}
+
+### Get order status
+GET {{baseUrl}}/api/v1/ebooks/orders/{{txRef}}
+
+### Verify order
+POST {{baseUrl}}/api/v1/ebooks/orders/verify
+Content-Type: application/json
+
+{
+  "txRef": "{{txRef}}",
+  "transactionId": null
+}
+
+### Ebook payment callback
+GET {{baseUrl}}/api/v1/ebooks/callback?tx_ref={{txRef}}&status=successful
+
+### My ebook orders
+GET {{baseUrl}}/api/v1/ebooks/my-orders
+Authorization: Bearer {{authToken}}
+
+### ─── Admin: Ebooks ─────────────────────────────────────────
+
+### Admin list ebooks
+GET {{baseUrl}}/api/v1/admin/ebooks
+Authorization: Bearer {{adminToken}}
+
+### Admin create ebook
+POST {{baseUrl}}/api/v1/admin/ebooks
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Nigeria Travel Health Guide",
+  "slug": "nigeria-travel-health-guide",
+  "description": "Comprehensive travel health guide for Nigeria.",
+  "shortDescription": "Your complete Nigeria health guide.",
+  "author": "Dr. Jane Doctor",
+  "authorBio": "Infectious disease specialist with 15 years experience.",
+  "pageCount": 120,
+  "publishedYear": 2025,
+  "isbn": "978-1234567890",
+  "isActive": true,
+  "isFeatured": true
+}
+
+### Admin update ebook
+PUT {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Nigeria Travel Health Guide — Updated",
+  "isActive": true,
+  "isFeatured": true
+}
+
+### Admin delete ebook
+DELETE {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}
+Authorization: Bearer {{adminToken}}
+
+### Admin add ebook version
+POST {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}/versions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "label": "English Edition",
+  "countryCode": "NG",
+  "countryName": "Nigeria",
+  "region": "West Africa",
+  "price": 29.99,
+  "currency": "USD",
+  "currencySymbol": "$",
+  "fileUrl": "https://storage.example.com/ebooks/nigeria-guide.pdf",
+  "fileKey": "ebooks/nigeria-guide.pdf",
+  "fileSizeMb": 5.2,
+  "isActive": true,
+  "sortOrder": 1
+}
+
+### Admin update ebook version
+PUT {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}/versions/{{versionId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "label": "English Edition — Updated",
+  "price": 34.99,
+  "isActive": true,
+  "sortOrder": 1
+}
+
+### Admin delete ebook version
+DELETE {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}/versions/{{versionId}}
+Authorization: Bearer {{adminToken}}
+
+### Admin list all ebook orders
+GET {{baseUrl}}/api/v1/admin/ebooks/orders
+Authorization: Bearer {{adminToken}}
+
+### Admin list orders by ebook
+GET {{baseUrl}}/api/v1/admin/ebooks/{{ebookId}}/orders
+Authorization: Bearer {{adminToken}}
+
+### Admin ebook stats
+GET {{baseUrl}}/api/v1/admin/ebooks/stats
+Authorization: Bearer {{adminToken}}
+
+### Admin upload ebook PDF (multipart)
+POST {{baseUrl}}/api/v1/admin/ebooks/upload-pdf
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=pdf-boundary
+
+--pdf-boundary
+Content-Disposition: form-data; name="file"; filename="nigeria-guide.pdf"
+Content-Type: application/pdf
+
+< ./nigeria-guide.pdf
+--pdf-boundary--

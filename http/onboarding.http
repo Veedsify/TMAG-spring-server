@@ -1,0 +1,106 @@
+### ============================================================================
+### ONBOARDING — /api/v1/onboarding + /api/v1/useronboardings
+### ============================================================================
+
+### ─── User Onboarding ───────────────────────────────────────
+
+### Get my onboarding
+GET {{baseUrl}}/api/v1/onboarding
+Authorization: Bearer {{authToken}}
+
+### Upsert onboarding
+POST {{baseUrl}}/api/v1/onboarding
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "userType": "INDIVIDUAL",
+  "nationality": "Nigerian",
+  "companyCode": "TRAVELSAFE01",
+  "complete": false
+}
+
+### Advance onboarding stage
+PUT {{baseUrl}}/api/v1/onboarding/stage
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "stage": 3
+}
+
+### Get onboarding questions
+GET {{baseUrl}}/api/v1/onboarding/questions
+Authorization: Bearer {{authToken}}
+
+### Save questionnaire responses
+POST {{baseUrl}}/api/v1/onboarding/questionnaire
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "responses": {
+    "age": 35,
+    "gender": "male",
+    "preexisting_conditions": ["none"],
+    "medications": [],
+    "allergies": ["penicillin"],
+    "travel_frequency": "monthly"
+  },
+  "complete": true
+}
+
+### Save onboarding progress
+POST {{baseUrl}}/api/v1/onboarding/progress
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "currentStep": 2,
+  "completedSteps": [1],
+  "formData": {
+    "nationality": "Nigerian",
+    "userType": "INDIVIDUAL"
+  }
+}
+
+### Get onboarding progress
+GET {{baseUrl}}/api/v1/onboarding/progress
+Authorization: Bearer {{authToken}}
+
+### ─── Onboarding Records (CRUD) ─────────────────────────────
+
+### List onboarding records (paginated)
+GET {{baseUrl}}/api/v1/useronboardings?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get onboarding record by ID
+GET {{baseUrl}}/api/v1/useronboardings/{{onboardingRecordId}}
+Authorization: Bearer {{authToken}}
+
+### Create onboarding record
+POST {{baseUrl}}/api/v1/useronboardings
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "userType": "INDIVIDUAL",
+  "nationality": "Nigerian",
+  "companyCode": "TRAVELSAFE01",
+  "userId": {{userId}}
+}
+
+### Update onboarding record
+PUT {{baseUrl}}/api/v1/useronboardings/{{onboardingRecordId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "userType": "INDIVIDUAL",
+  "nationality": "Ghanaian",
+  "userId": {{userId}}
+}
+
+### Delete onboarding record
+DELETE {{baseUrl}}/api/v1/useronboardings/{{onboardingRecordId}}
+Authorization: Bearer {{authToken}}

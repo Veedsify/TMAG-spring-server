@@ -54,6 +54,12 @@ public class AuthResponse {
     @JsonProperty("settings")
     private UserSettingResponse settings;
 
+    @JsonProperty("redirect_to")
+    private String redirectTo;
+
+    @JsonProperty("redirect_message")
+    private String redirectMessage;
+
     public AuthResponse() {}
 
     public Long getId() { return id; }
@@ -94,4 +100,10 @@ public class AuthResponse {
     public void setUserCreditPlan(CreditPlanResponse userCreditPlan) { this.userCreditPlan = userCreditPlan; }
     public UserSettingResponse getSettings() { return settings; }
     public void setSettings(UserSettingResponse settings) { this.settings = settings; }
+
+    public String getRedirectTo() { return redirectTo; }
+    public void setRedirectTo(String redirectTo) { this.redirectTo = redirectTo; }
+
+    public String getRedirectMessage() { return redirectMessage; }
+    public void setRedirectMessage(String redirectMessage) { this.redirectMessage = redirectMessage; }
 }

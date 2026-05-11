@@ -1,0 +1,86 @@
+### ============================================================================
+### AUTH — /api/v1/auth
+### ============================================================================
+
+### Register a new user
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "first_name": "Dike",
+  "last_name": "Thomas",
+  "username": "dikethomas",
+  "email": "dikethomas@example.com",
+  "password": "Str0ng!Pass123",
+  "plan_code": "STANDARD",
+  "billing_currency": "NGN"
+}
+
+### Login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "dikethomas@example.com",
+  "password": "Str0ng!Pass123"
+}
+
+### Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{authToken}}
+
+### Forgot password
+POST {{baseUrl}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "dikethomas@example.com"
+}
+
+### Reset password
+POST {{baseUrl}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "dikethomas@example.com",
+  "token": "reset-token-here",
+  "new_password": "NewStr0ng!Pass456"
+}
+
+### Resend verification email
+POST {{baseUrl}}/api/v1/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "dikethomas@example.com"
+}
+
+### Verify email
+POST {{baseUrl}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "dikethomas@example.com",
+  "code": "123456"
+}
+
+### Accept invitation
+POST {{baseUrl}}/api/v1/auth/accept-invitation
+Content-Type: application/json
+
+{
+  "token": "invitation-token-here",
+  "new_password": "MyStr0ng!Pass789"
+}
+
+### Get Google OAuth URL
+GET {{baseUrl}}/api/v1/auth/google/url
+
+### Google OAuth callback
+POST {{baseUrl}}/api/v1/auth/google/callback
+Content-Type: application/json
+
+{
+  "code": "google-auth-code-here",
+  "plan_code": "STANDARD"
+}

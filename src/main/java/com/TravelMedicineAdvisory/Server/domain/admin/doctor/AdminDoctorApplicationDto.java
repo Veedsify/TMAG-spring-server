@@ -14,6 +14,8 @@ public record AdminDoctorApplicationDto(
         String identityDocumentUrl,
         String licenseDocumentUrl,
         String cvOrProfileUrl,
+        String practicingLicenseUrl,
+        String travelMedicineCertificateUrl,
         boolean confidentialityAgreementAccepted,
         boolean conductAgreementAccepted,
         String bio,

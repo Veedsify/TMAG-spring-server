@@ -1,0 +1,143 @@
+### ============================================================================
+### CONTENT — Blog, FAQ, Translations, Newsletter, Contact
+### ============================================================================
+
+### ─── Blog Posts — /api/v1/blog-posts ───────────────────────
+
+### List blog posts (paginated)
+GET {{baseUrl}}/api/v1/blog-posts?page=0&size=20
+
+### Get blog post by ID
+GET {{baseUrl}}/api/v1/blog-posts/{{blogPostId}}
+
+### Create blog post
+POST {{baseUrl}}/api/v1/blog-posts
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Travel Health Tips for West Africa",
+  "slug": "travel-health-tips-west-africa",
+  "excerpt": "Essential health advice for travelers to West Africa.",
+  "content": "When traveling to West Africa, it's important to...",
+  "category": "Travel Tips",
+  "readTime": 5,
+  "publishedAt": "2025-06-01T10:00:00",
+  "isPublished": true,
+  "userId": {{userId}}
+}
+
+### Update blog post
+PUT {{baseUrl}}/api/v1/blog-posts/{{blogPostId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Updated: Travel Health Tips for West Africa",
+  "excerpt": "Updated essential health advice.",
+  "isPublished": true,
+  "userId": {{userId}}
+}
+
+### Delete blog post
+DELETE {{baseUrl}}/api/v1/blog-posts/{{blogPostId}}
+Authorization: Bearer {{authToken}}
+
+### ─── FAQ Items — /api/v1/faq-items ─────────────────────────
+
+### List FAQ items (paginated)
+GET {{baseUrl}}/api/v1/faq-items?page=0&size=20
+
+### Get FAQ item by ID
+GET {{baseUrl}}/api/v1/faq-items/{{faqItemId}}
+
+### Create FAQ item
+POST {{baseUrl}}/api/v1/faq-items
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "question": "What vaccinations do I need for Nigeria?",
+  "answer": "Yellow fever vaccination is required. Hepatitis A, Typhoid, and Meningitis are recommended.",
+  "category": "Vaccinations",
+  "position": 1,
+  "isActive": true
+}
+
+### Update FAQ item
+PUT {{baseUrl}}/api/v1/faq-items/{{faqItemId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "question": "What vaccinations do I need for Nigeria?",
+  "answer": "Updated: Yellow fever, Hepatitis A, Typhoid, and Meningitis are recommended.",
+  "category": "Vaccinations",
+  "position": 1,
+  "isActive": true
+}
+
+### Delete FAQ item
+DELETE {{baseUrl}}/api/v1/faq-items/{{faqItemId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Translations — /api/v1/translations ───────────────────
+
+### List translations (paginated)
+GET {{baseUrl}}/api/v1/translations?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get translation by ID
+GET {{baseUrl}}/api/v1/translations/{{translationId}}
+Authorization: Bearer {{authToken}}
+
+### Create translation
+POST {{baseUrl}}/api/v1/translations
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "locale": "fr",
+  "key": "onboarding.welcome",
+  "value": "Bienvenue sur TMAG"
+}
+
+### Update translation
+PUT {{baseUrl}}/api/v1/translations/{{translationId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "locale": "fr",
+  "key": "onboarding.welcome",
+  "value": "Bienvenue sur Travel Medicine Advisory Global"
+}
+
+### Delete translation
+DELETE {{baseUrl}}/api/v1/translations/{{translationId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Newsletter — /api/v1/newsletter ───────────────────────
+
+### Subscribe to newsletter
+POST {{baseUrl}}/api/v1/newsletter/subscribe
+Content-Type: application/json
+
+{
+  "email": "subscriber@example.com",
+  "name": "Subscriber Name"
+}
+
+### ─── Contact — /api/v1/contact ─────────────────────────────
+
+### Submit contact form
+POST {{baseUrl}}/api/v1/contact
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "subject": "Partnership inquiry",
+  "message": "We are interested in partnering with TMAG for corporate travel health.",
+  "inquiryType": "PARTNERSHIP"
+}

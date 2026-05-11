@@ -48,6 +48,13 @@ public class UserSettingService {
 
     public UserSetting updateDoctorFields(Long userId, String medicalLicenseNumber,
             String signatureUrl, String stampUrl, DoctorApplicationStatus status) {
+        return updateDoctorFields(userId, medicalLicenseNumber, signatureUrl, stampUrl, null, null, status);
+    }
+
+    public UserSetting updateDoctorFields(Long userId, String medicalLicenseNumber,
+            String signatureUrl, String stampUrl,
+            String practicingLicenseUrl, String travelMedicineCertificateUrl,
+            DoctorApplicationStatus status) {
         UserSetting setting = getOrCreateByUserId(userId);
         if (medicalLicenseNumber != null) {
             setting.setMedicalLicenseNumber(medicalLicenseNumber);
@@ -57,6 +64,12 @@ public class UserSettingService {
         }
         if (stampUrl != null) {
             setting.setStampUrl(stampUrl);
+        }
+        if (practicingLicenseUrl != null) {
+            setting.setPracticingLicenseUrl(practicingLicenseUrl);
+        }
+        if (travelMedicineCertificateUrl != null) {
+            setting.setTravelMedicineCertificateUrl(travelMedicineCertificateUrl);
         }
         if (status != null) {
             setting.setDoctorApplicationStatus(status);

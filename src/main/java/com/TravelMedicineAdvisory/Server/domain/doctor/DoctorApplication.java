@@ -66,6 +66,12 @@ public class DoctorApplication extends BaseEntity {
     @Column(name = "stamp_url")
     private String stampUrl;
 
+    @Column(name = "practicing_license_url", length = 1024)
+    private String practicingLicenseUrl;
+
+    @Column(name = "travel_medicine_certificate_url", length = 1024)
+    private String travelMedicineCertificateUrl;
+
     @Column(name = "confidentiality_agreement_accepted")
     private boolean confidentialityAgreementAccepted;
 
@@ -117,6 +123,10 @@ public class DoctorApplication extends BaseEntity {
     public void setSignatureUrl(String signatureUrl) { this.signatureUrl = signatureUrl; }
     public String getStampUrl() { return stampUrl; }
     public void setStampUrl(String stampUrl) { this.stampUrl = stampUrl; }
+    public String getPracticingLicenseUrl() { return practicingLicenseUrl; }
+    public void setPracticingLicenseUrl(String practicingLicenseUrl) { this.practicingLicenseUrl = practicingLicenseUrl; }
+    public String getTravelMedicineCertificateUrl() { return travelMedicineCertificateUrl; }
+    public void setTravelMedicineCertificateUrl(String travelMedicineCertificateUrl) { this.travelMedicineCertificateUrl = travelMedicineCertificateUrl; }
     public boolean isConfidentialityAgreementAccepted() { return confidentialityAgreementAccepted; }
     public void setConfidentialityAgreementAccepted(boolean confidentialityAgreementAccepted) { this.confidentialityAgreementAccepted = confidentialityAgreementAccepted; }
     public boolean isConductAgreementAccepted() { return conductAgreementAccepted; }

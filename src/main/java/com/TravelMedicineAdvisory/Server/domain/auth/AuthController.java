@@ -74,7 +74,7 @@ public class AuthController {
 
     @PostMapping("/google/callback")
     public ResponseEntity<Map<String, Object>> googleCallback(@RequestBody GoogleCallbackRequest request) {
-        AuthResponse data = authService.googleCallback(request.getCode(), request.getPlanCode());
+        AuthResponse data = authService.googleCallback(request.getCode(), request.getPlanCode(), request.getAffiliateReferralCode());
         return ResponseEntity.ok(Map.of("success", true, "data", data));
     }
 }

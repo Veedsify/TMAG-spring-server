@@ -1,0 +1,33 @@
+### ============================================================================
+### ADMIN → SYSTEM — /api/v1/admin/system
+### ============================================================================
+
+### Get system status
+GET {{baseUrl}}/api/v1/admin/system/status
+Authorization: Bearer {{adminToken}}
+
+### Get system logs
+GET {{baseUrl}}/api/v1/admin/system/logs?level=INFO&limit=50
+Authorization: Bearer {{adminToken}}
+
+### Get system settings
+GET {{baseUrl}}/api/v1/admin/system/settings
+Authorization: Bearer {{adminToken}}
+
+### Update system settings
+PUT {{baseUrl}}/api/v1/admin/system/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "maintenanceMode": false,
+  "maxPlansPerUser": 50
+}
+
+### Toggle maintenance mode
+POST {{baseUrl}}/api/v1/admin/system/settings/toggle-maintenance
+Authorization: Bearer {{adminToken}}
+
+### Fetch live exchange rates
+POST {{baseUrl}}/api/v1/admin/system/settings/fetch-live-rates
+Authorization: Bearer {{adminToken}}

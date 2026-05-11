@@ -1,0 +1,35 @@
+### ============================================================================
+### ADMIN → ROLES — /api/v1/admin/roles
+### ============================================================================
+
+### List roles
+GET {{baseUrl}}/api/v1/admin/roles
+Authorization: Bearer {{adminToken}}
+
+### Get role by ID
+GET {{baseUrl}}/api/v1/admin/roles/{{roleId}}
+Authorization: Bearer {{adminToken}}
+
+### Create role
+POST {{baseUrl}}/api/v1/admin/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "COMPANY_ADMIN",
+  "description": "Company administrator role"
+}
+
+### Update role
+PUT {{baseUrl}}/api/v1/admin/roles/{{roleId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "COMPANY_ADMIN",
+  "description": "Updated description"
+}
+
+### Delete role
+DELETE {{baseUrl}}/api/v1/admin/roles/{{roleId}}
+Authorization: Bearer {{adminToken}}

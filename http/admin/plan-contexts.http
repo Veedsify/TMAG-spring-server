@@ -1,0 +1,31 @@
+### ============================================================================
+### ADMIN → PLAN GENERATION CONTEXTS — /api/v1/admin/plan-contexts
+### ============================================================================
+
+### List plan generation contexts
+GET {{baseUrl}}/api/v1/admin/plan-contexts
+Authorization: Bearer {{adminToken}}
+
+### Upload plan generation context (multipart)
+POST {{baseUrl}}/api/v1/admin/plan-contexts
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=context-boundary
+
+--context-boundary
+Content-Disposition: form-data; name="title"
+
+WHO Malaria Guidelines 2025
+--context-boundary
+Content-Disposition: form-data; name="file"; filename="malaria-guidelines-2025.pdf"
+Content-Type: application/pdf
+
+< ./malaria-guidelines-2025.pdf
+--context-boundary--
+
+### Set context active/inactive
+PUT {{baseUrl}}/api/v1/admin/plan-contexts/{{planContextId}}/active?active=true
+Authorization: Bearer {{adminToken}}
+
+### Delete plan context
+DELETE {{baseUrl}}/api/v1/admin/plan-contexts/{{planContextId}}
+Authorization: Bearer {{adminToken}}

@@ -14,6 +14,8 @@ public record DoctorProfileResponse(
     String medicalLicenseNumber,
     String signatureUrl,
     String stampUrl,
+    String practicingLicenseUrl,
+    String travelMedicineCertificateUrl,
     String doctorApplicationStatus,
     LocalDateTime applicationSubmittedAt
 ) {}

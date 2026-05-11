@@ -13,7 +13,8 @@ public class CallbackRegistry {
         Map.entry("HR_BILLING", "/api/v1/company-admin/credits/callback"),
         Map.entry("ADMIN_CREDITS", "/api/v1/company-admin/credits/callback"),
         Map.entry("EBOOK_PURCHASE", "/api/v1/ebooks/callback"),
-        Map.entry("COMPANY_ONBOARDING", "/api/v1/public/company-onboarding/callback")
+        Map.entry("COMPANY_ONBOARDING", "/api/v1/public/company-onboarding/callback"),
+        Map.entry("FAMILY_PACKAGE", "/api/v1/family-package-purchases/callback")
     );
 
     private static final Map<String, String> FRONTEND_PATHS = Map.ofEntries(
@@ -21,7 +22,8 @@ public class CallbackRegistry {
         Map.entry("HR_BILLING", "/hr/billing/callback"),
         Map.entry("ADMIN_CREDITS", "/admin/credits/callback"),
         Map.entry("EBOOK_PURCHASE", "/shop/order-confirmation"),
-        Map.entry("COMPANY_ONBOARDING", "/company-onboarding/callback")
+        Map.entry("COMPANY_ONBOARDING", "/company-onboarding/callback"),
+        Map.entry("FAMILY_PACKAGE", "/family-payment-callback")
     );
 
     private final String frontendBaseUrl;

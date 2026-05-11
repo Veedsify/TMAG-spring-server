@@ -1,0 +1,144 @@
+### ============================================================================
+### TRAVEL PLANS — /api/v1/travel-plans
+### ============================================================================
+
+### List travel plans (paginated, optional companyId)
+GET {{baseUrl}}/api/v1/travel-plans?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get travel plan by ID
+GET {{baseUrl}}/api/v1/travel-plans/{{planId}}
+Authorization: Bearer {{authToken}}
+
+### Create travel plan
+POST {{baseUrl}}/api/v1/travel-plans
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "destination": "Lagos, Nigeria",
+  "country": "Nigeria",
+  "duration": 14,
+  "purpose": "Business trip",
+  "tripType": "BUSINESS",
+  "tripDetailsJson": "{\"hotel\":\"Eko Hotels\",\"meetings\":[\"Client A\",\"Client B\"]}",
+  "riskScore": 3,
+  "status": "DRAFT",
+  "medicalConsiderations": "Malaria prophylaxis recommended",
+  "vaccinations": "Yellow fever, Hepatitis A, Typhoid",
+  "healthAlerts": "COVID-19: Low risk",
+  "safetyAdvisories": "Avoid non-essential travel to high-risk areas",
+  "medications": "Malarone, Ciprofloxacin",
+  "waterFood": "Drink bottled water only",
+  "emergencyContacts": "+234-1-280-1234",
+  "questionnaireResponses": "{\"age\":35,\"preexisting\":\"none\"}",
+  "planTier": "STANDARD"
+}
+
+### Update travel plan
+PUT {{baseUrl}}/api/v1/travel-plans/{{planId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "destination": "Abuja, Nigeria",
+  "country": "Nigeria",
+  "duration": 10,
+  "purpose": "Conference",
+  "tripType": "BUSINESS",
+  "riskScore": 2,
+  "status": "DRAFT",
+  "planTier": "STANDARD"
+}
+
+### Delete travel plan
+DELETE {{baseUrl}}/api/v1/travel-plans/{{planId}}
+Authorization: Bearer {{authToken}}
+
+### Download travel plan PDF
+GET {{baseUrl}}/api/v1/travel-plans/{{planId}}/pdf
+Authorization: Bearer {{authToken}}
+
+### Download travel plan summary PDF (redirect)
+GET {{baseUrl}}/api/v1/travel-plans/{{planId}}/summary-pdf
+Authorization: Bearer {{authToken}}
+
+
+### ============================================================================
+### TEST TRAVEL PLANS — /api/v1/test/travel-plans
+### ============================================================================
+
+### Duplicate travel plan (for testing)
+POST {{baseUrl}}/api/v1/test/travel-plans/{{planId}}/duplicate
+
+### Approve plan (test doctor)
+POST {{baseUrl}}/api/v1/test/travel-plans/{{planId}}/approve
+
+### Reject plan (test doctor)
+POST {{baseUrl}}/api/v1/test/travel-plans/{{planId}}/reject
+Content-Type: application/json
+
+{
+  "rejectionReason": "Insufficient medical data"
+}
+
+### Validate plan (test doctor)
+POST {{baseUrl}}/api/v1/test/travel-plans/{{planId}}/validate
+Content-Type: application/json
+
+{
+  "planId": {{planId}},
+  "approved": true,
+  "rejectionReason": null
+}
+
+### Get pending plans (test)
+GET {{baseUrl}}/api/v1/test/travel-plans/pending
+
+### Get plan for review (test)
+GET {{baseUrl}}/api/v1/test/travel-plans/{{planId}}/review
+
+
+### ============================================================================
+### DRAFT PLANS — /api/v1/draft-plans
+### ============================================================================
+
+### List my drafts
+GET {{baseUrl}}/api/v1/draft-plans
+Authorization: Bearer {{authToken}}
+
+### Get draft by ID
+GET {{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}
+Authorization: Bearer {{authToken}}
+
+### Save draft
+POST {{baseUrl}}/api/v1/draft-plans
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "country": "Nigeria",
+  "answersJson": "{\"age\":35,\"preexisting\":\"none\",\"destination\":\"Lagos\"}",
+  "categoryIndex": 2,
+  "showVerify": false,
+  "showIntro": false,
+  "riskConsentGiven": true
+}
+
+### Update draft
+PUT {{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "country": "Nigeria",
+  "answersJson": "{\"age\":35,\"preexisting\":\"none\",\"destination\":\"Abuja\"}",
+  "categoryIndex": 3,
+  "showVerify": true,
+  "showIntro": false,
+  "riskConsentGiven": true
+}
+
+### Delete draft
+DELETE {{baseUrl}}/api/v1/draft-plans/{{draftPlanId}}
+Authorization: Bearer {{authToken}}

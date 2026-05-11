@@ -1,0 +1,78 @@
+### ============================================================================
+### ADMIN → ANALYTICS / DASHBOARD — /api/v1/admin
+### ============================================================================
+
+### Dashboard stats
+GET {{baseUrl}}/api/v1/admin/dashboard/stats
+Authorization: Bearer {{adminToken}}
+
+### Analytics
+GET {{baseUrl}}/api/v1/admin/analytics
+Authorization: Bearer {{adminToken}}
+
+### AI logs
+GET {{baseUrl}}/api/v1/admin/ai-logs?userId=&status=
+Authorization: Bearer {{adminToken}}
+
+### AI log detail
+GET {{baseUrl}}/api/v1/admin/ai-logs/{{aiRequestLogId}}
+Authorization: Bearer {{adminToken}}
+
+### Flag AI log
+POST {{baseUrl}}/api/v1/admin/ai-logs/{{aiRequestLogId}}/flag
+Authorization: Bearer {{adminToken}}
+
+### Admin plans list
+GET {{baseUrl}}/api/v1/admin/plans?userId=&companyId=
+Authorization: Bearer {{adminToken}}
+
+### Admin plan detail
+GET {{baseUrl}}/api/v1/admin/plans/{{planId}}
+Authorization: Bearer {{adminToken}}
+
+### Flag plan
+POST {{baseUrl}}/api/v1/admin/plans/{{planId}}/flag
+Authorization: Bearer {{adminToken}}
+
+### Archive plan
+POST {{baseUrl}}/api/v1/admin/plans/{{planId}}/archive
+Authorization: Bearer {{adminToken}}
+
+### Delete plan (admin)
+DELETE {{baseUrl}}/api/v1/admin/plans/{{planId}}
+Authorization: Bearer {{adminToken}}
+
+### Invoices list (admin billing)
+GET {{baseUrl}}/api/v1/admin/billing/invoices
+Authorization: Bearer {{adminToken}}
+
+### Invoice detail (admin billing)
+GET {{baseUrl}}/api/v1/admin/billing/invoices/{{invoiceId}}
+Authorization: Bearer {{adminToken}}
+
+### Create invoice (admin billing)
+POST {{baseUrl}}/api/v1/admin/billing/invoices
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": {{userId}},
+  "companyId": {{companyId}},
+  "amount": 150000,
+  "currency": "NGN",
+  "description": "Monthly subscription"
+}
+
+### Update invoice (admin billing)
+PUT {{baseUrl}}/api/v1/admin/billing/invoices/{{invoiceId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 200000,
+  "description": "Updated monthly subscription"
+}
+
+### Mark invoice as paid
+POST {{baseUrl}}/api/v1/admin/billing/invoices/{{invoiceId}}/paid
+Authorization: Bearer {{adminToken}}

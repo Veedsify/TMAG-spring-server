@@ -1,0 +1,60 @@
+### ============================================================================
+### ADMIN → USERS — /api/v1/admin/users
+### ============================================================================
+
+### Create user (admin)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "firstName": "New",
+  "lastName": "User",
+  "password": "Temp123!",
+  "role": "USER"
+}
+
+### List users
+GET {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+
+### Get user by ID (admin)
+GET {{baseUrl}}/api/v1/admin/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+### Update user (admin)
+PUT {{baseUrl}}/api/v1/admin/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Updated",
+  "lastName": "User",
+  "email": "updated@example.com"
+}
+
+### Suspend user
+POST {{baseUrl}}/api/v1/admin/users/{{userId}}/suspend
+Authorization: Bearer {{adminToken}}
+
+### Activate user
+POST {{baseUrl}}/api/v1/admin/users/{{userId}}/activate
+Authorization: Bearer {{adminToken}}
+
+### Reset user credits
+POST {{baseUrl}}/api/v1/admin/users/{{userId}}/reset-credits
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 100
+}
+
+### Reset user password
+POST {{baseUrl}}/api/v1/admin/users/{{userId}}/reset-password
+Authorization: Bearer {{adminToken}}
+
+### Delete user (admin)
+DELETE {{baseUrl}}/api/v1/admin/users/{{userId}}
+Authorization: Bearer {{adminToken}}

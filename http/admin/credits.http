@@ -1,0 +1,19 @@
+### ============================================================================
+### ADMIN → CREDIT LEDGER — /api/v1/admin/ledger
+### ============================================================================
+
+### Get credit ledger
+GET {{baseUrl}}/api/v1/admin/ledger?userId=&companyId=
+Authorization: Bearer {{adminToken}}
+
+### Adjust credits
+POST {{baseUrl}}/api/v1/admin/ledger/adjust
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": {{userId}},
+  "companyId": {{companyId}},
+  "amount": 100,
+  "reason": "Manual adjustment"
+}
