@@ -6,6 +6,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.InputStream;
@@ -18,21 +19,24 @@ import java.util.UUID;
 /**
  * StorageService backed by Cloudflare R2.
  *
- * <p>R2 is S3-compatible, so this service uses the AWS SDK v2 with a custom
+ * <p>
+ * R2 is S3-compatible, so this service uses the AWS SDK v2 with a custom
  * endpoint override pointing at the R2 account endpoint
  * ({@code https://<ACCOUNT_ID>.r2.cloudflarestorage.com}).
  *
- * <p>Files at or above {@code multipartThresholdBytes} (default 100 MB) are
+ * <p>
+ * Files at or above {@code multipartThresholdBytes} (default 100 MB) are
  * uploaded using the S3 multipart upload API, streaming each part from the
  * temp file that Spring wrote to disk. This avoids heap exhaustion and
  * connection timeouts for large files.
  *
- * <p>Public access URLs are resolved in one of two ways:
+ * <p>
+ * Public access URLs are resolved in one of two ways:
  * <ol>
- *   <li>If {@code app.storage.r2.public-url} is set (e.g. a custom domain or
- *       R2 public-bucket URL), that value is used as the base.</li>
- *   <li>Otherwise the URL is constructed from the R2 endpoint + bucket name,
- *       which only works when the bucket has public access enabled.</li>
+ * <li>If {@code app.storage.r2.public-url} is set (e.g. a custom domain or
+ * R2 public-bucket URL), that value is used as the base.</li>
+ * <li>Otherwise the URL is constructed from the R2 endpoint + bucket name,
+ * which only works when the bucket has public access enabled.</li>
  * </ol>
  */
 public class CloudflareR2StorageService implements StorageService {
@@ -50,11 +54,14 @@ public class CloudflareR2StorageService implements StorageService {
 
     /**
      * @param bucket                  R2 bucket name
-     * @param accountId               Cloudflare account ID (builds the endpoint URL)
+     * @param accountId               Cloudflare account ID (builds the endpoint
+     *                                URL)
      * @param accessKey               R2 API token – Access Key ID
      * @param secretKey               R2 API token – Secret Access Key
-     * @param publicUrl               Optional public base URL (custom domain or R2 public URL)
-     * @param multipartThresholdBytes File size (bytes) above which multipart upload is used
+     * @param publicUrl               Optional public base URL (custom domain or R2
+     *                                public URL)
+     * @param multipartThresholdBytes File size (bytes) above which multipart upload
+     *                                is used
      * @param partSizeBytes           Size of each individual part (must be ≥ 5 MiB)
      */
     public CloudflareR2StorageService(
@@ -79,17 +86,51 @@ public class CloudflareR2StorageService implements StorageService {
     // -------------------------------------------------------------------------
 
     private String r2Endpoint() {
-        return "https://" + accountId + ".r2.cloudflarestorage.com";
+        return "https://" + accountId + ".eu.r2.cloudflarestorage.com";
     }
 
     private S3Client buildClient() {
+        validateConfiguration();
         return S3Client.builder()
                 // R2 uses "auto" as the recommended region value
                 .region(Region.of("auto"))
                 .endpointOverride(URI.create(r2Endpoint()))
+                // R2 is S3-compatible, but path-style addressing is the most reliable
+                // form for the account endpoint: /<bucket>/<key>.
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .build())
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(accessKey, secretKey)))
                 .build();
+    }
+
+    private void validateConfiguration() {
+        List<String> missing = new ArrayList<>();
+        if (isBlank(bucket))
+            missing.add("APP_STORAGE_R2_BUCKET");
+        if (isBlank(accountId))
+            missing.add("APP_STORAGE_R2_ACCOUNT_ID");
+        if (isBlank(accessKey))
+            missing.add("APP_STORAGE_R2_ACCESS_KEY");
+        if (isBlank(secretKey))
+            missing.add("APP_STORAGE_R2_SECRET_KEY");
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Cloudflare R2 storage is selected but these settings are missing: "
+                    + String.join(", ", missing));
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private RuntimeException r2Exception(String operation, String key, S3Exception e) {
+        String message = "Cloudflare R2 " + operation + " failed for bucket '" + bucket + "' and key '" + key
+                + "' with status " + e.statusCode() + " (" + e.awsErrorDetails().errorMessage() + "). "
+                + "If this is 403 Access Denied, verify APP_STORAGE_R2_ACCOUNT_ID matches the bucket account, "
+                + "APP_STORAGE_R2_BUCKET is the exact bucket name, and the R2 API token has Object Read & Write permissions for this bucket.";
+        return new RuntimeException(message, e);
     }
 
     // -------------------------------------------------------------------------
@@ -138,13 +179,15 @@ public class CloudflareR2StorageService implements StorageService {
                             .contentType(contentType)
                             .build(),
                     RequestBody.fromBytes(content));
+        } catch (S3Exception e) {
+            throw r2Exception("putObject", key, e);
         }
         return key;
     }
 
     @Override
     public String storeStream(InputStream inputStream, long contentLength, String path,
-                               String filename, String contentType) {
+            String filename, String contentType) {
         String key = path + "/" + filename;
         if (contentLength >= multipartThresholdBytes || contentLength < 0) {
             doMultipartUpload(inputStream, contentLength, key, contentType);
@@ -157,6 +200,8 @@ public class CloudflareR2StorageService implements StorageService {
                                 .contentLength(contentLength)
                                 .build(),
                         RequestBody.fromInputStream(inputStream, contentLength));
+            } catch (S3Exception e) {
+                throw r2Exception("putObject", key, e);
             }
         }
         return key;
@@ -168,7 +213,8 @@ public class CloudflareR2StorageService implements StorageService {
             return client.getObjectAsBytes(
                     GetObjectRequest.builder()
                             .bucket(bucket).key(path)
-                            .build()).asByteArray();
+                            .build())
+                    .asByteArray();
         }
     }
 
@@ -206,7 +252,7 @@ public class CloudflareR2StorageService implements StorageService {
      * @param contentType   MIME type of the object
      */
     private void doMultipartUpload(InputStream inputStream, long contentLength,
-                                    String key, String contentType) {
+            String key, String contentType) {
         try (S3Client client = buildClient()) {
             CreateMultipartUploadResponse init = client.createMultipartUpload(
                     CreateMultipartUploadRequest.builder()
@@ -225,7 +271,8 @@ public class CloudflareR2StorageService implements StorageService {
                     int remaining = buffer.length - offset;
                     int bytesRead = inputStream.read(buffer, offset, remaining);
                     boolean endOfStream = bytesRead == -1;
-                    if (!endOfStream) offset += bytesRead;
+                    if (!endOfStream)
+                        offset += bytesRead;
 
                     boolean bufferFull = offset == buffer.length;
                     if ((bufferFull || endOfStream) && offset > 0) {
@@ -246,7 +293,8 @@ public class CloudflareR2StorageService implements StorageService {
                         offset = 0;
                     }
 
-                    if (endOfStream) break;
+                    if (endOfStream)
+                        break;
                 }
 
                 client.completeMultipartUpload(

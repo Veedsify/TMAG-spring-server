@@ -75,8 +75,12 @@ public class GcsStorageService implements StorageService {
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                 .setContentType(contentType)
                 .build();
-        // GCS client streams from InputStream natively — no heap buffering required
-        storage.createFrom(blobInfo, inputStream);
+        // GCS client streams from InputStream natively, no heap buffering required.
+        try {
+            storage.createFrom(blobInfo, inputStream);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store stream to GCS", e);
+        }
         return objectName;
     }
 
