@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -235,9 +236,20 @@ public class EbookController {
         if (contentType == null || !contentType.equals("application/pdf")) {
             return ResponseEntity.badRequest().body(new SuccessResponse("Only PDF files are accepted", null));
         }
-        var attachment = storageService.store(file, "ebooks", null, "EbookVersion");
-        String fileUrl = storageService.getUrl(attachment.getStoragePath());
-        String fileKey = attachment.getStoragePath();
+
+        String filename = UUID.randomUUID() + "_" + (file.getOriginalFilename() != null ? file.getOriginalFilename() : "ebook.pdf");
+        String fileKey;
+        try {
+            // Use the streaming path so the file is never fully buffered in heap.
+            // Spring will have already written large uploads to a temp file on disk
+            // (controlled by spring.servlet.multipart.file-size-threshold).
+            fileKey = storageService.storeStream(
+                    file.getInputStream(), file.getSize(), "ebooks", filename, contentType);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read uploaded file", e);
+        }
+
+        String fileUrl = storageService.getUrl(fileKey);
         BigDecimal fileSizeMb = BigDecimal.valueOf(file.getSize())
                 .divide(BigDecimal.valueOf(1024 * 1024), 1, RoundingMode.HALF_UP);
         return ResponseEntity.ok(new SuccessResponse("File uploaded", Map.of(

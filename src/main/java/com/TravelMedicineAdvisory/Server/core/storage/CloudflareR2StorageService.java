@@ -6,44 +6,77 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * StorageService backed by AWS S3 (or any S3-compatible provider).
+ * StorageService backed by Cloudflare R2.
  *
- * <p>Files whose size is at or above {@code multipartThresholdBytes} are uploaded
- * using the S3 multipart upload API so that individual parts are streamed rather
- * than loading the entire file into memory at once. This prevents heap exhaustion
- * and connection timeouts for files larger than 100 MB.
+ * <p>
+ * R2 is S3-compatible, so this service uses the AWS SDK v2 with a custom
+ * endpoint override pointing at the R2 account endpoint
+ * ({@code https://<ACCOUNT_ID>.r2.cloudflarestorage.com}).
+ *
+ * <p>
+ * Files at or above {@code multipartThresholdBytes} (default 100 MB) are
+ * uploaded using the S3 multipart upload API, streaming each part from the
+ * temp file that Spring wrote to disk. This avoids heap exhaustion and
+ * connection timeouts for large files.
+ *
+ * <p>
+ * Public access URLs are resolved in one of two ways:
+ * <ol>
+ * <li>If {@code app.storage.r2.public-url} is set (e.g. a custom domain or
+ * R2 public-bucket URL), that value is used as the base.</li>
+ * <li>Otherwise the URL is constructed from the R2 endpoint + bucket name,
+ * which only works when the bucket has public access enabled.</li>
+ * </ol>
  */
-public class S3StorageService implements StorageService {
+public class CloudflareR2StorageService implements StorageService {
 
-    /** Minimum part size enforced by S3 (5 MiB). */
+    /** Minimum part size enforced by R2 / S3 (5 MiB). */
     private static final long MIN_PART_SIZE = 5L * 1024L * 1024L;
 
     private final String bucket;
-    private final String region;
+    private final String accountId;
     private final String accessKey;
     private final String secretKey;
-    private final String endpoint;
+    private final String publicUrl;
     private final long multipartThresholdBytes;
     private final long partSizeBytes;
 
-    public S3StorageService(String bucket, String region, String accessKey, String secretKey,
-                             String endpoint, long multipartThresholdBytes, long partSizeBytes) {
+    /**
+     * @param bucket                  R2 bucket name
+     * @param accountId               Cloudflare account ID (builds the endpoint
+     *                                URL)
+     * @param accessKey               R2 API token – Access Key ID
+     * @param secretKey               R2 API token – Secret Access Key
+     * @param publicUrl               Optional public base URL (custom domain or R2
+     *                                public URL)
+     * @param multipartThresholdBytes File size (bytes) above which multipart upload
+     *                                is used
+     * @param partSizeBytes           Size of each individual part (must be ≥ 5 MiB)
+     */
+    public CloudflareR2StorageService(
+            String bucket,
+            String accountId,
+            String accessKey,
+            String secretKey,
+            String publicUrl,
+            long multipartThresholdBytes,
+            long partSizeBytes) {
         this.bucket = bucket;
-        this.region = region;
+        this.accountId = accountId;
         this.accessKey = accessKey;
         this.secretKey = secretKey;
-        this.endpoint = endpoint;
+        this.publicUrl = publicUrl;
         this.multipartThresholdBytes = multipartThresholdBytes;
         this.partSizeBytes = Math.max(partSizeBytes, MIN_PART_SIZE);
     }
@@ -52,15 +85,52 @@ public class S3StorageService implements StorageService {
     // Internal helpers
     // -------------------------------------------------------------------------
 
+    private String r2Endpoint() {
+        return "https://" + accountId + ".eu.r2.cloudflarestorage.com";
+    }
+
     private S3Client buildClient() {
-        S3ClientBuilder builder = S3Client.builder()
-                .region(Region.of(region))
+        validateConfiguration();
+        return S3Client.builder()
+                // R2 uses "auto" as the recommended region value
+                .region(Region.of("auto"))
+                .endpointOverride(URI.create(r2Endpoint()))
+                // R2 is S3-compatible, but path-style addressing is the most reliable
+                // form for the account endpoint: /<bucket>/<key>.
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .build())
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)));
-        if (endpoint != null && !endpoint.isBlank()) {
-            builder.endpointOverride(URI.create(endpoint));
+                        AwsBasicCredentials.create(accessKey, secretKey)))
+                .build();
+    }
+
+    private void validateConfiguration() {
+        List<String> missing = new ArrayList<>();
+        if (isBlank(bucket))
+            missing.add("APP_STORAGE_R2_BUCKET");
+        if (isBlank(accountId))
+            missing.add("APP_STORAGE_R2_ACCOUNT_ID");
+        if (isBlank(accessKey))
+            missing.add("APP_STORAGE_R2_ACCESS_KEY");
+        if (isBlank(secretKey))
+            missing.add("APP_STORAGE_R2_SECRET_KEY");
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Cloudflare R2 storage is selected but these settings are missing: "
+                    + String.join(", ", missing));
         }
-        return builder.build();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private RuntimeException r2Exception(String operation, String key, S3Exception e) {
+        String message = "Cloudflare R2 " + operation + " failed for bucket '" + bucket + "' and key '" + key
+                + "' with status " + e.statusCode() + " (" + e.awsErrorDetails().errorMessage() + "). "
+                + "If this is 403 Access Denied, verify APP_STORAGE_R2_ACCOUNT_ID matches the bucket account, "
+                + "APP_STORAGE_R2_BUCKET is the exact bucket name, and the R2 API token has Object Read & Write permissions for this bucket.";
+        return new RuntimeException(message, e);
     }
 
     // -------------------------------------------------------------------------
@@ -95,7 +165,7 @@ public class S3StorageService implements StorageService {
             attachment.setModelName(modelName);
             return attachment;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to store file to S3", e);
+            throw new RuntimeException("Failed to store file to Cloudflare R2", e);
         }
     }
 
@@ -109,13 +179,15 @@ public class S3StorageService implements StorageService {
                             .contentType(contentType)
                             .build(),
                     RequestBody.fromBytes(content));
+        } catch (S3Exception e) {
+            throw r2Exception("putObject", key, e);
         }
         return key;
     }
 
     @Override
     public String storeStream(InputStream inputStream, long contentLength, String path,
-                               String filename, String contentType) {
+            String filename, String contentType) {
         String key = path + "/" + filename;
         if (contentLength >= multipartThresholdBytes || contentLength < 0) {
             doMultipartUpload(inputStream, contentLength, key, contentType);
@@ -128,6 +200,8 @@ public class S3StorageService implements StorageService {
                                 .contentLength(contentLength)
                                 .build(),
                         RequestBody.fromInputStream(inputStream, contentLength));
+            } catch (S3Exception e) {
+                throw r2Exception("putObject", key, e);
             }
         }
         return key;
@@ -139,7 +213,8 @@ public class S3StorageService implements StorageService {
             return client.getObjectAsBytes(
                     GetObjectRequest.builder()
                             .bucket(bucket).key(path)
-                            .build()).asByteArray();
+                            .build())
+                    .asByteArray();
         }
     }
 
@@ -155,10 +230,11 @@ public class S3StorageService implements StorageService {
 
     @Override
     public String getUrl(String path) {
-        if (endpoint != null && !endpoint.isBlank()) {
-            return endpoint.replaceAll("/$", "") + "/" + bucket + "/" + path;
+        if (publicUrl != null && !publicUrl.isBlank()) {
+            return publicUrl.replaceAll("/+$", "") + "/" + path;
         }
-        return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + path;
+        // Fall back to: https://<accountId>.r2.cloudflarestorage.com/<bucket>/<path>
+        return r2Endpoint() + "/" + bucket + "/" + path;
     }
 
     // -------------------------------------------------------------------------
@@ -166,17 +242,17 @@ public class S3StorageService implements StorageService {
     // -------------------------------------------------------------------------
 
     /**
-     * Executes an S3 multipart upload, reading {@code inputStream} in
+     * Executes a multipart upload, reading {@code inputStream} in
      * {@code partSizeBytes} chunks. The upload is aborted automatically if
      * any part fails.
      *
      * @param inputStream   the source data stream
      * @param contentLength total byte count, or {@code -1} if unknown
-     * @param key           S3 object key
+     * @param key           object key in the bucket
      * @param contentType   MIME type of the object
      */
     private void doMultipartUpload(InputStream inputStream, long contentLength,
-                                    String key, String contentType) {
+            String key, String contentType) {
         try (S3Client client = buildClient()) {
             CreateMultipartUploadResponse init = client.createMultipartUpload(
                     CreateMultipartUploadRequest.builder()
@@ -190,22 +266,18 @@ public class S3StorageService implements StorageService {
             int partNumber = 1;
 
             try {
-                int bytesRead;
                 int offset = 0;
                 while (true) {
-                    // Fill the buffer for one part
                     int remaining = buffer.length - offset;
-                    bytesRead = inputStream.read(buffer, offset, remaining);
-
+                    int bytesRead = inputStream.read(buffer, offset, remaining);
                     boolean endOfStream = bytesRead == -1;
-                    if (!endOfStream) {
+                    if (!endOfStream)
                         offset += bytesRead;
-                    }
 
                     boolean bufferFull = offset == buffer.length;
                     if ((bufferFull || endOfStream) && offset > 0) {
-                        byte[] partData = offset == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, offset);
-                        UploadPartResponse partResponse = client.uploadPart(
+                        byte[] partData = offset == buffer.length ? buffer : Arrays.copyOf(buffer, offset);
+                        UploadPartResponse partResp = client.uploadPart(
                                 UploadPartRequest.builder()
                                         .bucket(bucket).key(key)
                                         .uploadId(uploadId)
@@ -215,13 +287,14 @@ public class S3StorageService implements StorageService {
                                 RequestBody.fromBytes(partData));
                         completedParts.add(CompletedPart.builder()
                                 .partNumber(partNumber)
-                                .eTag(partResponse.eTag())
+                                .eTag(partResp.eTag())
                                 .build());
                         partNumber++;
                         offset = 0;
                     }
 
-                    if (endOfStream) break;
+                    if (endOfStream)
+                        break;
                 }
 
                 client.completeMultipartUpload(
@@ -233,7 +306,6 @@ public class S3StorageService implements StorageService {
                                         .build())
                                 .build());
             } catch (Exception e) {
-                // Best-effort abort to avoid orphaned parts
                 try {
                     client.abortMultipartUpload(
                             AbortMultipartUploadRequest.builder()
