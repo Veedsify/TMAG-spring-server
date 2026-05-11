@@ -1,0 +1,204 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [staging]
+
+concurrency:
+  group: deploy-staging-spring-server
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/tmag-spring-server
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.tag }}
+            type=raw,value=latest-staging
+
+      # Maven layer cache — avoids re-downloading dependencies on every build
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/tmag-spring-server:latest-staging
+          cache-to: type=inline
+
+  deploy:
+    name: Deploy spring-server to staging
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_API_URL }}
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+      - run: ssh-keyscan -H "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Write spring-server env on server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+          # Injected directly — not written to runner disk in plaintext
+          SPRING_DATASOURCE_URL: ${{ secrets.STAGING_DB_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.STAGING_DB_USER }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+          APP_API_KEY: ${{ secrets.STAGING_API_KEY }}
+          REDIS_HOST: ${{ secrets.STAGING_REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.STAGING_REDIS_PORT }}
+          REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
+          SPRING_MAIL_HOST: ${{ secrets.STAGING_MAIL_HOST }}
+          SPRING_MAIL_PORT: ${{ secrets.STAGING_MAIL_PORT }}
+          SPRING_MAIL_USERNAME: ${{ secrets.STAGING_MAIL_USERNAME }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.STAGING_MAIL_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VERTEX_PROJECT_ID: ${{ secrets.VERTEX_PROJECT_ID }}
+          FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_PUBLIC_KEY }}
+          FLUTTERWAVE_SECRET_KEY: ${{ secrets.FLUTTERWAVE_SECRET_KEY }}
+          FLUTTERWAVE_ENCRYPTION_KEY: ${{ secrets.FLUTTERWAVE_ENCRYPTION_KEY }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+        run: |
+          # Write a fresh .env for spring-server on the staging server via SSH.
+          # All values come from GitHub Secrets — never touch runner disk in plaintext.
+          ssh "$STAGING_USER@$STAGING_HOST" \
+            DEPLOY_PATH="$STAGING_DEPLOY_PATH" \
+            DB_URL="$SPRING_DATASOURCE_URL" \
+            DB_USER="$SPRING_DATASOURCE_USERNAME" \
+            DB_PASS="$SPRING_DATASOURCE_PASSWORD" \
+            JWT="$JWT_SECRET" \
+            API_KEY="$APP_API_KEY" \
+            REDIS_H="$REDIS_HOST" \
+            REDIS_P="$REDIS_PORT" \
+            REDIS_PW="$REDIS_PASSWORD" \
+            MAIL_H="$SPRING_MAIL_HOST" \
+            MAIL_P="$SPRING_MAIL_PORT" \
+            MAIL_U="$SPRING_MAIL_USERNAME" \
+            MAIL_PW="$SPRING_MAIL_PASSWORD" \
+            ANTHROPIC="$ANTHROPIC_API_KEY" \
+            VERTEX="$VERTEX_PROJECT_ID" \
+            FW_PUB="$FLUTTERWAVE_PUBLIC_KEY" \
+            FW_SEC="$FLUTTERWAVE_SECRET_KEY" \
+            FW_ENC="$FLUTTERWAVE_ENCRYPTION_KEY" \
+            PS_SEC="$PAYSTACK_SECRET_KEY" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          # Overwrite .env atomically
+          umask 077
+          cat > "$DEPLOY_PATH/.env" <<ENV
+          SPRING_DATASOURCE_URL=$DB_URL
+          SPRING_DATASOURCE_USERNAME=$DB_USER
+          SPRING_DATASOURCE_PASSWORD=$DB_PASS
+          SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+          SPRING_FLYWAY_ENABLED=true
+          SPRING_FLYWAY_BASELINE_ON_MIGRATE=true
+          SPRING_FLYWAY_LOCATIONS=classpath:db/migration
+          SPRING_FLYWAY_VALIDATE_ON_MIGRATE=true
+          SPRING_FLYWAY_SCHEMAS=public
+          JWT_SECRET=$JWT
+          APP_API_KEY=$API_KEY
+          REDIS_HOST=$REDIS_H
+          REDIS_PORT=${REDIS_P:-6379}
+          REDIS_PASSWORD=$REDIS_PW
+          SPRING_MAIL_HOST=$MAIL_H
+          SPRING_MAIL_PORT=${MAIL_P:-587}
+          SPRING_MAIL_USERNAME=$MAIL_U
+          SPRING_MAIL_PASSWORD=$MAIL_PW
+          ANTHROPIC_API_KEY=$ANTHROPIC
+          VERTEX_PROJECT_ID=$VERTEX
+          APP_AI_PROVIDER=anthropic
+          APP_AI_MAIN_PROVIDER=anthropic
+          APP_AI_DEFAULT_MODEL=claude-sonnet-4-6
+          APP_AI_MAIN_MODEL=claude-sonnet-4-6
+          APP_AI_SUMMARY_MODEL=claude-haiku-4-5-20251001
+          APP_AI_FREE_MODEL=claude-haiku-4-5-20251001
+          APP_AI_MAX_OUTPUT_TOKENS=8192
+          APP_AI_SUMMARY_MAX_OUTPUT_TOKENS=2048
+          FLUTTERWAVE_PUBLIC_KEY=$FW_PUB
+          FLUTTERWAVE_SECRET_KEY=$FW_SEC
+          FLUTTERWAVE_ENCRYPTION_KEY=$FW_ENC
+          PAYSTACK_SECRET_KEY=$PS_SEC
+          APP_ENV=staging
+          APP_STORAGE_PATH=/app/storage/upload
+          APP_LOGGING_ERROR_FILE_ENABLED=true
+          APP_LOGGING_ERROR_FILE_PATH=/app/logs/error.log
+          ENV
+          echo ".env written"
+          REMOTE
+
+      - name: Pull & restart spring-server
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+          IMAGE_TAG: ${{ needs.build-push.outputs.tag }}
+          GHCR_ORG: ${{ github.repository_owner }}
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh "$STAGING_USER@$STAGING_HOST" \
+            DEPLOY_PATH="$STAGING_DEPLOY_PATH" \
+            IMAGE_TAG="$IMAGE_TAG" \
+            GHCR_ORG="$GHCR_ORG" \
+            GHCR_ACTOR="$GHCR_ACTOR" \
+            GHCR_TOKEN="$GHCR_TOKEN" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+          cd "$DEPLOY_PATH"
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.staging.yml pull spring-server
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.staging.yml up -d --no-deps spring-server
+          docker compose -f docker-compose.staging.yml ps spring-server
+          REMOTE
+
+  health-check:
+    name: Health check
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Spring Boot Actuator (port 8080)
+        run: |
+          for i in $(seq 1 15); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+              "http://${{ secrets.STAGING_HOST }}:8080/actuator/health" || echo "000")
+            [[ "$status" == "200" ]] && { echo "OK (HTTP $status)"; exit 0; }
+            echo "Retry $i/15 (HTTP $status)..."; sleep 10
+          done
+          echo "::error::spring-server health check failed after 15 retries (2.5 min)"
+          exit 1
