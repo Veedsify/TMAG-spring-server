@@ -209,6 +209,8 @@ public class PlanGenerationService {
 
             generatedPlan.setPlanJson(writeJson(structuredOutput));
             generatedPlan.setStatus("active");
+            generatedPlan.setSystemPrompt(systemPrompt);
+            generatedPlan.setUserPrompt(userPrompt);
             generatedPlan.setProvider(result.provider());
             generatedPlan.setModelUsed(result.model());
             generatedPlan.setTokensUsed(result.estimatedTokens());
@@ -233,7 +235,9 @@ public class PlanGenerationService {
             aiLog.setPlanGenerationTokensUsed(result.estimatedTokens());
             aiLog.setSummaryGenerationTokensUsed(generatedPlan.getSummaryGenerationTokensUsed());
             aiLog.setTokensUsed((result.estimatedTokens() != null ? result.estimatedTokens() : 0)
-                    + (generatedPlan.getSummaryGenerationTokensUsed() != null ? generatedPlan.getSummaryGenerationTokensUsed() : 0));
+                    + (generatedPlan.getSummaryGenerationTokensUsed() != null
+                            ? generatedPlan.getSummaryGenerationTokensUsed()
+                            : 0));
             aiLog.setModelUsed(result.model());
             aiLog.setProcessingTimeMs(elapsedMs);
             aiRequestLogRepository.save(aiLog);
@@ -301,7 +305,8 @@ public class PlanGenerationService {
 
         doctorWebSocketService.broadcastNewPlanPending(travelPlan.getId(), travelPlan.getDestination());
 
-        List<TravelPlanDoctorAssignment> assignments = assignmentRepository.findByTravelPlanIdAndDeletedAtIsNull(travelPlan.getId());
+        List<TravelPlanDoctorAssignment> assignments = assignmentRepository
+                .findByTravelPlanIdAndDeletedAtIsNull(travelPlan.getId());
         List<User> doctors = assignments.isEmpty()
                 ? userRepository.findByRoleName(Roles.Doctor.name())
                 : assignments.stream().map(TravelPlanDoctorAssignment::getDoctor).toList();
@@ -342,7 +347,8 @@ public class PlanGenerationService {
 
         byte[] summaryPdf = travelPlanSummaryPdfGenerator.generate(travelPlan, generatedPlan);
         String filename = "summary-plan-" + travelPlanId + "-" + UUID.randomUUID() + ".pdf";
-        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename, "application/pdf");
+        String storagePath = storageService.storeBytes(summaryPdf, "travel-plan-summaries", filename,
+                "application/pdf");
         generatedPlan.setSummaryPdfUrl(storageService.getUrl(storagePath));
         generatedPlanRepository.save(generatedPlan);
 
@@ -354,7 +360,8 @@ public class PlanGenerationService {
             return new AiModelSelection(
                     firstNonBlank(aiGenerationProperties.getStandardPremiumProvider(),
                             aiGenerationProperties.getMainProvider(), aiGenerationProperties.getProvider()),
-                    firstNonBlank(aiGenerationProperties.getStandardPremiumModel(), aiGenerationProperties.getMainModel(),
+                    firstNonBlank(aiGenerationProperties.getStandardPremiumModel(),
+                            aiGenerationProperties.getMainModel(),
                             aiGenerationProperties.getDefaultModel()));
         }
         return new AiModelSelection(
@@ -641,7 +648,7 @@ public class PlanGenerationService {
                 .append("trip duration, purpose, and dates in the report JSON)\n");
         builder.append("Destination: ").append(nullSafe(travelPlan.getDestination())).append("\n");
         builder.append("Country: ").append(nullSafe(travelPlan.getCountry())).append("\n");
-        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)   
+        builder.append("Duration Days: ").append(travelPlan.getDuration() != null ? travelPlan.getDuration() : 0)
                 .append("\n");
         builder.append("Purpose: ").append(nullSafe(travelPlan.getPurpose())).append("\n");
         builder.append("Trip Type: ").append(resolveTripType(travelPlan.getTripType())).append("\n");
@@ -866,7 +873,8 @@ public class PlanGenerationService {
         return value == null ? "" : value;
     }
 
-    private void processFamilyGeneration(TravelPlan travelPlan, GeneratedPlan generatedPlan, AiRequestLog aiLog, Instant startedAt) {
+    private void processFamilyGeneration(TravelPlan travelPlan, GeneratedPlan generatedPlan, AiRequestLog aiLog,
+            Instant startedAt) {
         Long tripId = travelPlan.getFamilyTrip().getId();
 
         // Load all member questionnaire data from the aggregate questionnaire
@@ -921,7 +929,8 @@ public class PlanGenerationService {
         travelPlan.setStatus("COMPLETED");
         travelPlanRepository.save(travelPlan);
 
-        log.info("Family plan generation completed: planId={} tripId={} elapsedMs={}", travelPlan.getId(), tripId, elapsedMs);
+        log.info("Family plan generation completed: planId={} tripId={} elapsedMs={}", travelPlan.getId(), tripId,
+                elapsedMs);
 
         aiLog.setStatus("success");
         aiLog.setTokensUsed(result.estimatedTokens());
@@ -994,10 +1003,14 @@ public class PlanGenerationService {
         builder.append("Trip Stops JSON: ").append(extractTripStopsJson(plan)).append("\n\n");
 
         builder.append("### Family members with individual health questionnaires\n");
-        builder.append("Each entry has: memberId, firstName, lastName, relationship, relationshipToMainApplicant, displayLabel, writingPerspective, ageAtDeparture, responses (health questionnaire).\n");
-        builder.append("The main applicant is the reader of the plan. Write member-specific advice in second person, relative to the main applicant.\n");
-        builder.append("Use each member's displayLabel when introducing or referring to them, e.g. 'Your son Bob should...' or 'For your spouse Sarah...'.\n");
-        builder.append("Do not use detached third-person biography language such as 'Bob is a 15 year old male' or 'the traveller is'.\n");
+        builder.append(
+                "Each entry has: memberId, firstName, lastName, relationship, relationshipToMainApplicant, displayLabel, writingPerspective, ageAtDeparture, responses (health questionnaire).\n");
+        builder.append(
+                "The main applicant is the reader of the plan. Write member-specific advice in second person, relative to the main applicant.\n");
+        builder.append(
+                "Use each member's displayLabel when introducing or referring to them, e.g. 'Your son Bob should...' or 'For your spouse Sarah...'.\n");
+        builder.append(
+                "Do not use detached third-person biography language such as 'Bob is a 15 year old male' or 'the traveller is'.\n");
         builder.append("Generate a full, personalised medical section for each member in the `members` array.\n");
         builder.append("Use the memberId value exactly as given — do NOT change it.\n\n");
         builder.append("Members JSON:\n").append(membersJson).append("\n\n");

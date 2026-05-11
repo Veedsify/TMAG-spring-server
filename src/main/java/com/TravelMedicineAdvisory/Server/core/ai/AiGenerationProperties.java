@@ -15,8 +15,8 @@ public class AiGenerationProperties {
     private String summaryModel = "gemini-3-flash-preview";
     private String freeModel = "";
     private String standardPremiumModel = "";
-    private double temperature = 0.2d;
-    private int maxOutputTokens = 8192;
+    private double temperature = 0.3d;
+    private int maxOutputTokens = 4096;
     private int summaryMaxOutputTokens = 2048;
 
     private final Vertex vertex = new Vertex();

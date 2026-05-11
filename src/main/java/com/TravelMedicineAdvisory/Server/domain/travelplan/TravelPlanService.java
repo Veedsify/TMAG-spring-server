@@ -123,9 +123,9 @@ public class TravelPlanService {
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        if (!isUserPdfAvailable(plan)) {
+        if (!isPlanCompleted(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan PDF is only available after required doctor approval");
+                    "Travel plan PDF is only available when the plan is completed");
         }
         GeneratedPlan generated = requireActiveGeneratedPlanForPdf(planId);
         byte[] pdf = travelPlanPdfGenerator.generate(plan, generated);
@@ -166,13 +166,13 @@ public class TravelPlanService {
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        if (!isUserPdfAvailable(plan)) {
+        if (!isPlanCompleted(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan summary PDF is only available after required doctor approval");
+                    "Travel plan summary PDF is only available when the plan is completed");
         }
         if (plan.getPlanTier() == null || plan.getPlanTier() == PlanTier.FREE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan summary PDF is only available for standard and premium plans");
+                    "Travel plan summary PDF is not available for this plan");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
         String url = generated != null ? generated.getSummaryPdfUrl() : null;
@@ -195,15 +195,9 @@ public class TravelPlanService {
         return s.length() > 48 ? s.substring(0, 48) : s;
     }
 
-    private boolean isUserPdfAvailable(TravelPlan plan) {
+    private boolean isPlanCompleted(TravelPlan plan) {
         String status = plan.getStatus();
-        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
-            return false;
-        }
-        DoctorValidationStatus validationStatus = plan.getDoctorValidationStatus();
-        return validationStatus == null
-                || validationStatus == DoctorValidationStatus.NOT_REQUIRED
-                || validationStatus == DoctorValidationStatus.APPROVED;
+        return status != null && "COMPLETED".equalsIgnoreCase(status);
     }
 
     private boolean canAccessPlan(TravelPlan plan, Long currentUserId) {
