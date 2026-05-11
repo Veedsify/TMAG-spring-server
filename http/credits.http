@@ -1,0 +1,83 @@
+### ============================================================================
+### CREDITS — /api/v1/credits + /api/v1/user-credit-plans + /api/v1/credit-requests
+### ============================================================================
+
+### ─── Credits ───────────────────────────────────────────────
+
+### List my credits (paginated, optional companyId)
+GET {{baseUrl}}/api/v1/credits?companyId={{companyId}}&page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get credit by ID
+GET {{baseUrl}}/api/v1/credits/{{purchaseId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Credit Plans ──────────────────────────────────────────
+
+### List credit plans
+GET {{baseUrl}}/api/v1/user-credit-plans?companyId={{companyId}}
+
+### Get credit plan by ID
+GET {{baseUrl}}/api/v1/user-credit-plans/{{creditPlanId}}
+
+### Create custom credit plan
+POST {{baseUrl}}/api/v1/user-credit-plans/custom
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "companyId": {{companyId}},
+  "credits": 500,
+  "pricePerCredit": 150.00,
+  "currency": "NGN",
+  "description": "Custom plan for Acme Corp"
+}
+
+### ─── Credit Requests ───────────────────────────────────────
+
+### List credit requests (paginated)
+GET {{baseUrl}}/api/v1/credit-requests?companyId={{companyId}}&page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get credit request by ID
+GET {{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}
+Authorization: Bearer {{authToken}}
+
+### Create credit request
+POST {{baseUrl}}/api/v1/credit-requests
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "creditsRequested": 30,
+  "reason": "Need additional credits for upcoming business trip",
+  "companyId": {{companyId}},
+  "employeeId": {{employeeId}}
+}
+
+### Update credit request
+PUT {{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "creditsRequested": 50,
+  "reason": "Updated: Need more credits"
+}
+
+### Approve credit request
+POST {{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}/approve
+Authorization: Bearer {{authToken}}
+
+### Reject credit request
+POST {{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}/reject
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "reason": "Insufficient budget this quarter"
+}
+
+### Delete credit request
+DELETE {{baseUrl}}/api/v1/credit-requests/{{creditRequestId}}
+Authorization: Bearer {{authToken}}

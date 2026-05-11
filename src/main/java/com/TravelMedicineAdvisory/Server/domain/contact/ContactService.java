@@ -1,5 +1,6 @@
 package com.TravelMedicineAdvisory.Server.domain.contact;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,9 @@ import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.domain.contact.ContactDto.ContactRequest;
 import com.TravelMedicineAdvisory.Server.domain.contact.ContactDto.ContactResponse;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 
 @Service
 public class ContactService {
@@ -20,9 +24,14 @@ public class ContactService {
     @Value("${app.admin.email:hello@tmag.health}")
     private String adminEmail;
 
-    public ContactService(ContactRepository repository, QueueService queueService) {
+    public ContactService(ContactRepository repository, QueueService queueService, UserRepository userRepository) {
         this.repository = repository;
         this.queueService = queueService;
+        List<User> AdminUser = userRepository.findByRoleName(Roles.SuperAdmin.name());
+        if (AdminUser.isEmpty()) {
+            throw new IllegalStateException("No super admin user found. At least one user with role SUPERADMIN is required to receive contact form submissions.");
+        }
+        this.adminEmail = AdminUser.get(0).getEmail();
     }
 
     @Transactional

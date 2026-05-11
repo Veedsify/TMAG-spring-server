@@ -24,9 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
 import com.TravelMedicineAdvisory.Server.core.notifications.AdminNotificationService;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.domain.company.BillingCurrency;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
@@ -65,6 +67,9 @@ public class AuthService {
     private final CreditPlanRepository userCreditPlanRepository;
     private final UserSettingService userSettingService;
     private final AvatarUrlService avatarUrlService;
+    private final AffiliateService affiliateService;
+
+    private final AppLinksProperties appLinks;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -88,7 +93,9 @@ public class AuthService {
             AdminNotificationService adminNotificationService,
             CreditPlanRepository userCreditPlanRepository,
             UserSettingService userSettingService,
-            AvatarUrlService avatarUrlService) {
+            AvatarUrlService avatarUrlService,
+            AffiliateService affiliateService,
+            AppLinksProperties appLinks) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -102,6 +109,8 @@ public class AuthService {
         this.userCreditPlanRepository = userCreditPlanRepository;
         this.userSettingService = userSettingService;
         this.avatarUrlService = avatarUrlService;
+        this.affiliateService = affiliateService;
+        this.appLinks = appLinks;
 
     }
 
@@ -124,7 +133,7 @@ public class AuthService {
             throw new IllegalArgumentException("User already exists");
         }
 
-        Role role = determineUserRole();
+        Role role = determineUserRole(request.getAccountType());
 
         Credit newAssignedCredits = new Credit();
         Optional<CreditPlan> userCreditPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
@@ -139,10 +148,12 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setOnboardingStage(0);
-        user.setOnboarded(false);
+        boolean isFamilySignup = request.getPlanCode() != null && request.getPlanCode().startsWith("FAMILY");
+        boolean isAffiliateSignup = request.getAccountType() != null && "AFFILIATE".equalsIgnoreCase(request.getAccountType().trim());
+        user.setOnboardingStage(isFamilySignup ? 99 : 0);
+        user.setOnboarded(isFamilySignup);
         user.setVerified(false);
-        user.setType("INDIVIDUAL");
+        user.setType(isFamilySignup ? "FAMILY" : isAffiliateSignup ? "AFFILIATE" : "INDIVIDUAL");
         user.setCredits(1);
         user.setCreditPlan(userCreditPlan.get());
         user.setBillingCurrency(
@@ -152,6 +163,7 @@ public class AuthService {
         user.setCreditPlan(resolveCreditPlan(request.getPlanCode()));
 
         User savedUser = userRepository.save(user);
+        affiliateService.registerReferralForUser(savedUser.getId(), request.getAffiliateReferralCode());
 
         newAssignedCredits.setUser(user);
         newAssignedCredits.setType("new-user-bonus");
@@ -167,7 +179,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", savedUser.getId()), userDetails);
 
-        return buildAuthResponse(savedUser, jwtToken);
+        AuthResponse response = buildAuthResponse(savedUser, jwtToken);
+        applyRoleRedirect(savedUser, response);
+        return response;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -189,7 +203,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-        return buildAuthResponse(user, jwtToken);
+        AuthResponse response = buildAuthResponse(user, jwtToken);
+        applyRoleRedirect(user, response);
+        return response;
     }
 
     private void sendLoginAlertEmail(User user) {
@@ -231,7 +247,7 @@ public class AuthService {
 
     @Transactional
     @SuppressWarnings("unchecked")
-    public AuthResponse googleCallback(String code, String planCode) {
+    public AuthResponse googleCallback(String code, String planCode, String affiliateReferralCode) {
         if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null
                 || googleClientSecret.isBlank()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Google sign-in is not configured");
@@ -288,7 +304,7 @@ public class AuthService {
             }
 
             if (user == null) {
-                Role role = determineUserRole();
+                Role role = determineUserRole(null);
 
                 user = new User();
                 user.setFirstName(firstName);
@@ -313,6 +329,7 @@ public class AuthService {
                 }
 
                 user = userRepository.save(user);
+                affiliateService.registerReferralForUser(user.getId(), affiliateReferralCode);
 
                 Credit newAssignedCredits = new Credit();
                 newAssignedCredits.setUser(user);
@@ -336,7 +353,9 @@ public class AuthService {
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
             String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-            return buildAuthResponse(user, jwtToken);
+            AuthResponse response = buildAuthResponse(user, jwtToken);
+            applyRoleRedirect(user, response);
+            return response;
 
         } catch (IllegalArgumentException e) {
             throw e;
@@ -446,7 +465,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-        return buildAuthResponse(user, jwtToken);
+        AuthResponse response = buildAuthResponse(user, jwtToken);
+        applyRoleRedirect(user, response);
+        return response;
     }
 
     private void sendInvitationAcceptedEmail(User user) {
@@ -517,13 +538,48 @@ public class AuthService {
                 .orElseGet(() -> userCreditPlanRepository.findByCode(CreditPlanCode.STANDARD).orElse(null));
     }
 
-    private Role determineUserRole() {
+    private Role determineUserRole(String accountType) {
         long userCount = userRepository.count();
         if (userCount == 0) {
             return roleRepository.findByName("SuperAdmin")
                     .orElseGet(() -> roleRepository.findByName("Administrator").orElse(null));
         }
+        if (accountType != null && "AFFILIATE".equalsIgnoreCase(accountType.trim())) {
+            return roleRepository.findByName("Affiliate")
+                    .orElseGet(() -> roleRepository.findByName("Individual").orElse(null));
+        }
         return roleRepository.findByName("Individual").orElse(null);
+    }
+
+    /**
+     * Check if the user's role requires redirecting to a different app.
+     * Sets redirectTo and redirectMessage on the response when applicable.
+     */
+    private void applyRoleRedirect(User user, AuthResponse response) {
+        if (user == null || user.getRole() == null) {
+            return;
+        }
+        String roleName = user.getRole().getName();
+        if (roleName == null) {
+            return;
+        }
+        switch (roleName.toLowerCase().trim()) {
+            case "superadmin" -> {
+                response.setRedirectTo(appLinks.superAdminAppUrl());
+                response.setRedirectMessage("Super admin accounts must be accessed from the Super Admin Dashboard. Please log in there instead.");
+            }
+            case "administrator", "admin" -> {
+                response.setRedirectTo(appLinks.adminAppUrl());
+                response.setRedirectMessage("Admin accounts must be accessed from the Admin Dashboard. Please log in there instead.");
+            }
+            case "affiliate" -> {
+                response.setRedirectTo(appLinks.affiliateAppUrl());
+                response.setRedirectMessage("Affiliate accounts must be accessed from the Affiliate Portal. Please log in there instead.");
+            }
+            default -> {
+                // No redirect needed for Individual, Hr, Doctor, CustomerSupport, etc.
+            }
+        }
     }
 
     private AuthResponse buildAuthResponse(User user, String jwtToken) {

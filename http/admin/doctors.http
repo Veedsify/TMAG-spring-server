@@ -1,0 +1,43 @@
+### ============================================================================
+### ADMIN → DOCTORS — /api/v1/admin/doctors
+### ============================================================================
+
+### List doctor applications
+GET {{baseUrl}}/api/v1/admin/doctors/applications
+Authorization: Bearer {{adminToken}}
+
+### Approve doctor application
+POST {{baseUrl}}/api/v1/admin/doctors/applications/{{doctorUserId}}/approve
+Authorization: Bearer {{adminToken}}
+
+### Reject doctor application
+POST {{baseUrl}}/api/v1/admin/doctors/applications/{{doctorUserId}}/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Insufficient credentials"
+}
+
+### Invite doctor
+POST {{baseUrl}}/api/v1/admin/doctors/invite
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "doctor@example.com",
+  "firstName": "Jane",
+  "lastName": "Doctor"
+}
+
+### Get doctor stats
+GET {{baseUrl}}/api/v1/admin/doctors/stats
+Authorization: Bearer {{adminToken}}
+
+### List doctors
+GET {{baseUrl}}/api/v1/admin/doctors
+Authorization: Bearer {{adminToken}}
+
+### Revoke doctor privileges
+POST {{baseUrl}}/api/v1/admin/doctors/{{doctorUserId}}/revoke
+Authorization: Bearer {{adminToken}}

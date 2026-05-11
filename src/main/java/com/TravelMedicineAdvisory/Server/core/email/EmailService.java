@@ -16,12 +16,14 @@ public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
+    private final EmailTemplates emailTemplates;
 
     @Value("${app.email.from-address}")
     private String fromEmail;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, EmailTemplates emailTemplates) {
         this.mailSender = mailSender;
+        this.emailTemplates = emailTemplates;
     }
 
     public void sendEmail(String to, String subject, String body) {
@@ -73,6 +75,24 @@ public class EmailService {
         }
     }
 
+    public void sendAffiliateWelcomeEmail(String to, String name, String email, String tempPassword, String loginUrl) {
+        try {
+            sendHtmlEmail(to, "Welcome to TMAG Affiliate Program",
+                    emailTemplates.affiliateWelcome(name, email, tempPassword, loginUrl));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate welcome email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliateRejectionEmail(String to, String name, String reason) {
+        try {
+            sendHtmlEmail(to, "Your TMAG Affiliate Application",
+                    emailTemplates.affiliateRejection(name, reason));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate rejection email to {}: {}", to, e.getMessage());
+        }
+    }
+
     public void sendEmailWithAttachment(String to, String subject, String htmlBody,
                                          byte[] attachment, String attachmentName, String attachmentContentType) {
         try {
@@ -100,6 +120,63 @@ public class EmailService {
         } catch (MessagingException e) {
             logger.error("Failed to send email with attachment to {}: {}", to, e.getMessage());
             throw new RuntimeException("Failed to send email with attachment", e);
+        }
+    }
+
+    public void sendAffiliateApplicationConfirmation(String to, String firstName) {
+        try {
+            sendHtmlEmail(to, "Application Received — TMAG Affiliate Program",
+                    emailTemplates.affiliateApplicationConfirmation(firstName));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate application confirmation to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliateCommissionEarned(String to, String firstName, String amount, String customerEmail, String campaign) {
+        try {
+            sendHtmlEmail(to, "You earned a commission on TMAG!",
+                    emailTemplates.affiliateCommissionEarned(firstName, amount, customerEmail, campaign));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate commission earned email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendAffiliatePayoutProcessed(String to, String firstName, String amount, String paymentMethod) {
+        try {
+            sendHtmlEmail(to, "Your TMAG affiliate payout has been processed",
+                    emailTemplates.affiliatePayoutProcessed(firstName, amount, paymentMethod));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout processed email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Sent to the affiliate immediately after they submit a payout request.
+     */
+    public void sendAffiliatePayoutRequested(String to, String firstName,
+                                              String amount, String currency,
+                                              String paymentMethod, String paymentDetails) {
+        try {
+            sendHtmlEmail(to, "Payout request received \u2014 TMAG Affiliates",
+                    emailTemplates.affiliatePayoutRequested(firstName, amount, currency, paymentMethod, paymentDetails));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout-requested email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * Sent to every super-admin when an affiliate submits a payout request.
+     */
+    public void sendAffiliatePayoutRequestedAdmin(String to,
+                                                   String affiliateName, String affiliateEmail,
+                                                   String amount, String currency,
+                                                   String paymentMethod, String paymentDetails) {
+        try {
+            sendHtmlEmail(to, "New affiliate payout request: " + affiliateName,
+                    emailTemplates.affiliatePayoutRequestedAdmin(
+                            affiliateName, affiliateEmail, amount, currency, paymentMethod, paymentDetails));
+        } catch (Exception e) {
+            logger.error("Failed to send affiliate payout-requested admin email to {}: {}", to, e.getMessage());
         }
     }
 }

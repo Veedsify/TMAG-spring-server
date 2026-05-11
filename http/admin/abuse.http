@@ -1,0 +1,11 @@
+### ============================================================================
+### ADMIN → ABUSE FLAGS — /api/v1/admin/abuse
+### ============================================================================
+
+### List abuse flags
+GET {{baseUrl}}/api/v1/admin/abuse?resolved=false
+Authorization: Bearer {{adminToken}}
+
+### Resolve abuse flag
+POST {{baseUrl}}/api/v1/admin/abuse/{{abuseFlagId}}/resolve
+Authorization: Bearer {{adminToken}}

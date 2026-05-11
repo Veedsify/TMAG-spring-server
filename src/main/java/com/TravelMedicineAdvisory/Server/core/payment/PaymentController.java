@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.TravelMedicineAdvisory.Server.domain.creditpurchase.CreditPurchaseService;
 import com.TravelMedicineAdvisory.Server.domain.ebook.EbookService;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyPackagePurchaseService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ public class PaymentController {
     private final FlutterwaveService flutterwaveService;
     private final CreditPurchaseService creditPurchaseService;
     private final EbookService ebookService;
+    private final FamilyPackagePurchaseService familyPackagePurchaseService;
     private final PaymentConfigService paymentConfigService;
     private final ObjectMapper objectMapper;
 
@@ -30,11 +32,13 @@ public class PaymentController {
             FlutterwaveService flutterwaveService,
             CreditPurchaseService creditPurchaseService,
             EbookService ebookService,
+            FamilyPackagePurchaseService familyPackagePurchaseService,
             PaymentConfigService paymentConfigService,
             ObjectMapper objectMapper) {
         this.flutterwaveService = flutterwaveService;
         this.creditPurchaseService = creditPurchaseService;
         this.ebookService = ebookService;
+        this.familyPackagePurchaseService = familyPackagePurchaseService;
         this.paymentConfigService = paymentConfigService;
         this.objectMapper = objectMapper;
     }
@@ -134,16 +138,16 @@ public class PaymentController {
 
             logger.info("Processing webhook: txRef={}, flwRef={}, status={}, amount={}", txRef, flwRef, status, amount);
 
-            // Try credit purchase first, then ebook order
+            // Try credit purchase, ebook order, and family package purchase
             var creditResult = creditPurchaseService.completePurchaseFromWebhook(txRef, flwRef, status, amount);
             var ebookResult = ebookService.completeOrderFromWebhook(txRef, flwRef, status, amount);
+            var familyResult = familyPackagePurchaseService.completePurchaseFromWebhook(txRef, flwRef, status, amount.longValue());
 
-            if (creditResult != null || ebookResult != null) {
+            if (creditResult != null || ebookResult != null || familyResult != null) {
                 logger.info("Webhook processed successfully for txRef: {}", txRef);
             } else {
                 logger.warn("No purchase or ebook order found for txRef: {}", txRef);
             }
-            // var result = creditResult != null ? creditResult : ebookResult;
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Webhook processed"));
         } catch (Exception e) {

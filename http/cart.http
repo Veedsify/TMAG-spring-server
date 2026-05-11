@@ -1,0 +1,43 @@
+### ============================================================================
+### CART — /api/v1/cart
+### ============================================================================
+
+### Get cart items
+GET {{baseUrl}}/api/v1/cart
+Authorization: Bearer {{authToken}}
+
+### Add item to cart
+POST {{baseUrl}}/api/v1/cart/add
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "ebookVersionId": 1
+}
+
+### Remove item from cart
+DELETE {{baseUrl}}/api/v1/cart/{{cartItemId}}
+Authorization: Bearer {{authToken}}
+
+### Clear cart
+DELETE {{baseUrl}}/api/v1/cart
+Authorization: Bearer {{authToken}}
+
+### Sync cart
+POST {{baseUrl}}/api/v1/cart/sync
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+[
+  {"ebookVersionId": 1},
+  {"ebookVersionId": 2}
+]
+
+### Cart checkout
+POST {{baseUrl}}/api/v1/cart/checkout
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "ebookVersionIds": [1, 2]
+}

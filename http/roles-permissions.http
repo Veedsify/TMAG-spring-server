@@ -1,0 +1,179 @@
+### ============================================================================
+### ROLES & PERMISSIONS — Roles, Permissions, Role-Permissions, Resource Access
+### ============================================================================
+
+### ─── Roles — /api/v1/roles ─────────────────────────────────
+
+### List roles (paginated)
+GET {{baseUrl}}/api/v1/roles?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get role by ID
+GET {{baseUrl}}/api/v1/roles/{{roleId}}
+Authorization: Bearer {{authToken}}
+
+### Create role
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "AUDITOR",
+  "description": "Can view reports and audit logs"
+}
+
+### Update role
+PUT {{baseUrl}}/api/v1/roles/{{roleId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "AUDITOR",
+  "description": "Can view reports, audit logs, and compliance data"
+}
+
+### Delete role
+DELETE {{baseUrl}}/api/v1/roles/{{roleId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Permissions — /api/v1/permissions ─────────────────────
+
+### List permissions (paginated)
+GET {{baseUrl}}/api/v1/permissions?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get permission by ID
+GET {{baseUrl}}/api/v1/permissions/{{permissionId}}
+Authorization: Bearer {{authToken}}
+
+### Create permission
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "audit_log:export",
+  "description": "Export audit logs",
+  "resource": "audit_log",
+  "action": "export"
+}
+
+### Update permission
+PUT {{baseUrl}}/api/v1/permissions/{{permissionId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "audit_log:export",
+  "description": "Export audit logs to CSV",
+  "resource": "audit_log",
+  "action": "export"
+}
+
+### Delete permission
+DELETE {{baseUrl}}/api/v1/permissions/{{permissionId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Role-Permissions — /api/v1/role-permissions ───────────
+
+### List role-permission assignments (paginated)
+GET {{baseUrl}}/api/v1/role-permissions?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get role-permission by ID
+GET {{baseUrl}}/api/v1/role-permissions/{{rolePermissionId}}
+Authorization: Bearer {{authToken}}
+
+### Create role-permission assignment
+POST {{baseUrl}}/api/v1/role-permissions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "roleId": {{roleId}},
+  "permissionId": {{permissionId}}
+}
+
+### Update role-permission assignment
+PUT {{baseUrl}}/api/v1/role-permissions/{{rolePermissionId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "roleId": {{roleId}},
+  "permissionId": {{permissionId}}
+}
+
+### Delete role-permission assignment
+DELETE {{baseUrl}}/api/v1/role-permissions/{{rolePermissionId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Resource Access — /api/v1/resource-access ─────────────
+
+### List resource access records (paginated)
+GET {{baseUrl}}/api/v1/resource-access?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get resource access by ID
+GET {{baseUrl}}/api/v1/resource-access/{{resourceAccessId}}
+Authorization: Bearer {{authToken}}
+
+### Create resource access record
+POST {{baseUrl}}/api/v1/resource-access
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "roleId": {{roleId}},
+  "resource": "travel_plan",
+  "action": "read"
+}
+
+### Update resource access record
+PUT {{baseUrl}}/api/v1/resource-access/{{resourceAccessId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "roleId": {{roleId}},
+  "resource": "travel_plan",
+  "action": "write"
+}
+
+### Delete resource access record
+DELETE {{baseUrl}}/api/v1/resource-access/{{resourceAccessId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Resource Permissions — /api/v1/resource-permissions ───
+
+### List resource permissions (paginated)
+GET {{baseUrl}}/api/v1/resource-permissions?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get resource permission by ID
+GET {{baseUrl}}/api/v1/resource-permissions/{{resourcePermissionId}}
+Authorization: Bearer {{authToken}}
+
+### Create resource permission
+POST {{baseUrl}}/api/v1/resource-permissions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "travel_plan:read",
+  "description": "Read travel plans"
+}
+
+### Update resource permission
+PUT {{baseUrl}}/api/v1/resource-permissions/{{resourcePermissionId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "travel_plan:read",
+  "description": "Read and view travel plans"
+}
+
+### Delete resource permission
+DELETE {{baseUrl}}/api/v1/resource-permissions/{{resourcePermissionId}}
+Authorization: Bearer {{authToken}}

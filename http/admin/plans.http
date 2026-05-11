@@ -1,0 +1,28 @@
+### ============================================================================
+### ADMIN → PLANS (Escalated) — /api/v1/admin/plans
+### ============================================================================
+
+### Get escalated plans
+GET {{baseUrl}}/api/v1/admin/plans/escalated?page=0&size=20
+Authorization: Bearer {{adminToken}}
+
+### Approve escalated plan
+POST {{baseUrl}}/api/v1/admin/plans/{{planId}}/approve
+Authorization: Bearer {{adminToken}}
+
+### Reject escalated plan
+POST {{baseUrl}}/api/v1/admin/plans/{{planId}}/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Plan does not meet clinical guidelines"
+}
+
+### Preview escalated plan PDF
+GET {{baseUrl}}/api/v1/admin/plans/{{planId}}/preview-pdf
+Authorization: Bearer {{adminToken}}
+
+### Preview escalated plan summary PDF
+GET {{baseUrl}}/api/v1/admin/plans/{{planId}}/preview-summary
+Authorization: Bearer {{adminToken}}

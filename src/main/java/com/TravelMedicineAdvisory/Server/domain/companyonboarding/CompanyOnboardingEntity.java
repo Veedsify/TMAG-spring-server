@@ -95,6 +95,15 @@ public class CompanyOnboardingEntity extends BaseEntity {
     @Column(name = "credit_count", nullable = false)
     private Integer creditCount = 0;
 
+    @Column(name = "affiliate_referral_code", length = 40)
+    private String affiliateReferralCode;
+
+    @Column(name = "affiliate_discount_rate", precision = 5, scale = 2)
+    private BigDecimal affiliateDiscountRate;
+
+    @Column(name = "affiliate_discount_amount", precision = 10, scale = 2)
+    private BigDecimal affiliateDiscountAmount;
+
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
 
@@ -169,4 +178,13 @@ public class CompanyOnboardingEntity extends BaseEntity {
 
     public Integer getCreditCount() { return creditCount; }
     public void setCreditCount(Integer creditCount) { this.creditCount = creditCount; }
+
+    public String getAffiliateReferralCode() { return affiliateReferralCode; }
+    public void setAffiliateReferralCode(String affiliateReferralCode) { this.affiliateReferralCode = affiliateReferralCode; }
+
+    public BigDecimal getAffiliateDiscountRate() { return affiliateDiscountRate; }
+    public void setAffiliateDiscountRate(BigDecimal affiliateDiscountRate) { this.affiliateDiscountRate = affiliateDiscountRate; }
+
+    public BigDecimal getAffiliateDiscountAmount() { return affiliateDiscountAmount; }
+    public void setAffiliateDiscountAmount(BigDecimal affiliateDiscountAmount) { this.affiliateDiscountAmount = affiliateDiscountAmount; }
 }

@@ -11,7 +11,8 @@ public record UserSettingResponse(
     String doctorApplicationStatus,
     Integer consentVersion,
     Integer consentAcceptedByVersion,
-    LocalDateTime consentAcceptedAt
+    LocalDateTime consentAcceptedAt,
+    String affiliateReferralCode
 ) {
     public static UserSettingResponse from(UserSetting s) {
         return new UserSettingResponse(
@@ -21,7 +22,8 @@ public record UserSettingResponse(
             s.getDoctorApplicationStatus() != null ? s.getDoctorApplicationStatus().name() : DoctorApplicationStatus.NONE.name(),
             s.getConsentVersion() != null ? s.getConsentVersion() : 0,
             s.getConsentAcceptedByVersion(),
-            s.getConsentAcceptedAt()
+            s.getConsentAcceptedAt(),
+            s.getAffiliateReferralCode()
         );
     }
 

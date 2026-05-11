@@ -16,8 +16,6 @@ import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.Tier;
 import com.TravelMedicineAdvisory.Server.domain.companyonboarding.CompanyOnboardingSubmitRequest.TeamMemberRequest;
 import com.TravelMedicineAdvisory.Server.domain.companyonboarding.CompanyOnboardingSubmitRequest.PlatformEmployeeRequest;
-import com.TravelMedicineAdvisory.Server.domain.companyonboarding.OnboardingStatus;
-import com.TravelMedicineAdvisory.Server.domain.companyonboarding.OnboardingPaymentStatus;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
@@ -28,10 +26,12 @@ import com.TravelMedicineAdvisory.Server.domain.employee.Employee;
 import com.TravelMedicineAdvisory.Server.domain.employee.EmployeeRepository;
 import com.TravelMedicineAdvisory.Server.domain.role.Role;
 import com.TravelMedicineAdvisory.Server.domain.role.RoleRepository;
+import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateService;
 import com.TravelMedicineAdvisory.Server.core.utils.RandomNumberGenerator;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -80,11 +80,12 @@ public class CompanyOnboardingService {
     private final CallbackRegistry callbackRegistry;
     private final VolumePricingService volumePricingService;
     private final StorageService storageService;
+    private final AffiliateService affiliateService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    @Value("${app.admin.superadmin-email:hello@tmag.health}")
+    @Value("${app.admin.email:hello@tmag.health}")
     private String superadminEmail;
 
     public CompanyOnboardingService(
@@ -105,7 +106,8 @@ public class CompanyOnboardingService {
             ExchangeRateService exchangeRateService,
             CallbackRegistry callbackRegistry,
             VolumePricingService volumePricingService,
-            StorageService storageService) {
+            StorageService storageService,
+            AffiliateService affiliateService) {
         this.onboardingRepository = onboardingRepository;
         this.companyRepository = companyRepository;
         this.userCreditPlanRepository = userCreditPlanRepository;
@@ -124,6 +126,13 @@ public class CompanyOnboardingService {
         this.callbackRegistry = callbackRegistry;
         this.volumePricingService = volumePricingService;
         this.storageService = storageService;
+        this.affiliateService = affiliateService;
+
+        List<User> AdminUser = userRepository.findByRoleName(Roles.SuperAdmin.name());
+        if (AdminUser.isEmpty()) {
+            throw new IllegalStateException("No super admin user found. At least one user with role SUPERADMIN is required to receive contact form submissions.");
+        }
+        this.superadminEmail = AdminUser.get(0).getEmail();
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {
@@ -176,6 +185,10 @@ public class CompanyOnboardingService {
         } catch (JsonProcessingException e) {
             entity.setPlatformEmployees("[]");
         }
+
+        // Store affiliate referral code if present
+        entity.setAffiliateReferralCode(req.affiliateReferralCode() != null && !req.affiliateReferralCode().isBlank()
+                ? req.affiliateReferralCode().trim() : null);
 
         if (teamMembersCsv != null && !teamMembersCsv.isEmpty()) {
             if (teamMembersCsv.getOriginalFilename() == null || !teamMembersCsv.getOriginalFilename().toLowerCase().endsWith(".csv")) {
@@ -230,7 +243,24 @@ public class CompanyOnboardingService {
         }
 
         BigDecimal pricePerCredit = tier.pricePerCredit();
-        BigDecimal price = pricePerCredit.multiply(BigDecimal.valueOf(creditCount));
+        BigDecimal baseAmount = pricePerCredit.multiply(BigDecimal.valueOf(creditCount));
+
+        // Apply affiliate discount if referral code is present
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (entity.getAffiliateReferralCode() != null) {
+            var affiliateDiscount = affiliateService.getDiscount(entity.getAffiliateReferralCode());
+            if (affiliateDiscount.isPresent() && affiliateDiscount.get().active()) {
+                discountRate = affiliateDiscount.get().discountRate();
+                discountAmount = discountRate.compareTo(BigDecimal.ZERO) > 0
+                        ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+            }
+        }
+        BigDecimal price = baseAmount.subtract(discountAmount);
+
+        entity.setAffiliateDiscountRate(discountRate);
+        entity.setAffiliateDiscountAmount(discountAmount);
         String currencyCode = currency.name();
 
         // Essential plan (free) — skip payment if price is zero
@@ -337,6 +367,15 @@ public class CompanyOnboardingService {
                 creditPurchaseRepository.save(purchase);
             }
 
+            // Record affiliate commission for this company onboarding
+            if (entity.getAffiliateReferralCode() != null) {
+                try {
+                    affiliateService.recordCommissionForCompanyOnboarding(entity);
+                } catch (Exception e) {
+                    logger.error("Failed to record affiliate commission for company onboarding: id={}, error={}", entity.getId(), e.getMessage(), e);
+                }
+            }
+
             queueService.dispatch(JobType.EMAIL_GENERIC, Map.of(
                     "to", superadminEmail,
                     "subject", "New Company Registration Pending Approval - " + entity.getCompanyName(),
@@ -393,6 +432,18 @@ public class CompanyOnboardingService {
         }
 
         Company company = createCompanyFromRequest(entity);
+
+        // Register affiliate referral for the admin user if an affiliate code was used during onboarding.
+        // This ensures future purchases (e.g., top-ups) by this user earn commissions for the affiliate.
+        if (entity.getAffiliateReferralCode() != null) {
+            userRepository.findByEmail(entity.getContactEmail()).ifPresent(adminUser -> {
+                try {
+                    affiliateService.registerReferralForUser(adminUser.getId(), entity.getAffiliateReferralCode());
+                } catch (Exception e) {
+                    logger.error("Failed to register affiliate referral for admin user: userId={}, error={}", adminUser.getId(), e.getMessage(), e);
+                }
+            });
+        }
 
         entity.setStatus(OnboardingStatus.APPROVED);
         entity.setReviewedBy(adminEmail);
@@ -775,6 +826,10 @@ public class CompanyOnboardingService {
                 entity.getTxRef(),
                 entity.getPaymentStatus() != null ? entity.getPaymentStatus().name().toLowerCase() : "pending",
                 entity.getPaymentAmount(),
+                entity.getPaymentAmount() != null && entity.getAffiliateDiscountAmount() != null
+                        ? entity.getPaymentAmount().add(entity.getAffiliateDiscountAmount())
+                        : entity.getPaymentAmount(),
+                entity.getAffiliateDiscountAmount(),
                 entity.getPaymentCurrency(),
                 entity.getStatus() != null ? entity.getStatus().name().toLowerCase() : "pending_payment",
                 entity.getRejectionReason(),

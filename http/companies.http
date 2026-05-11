@@ -1,0 +1,175 @@
+### ============================================================================
+### COMPANIES — /api/v1/companies + /api/v1/company-users + /api/v1/employees
+### ============================================================================
+
+### ─── Companies ─────────────────────────────────────────────
+
+### List companies (paginated)
+GET {{baseUrl}}/api/v1/companies?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get company by ID
+GET {{baseUrl}}/api/v1/companies/{{companyId}}
+Authorization: Bearer {{authToken}}
+
+### Create company
+POST {{baseUrl}}/api/v1/companies
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "TravelSafe Inc.",
+  "industry": "Travel",
+  "totalCredits": 500,
+  "usedCredits": 0,
+  "employeeCount": 25,
+  "plan": "STANDARD",
+  "companyCode": "TRAVELSAFE01",
+  "billing_currency": "USD"
+}
+
+### Update company
+PUT {{baseUrl}}/api/v1/companies/{{companyId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "TravelSafe Inc.",
+  "industry": "Travel & Tourism",
+  "billing_currency": "USD"
+}
+
+### Purchase credits
+POST {{baseUrl}}/api/v1/companies/{{companyId}}/purchase-credits
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 200,
+  "reference": "Bulk purchase Q1 2025"
+}
+
+### Validate company code
+GET {{baseUrl}}/api/v1/companies/validate-code?code=TRAVELSAFE01
+Authorization: Bearer {{authToken}}
+
+### Delete company
+DELETE {{baseUrl}}/api/v1/companies/{{companyId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Company Users ─────────────────────────────────────────
+
+### List company users (paginated)
+GET {{baseUrl}}/api/v1/company-users?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get company user by ID
+GET {{baseUrl}}/api/v1/company-users/{{companyUserId}}
+Authorization: Bearer {{authToken}}
+
+### Create company user
+POST {{baseUrl}}/api/v1/company-users
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "user_id": {{userId}},
+  "company_id": {{companyId}},
+  "role": "EMPLOYEE"
+}
+
+### Update company user
+PUT {{baseUrl}}/api/v1/company-users/{{companyUserId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "user_id": {{userId}},
+  "company_id": {{companyId}},
+  "role": "ADMIN"
+}
+
+### Delete company user
+DELETE {{baseUrl}}/api/v1/company-users/{{companyUserId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Employees ─────────────────────────────────────────────
+
+### List employees (paginated, optional companyId)
+GET {{baseUrl}}/api/v1/employees?companyId={{companyId}}&page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get employee by ID
+GET {{baseUrl}}/api/v1/employees/{{employeeId}}
+Authorization: Bearer {{authToken}}
+
+### Invite employee
+POST {{baseUrl}}/api/v1/employees/invite
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@company.com",
+  "department": "Engineering",
+  "role": "EMPLOYEE",
+  "creditsAllocated": 50,
+  "companyId": {{companyId}}
+}
+
+### Create employee
+POST {{baseUrl}}/api/v1/employees
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Bob Wilson",
+  "email": "bob.wilson@company.com",
+  "department": "Marketing",
+  "creditsUsed": 0,
+  "creditsAllocated": 30,
+  "status": "active",
+  "plansGenerated": 0,
+  "company_id": {{companyId}},
+  "user_id": {{userId}}
+}
+
+### Update employee
+PUT {{baseUrl}}/api/v1/employees/{{employeeId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Jane Smith-Updated",
+  "email": "jane.smith@company.com",
+  "department": "Engineering",
+  "status": "active",
+  "company_id": {{companyId}}
+}
+
+### Allocate employee credits
+PUT {{baseUrl}}/api/v1/employees/{{employeeId}}/credits
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "creditsAllocated": 75,
+  "companyId": {{companyId}}
+}
+
+### Update employee status
+PUT {{baseUrl}}/api/v1/employees/{{employeeId}}/status
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "status": "active"
+}
+
+### Delete employee
+DELETE {{baseUrl}}/api/v1/employees/{{employeeId}}
+Authorization: Bearer {{authToken}}
+
+### Remind onboarding
+POST {{baseUrl}}/api/v1/employees/{{employeeId}}/remind-onboarding
+Authorization: Bearer {{authToken}}

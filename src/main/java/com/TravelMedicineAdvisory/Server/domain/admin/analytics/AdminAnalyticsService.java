@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.TravelMedicineAdvisory.Server.domain.abuseflag.AbuseFlagRepository;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateProfileRepository;
+import com.TravelMedicineAdvisory.Server.domain.affiliate.AffiliateCommissionRepository;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLog;
 import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
@@ -37,13 +39,17 @@ public class AdminAnalyticsService {
     private final SystemSettingRepository systemSettingRepository;
     private final EmployeeRepository employeeRepository;
     private final AbuseFlagRepository abuseFlagRepository;
+    private final AffiliateProfileRepository affiliateProfileRepository;
+    private final AffiliateCommissionRepository affiliateCommissionRepository;
 
     public AdminAnalyticsService(UserRepository userRepository, CompanyRepository companyRepository,
             CreditRepository creditRepository, TravelPlanRepository travelPlanRepository,
             AiRequestLogRepository aiRequestLogRepository, InvoiceRepository invoiceRepository,
             GeneratedPlanRepository generatedPlanRepository,
             SystemSettingRepository systemSettingRepository, EmployeeRepository employeeRepository,
-            AbuseFlagRepository abuseFlagRepository) {
+            AbuseFlagRepository abuseFlagRepository,
+            AffiliateProfileRepository affiliateProfileRepository,
+            AffiliateCommissionRepository affiliateCommissionRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.creditRepository = creditRepository;
@@ -54,6 +60,8 @@ public class AdminAnalyticsService {
         this.systemSettingRepository = systemSettingRepository;
         this.employeeRepository = employeeRepository;
         this.abuseFlagRepository = abuseFlagRepository;
+        this.affiliateProfileRepository = affiliateProfileRepository;
+        this.affiliateCommissionRepository = affiliateCommissionRepository;
     }
 
     private String getBaseCurrency() {
@@ -162,6 +170,14 @@ public class AdminAnalyticsService {
 
         long newUsersThisWeek = userRepository.countCreatedSince(weekStart);
         stats.setNewUsersThisWeek(newUsersThisWeek);
+
+        // Affiliate stats
+        long activeAffiliates = affiliateProfileRepository.countByStatusAndDeletedAtIsNull("active");
+        stats.setTotalActiveAffiliates(activeAffiliates);
+        java.math.BigDecimal affiliatePaid = affiliateProfileRepository.sumTotalPaidOut();
+        stats.setAffiliateCommissionPaid(affiliatePaid != null ? affiliatePaid.doubleValue() : 0.0);
+        java.math.BigDecimal affiliatePending = affiliateProfileRepository.sumPendingCommission();
+        stats.setAffiliateCommissionPending(affiliatePending != null ? affiliatePending.doubleValue() : 0.0);
 
         String health = "healthy";
         if (stats.getUnresolvedAbuseFlags() != null && stats.getUnresolvedAbuseFlags() > 0) {

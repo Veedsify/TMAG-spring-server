@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.domain.companyonboarding;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record CompanyOnboardingSubmitRequest(
         String companyName,
@@ -13,7 +14,9 @@ public record CompanyOnboardingSubmitRequest(
         Integer creditCount,
         String sampleRequest,
         List<TeamMemberRequest> teamMembers,
-        List<PlatformEmployeeRequest> platformEmployees) {
+        List<PlatformEmployeeRequest> platformEmployees,
+        @JsonProperty("affiliate_referral_code")
+        String affiliateReferralCode) {
 
     public record TeamMemberRequest(
             String firstName,

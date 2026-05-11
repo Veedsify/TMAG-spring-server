@@ -1,0 +1,77 @@
+### ============================================================================
+### PAYMENTS (Flutterwave) — /api/v1/payments
+### ============================================================================
+
+### Initiate payment
+POST {{baseUrl}}/api/v1/payments/initiate
+Content-Type: application/json
+
+{
+  "amount": 5000,
+  "currency": "NGN",
+  "customerEmail": "dikethomas@example.com",
+  "customerName": "Dike Thomas",
+  "description": "Credit purchase - 50 credits",
+  "txRef": "{{txRef}}",
+  "customerPhone": "+2348012345678",
+  "redirectUrl": "{{baseUrl}}/api/v1/payments/callback"
+}
+
+### Verify transaction by ID
+GET {{baseUrl}}/api/v1/payments/verify/{{txRef}}
+
+### Verify transaction by reference
+GET {{baseUrl}}/api/v1/payments/verify-by-reference/{{txRef}}
+
+### Refund transaction
+POST {{baseUrl}}/api/v1/payments/refund/{{txRef}}
+
+### Flutterwave webhook handler
+POST {{baseUrl}}/api/v1/payments/webhook/flutterwave
+Content-Type: application/json
+verif-hash: your-webhook-secret-hash
+
+{
+  "event": "charge.completed",
+  "data": {
+    "tx_ref": "{{txRef}}",
+    "flw_ref": "FLW-REF-123",
+    "status": "successful",
+    "amount": 5000
+  }
+}
+
+### Get payment config
+GET {{baseUrl}}/api/v1/payments/config
+
+### Generate transaction reference
+GET {{baseUrl}}/api/v1/payments/generate-reference
+
+
+### ============================================================================
+### CREDIT PURCHASES — /api/v1/credit-purchases
+### ============================================================================
+
+### Initiate credit purchase
+POST {{baseUrl}}/api/v1/credit-purchases/initiate
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "credits": 50,
+  "currency": "NGN"
+}
+
+### Verify purchase
+GET {{baseUrl}}/api/v1/credit-purchases/verify/{{txRef}}?transaction_id=
+
+### Payment callback
+GET {{baseUrl}}/api/v1/credit-purchases/callback?tx_ref={{txRef}}&status=successful
+
+### Purchase history
+GET {{baseUrl}}/api/v1/credit-purchases/history
+Authorization: Bearer {{authToken}}
+
+### Get purchase by txRef
+GET {{baseUrl}}/api/v1/credit-purchases/{{txRef}}
+Authorization: Bearer {{authToken}}

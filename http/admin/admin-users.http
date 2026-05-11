@@ -1,0 +1,36 @@
+### ============================================================================
+### ADMIN → ADMIN USERS — /api/v1/admin/admin-users
+### ============================================================================
+
+### List admin users
+GET {{baseUrl}}/api/v1/admin/admin-users
+Authorization: Bearer {{adminToken}}
+
+### Get admin user by ID
+GET {{baseUrl}}/api/v1/admin/admin-users/{{adminUserId}}
+Authorization: Bearer {{adminToken}}
+
+### Create admin user
+POST {{baseUrl}}/api/v1/admin/admin-users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "newadmin@example.com",
+  "password": "AdminPass123!",
+  "role": "SUPER_ADMIN"
+}
+
+### Update admin user
+PUT {{baseUrl}}/api/v1/admin/admin-users/{{adminUserId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "updatedadmin@example.com",
+  "role": "SUPER_ADMIN"
+}
+
+### Delete admin user
+DELETE {{baseUrl}}/api/v1/admin/admin-users/{{adminUserId}}
+Authorization: Bearer {{adminToken}}

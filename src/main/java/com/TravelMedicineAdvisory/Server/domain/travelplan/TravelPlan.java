@@ -86,6 +86,20 @@ public class TravelPlan extends BaseEntity {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_trip_id")
+    private com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip familyTrip;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_trip_member_id")
+    private com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMember familyTripMember;
+
+    @Column(name = "traveller_display_name")
+    private String travellerDisplayName;
+
+    @Column(name = "traveller_relationship")
+    private String travellerRelationship;
+
     public String getDestination() {
         return destination;
     }
@@ -268,5 +282,37 @@ public class TravelPlan extends BaseEntity {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip getFamilyTrip() {
+        return familyTrip;
+    }
+
+    public void setFamilyTrip(com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip familyTrip) {
+        this.familyTrip = familyTrip;
+    }
+
+    public com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMember getFamilyTripMember() {
+        return familyTripMember;
+    }
+
+    public void setFamilyTripMember(com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMember familyTripMember) {
+        this.familyTripMember = familyTripMember;
+    }
+
+    public String getTravellerDisplayName() {
+        return travellerDisplayName;
+    }
+
+    public void setTravellerDisplayName(String travellerDisplayName) {
+        this.travellerDisplayName = travellerDisplayName;
+    }
+
+    public String getTravellerRelationship() {
+        return travellerRelationship;
+    }
+
+    public void setTravellerRelationship(String travellerRelationship) {
+        this.travellerRelationship = travellerRelationship;
     }
 }

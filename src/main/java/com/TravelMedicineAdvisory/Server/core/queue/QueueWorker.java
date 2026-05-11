@@ -172,6 +172,8 @@ public class QueueWorker {
                     handleEmailJob(msg, "doctor_application_approved");
                 case EMAIL_DOCTOR_INVITATION ->
                     handleEmailJob(msg, "doctor_invitation");
+                case EMAIL_FAMILY_PLAN_WELCOME ->
+                    handleEmailJob(msg, "family_plan_welcome");
             }
             if (msg.getType() == JobType.GENERATE_TRAVEL_PLAN || msg.getType() == JobType.GENERATE_SUMMARY_PDF) {
                 logger.info("{} finished successfully: queueJobId={}", msg.getType(), msg.getId());
@@ -334,6 +336,8 @@ public class QueueWorker {
                 emailTemplates.doctorApplicationApprovedEmail(firstName, vars.getOrDefault("onboardingLink", "#"));
             case "doctor_invitation" ->
                 emailTemplates.doctorInvitationEmail(firstName, vars.getOrDefault("onboardingLink", "#"));
+            case "family_plan_welcome" ->
+                emailTemplates.familyPlanWelcomeEmail(firstName, link);
             default ->
                 emailTemplates.genericEmail(subject, vars.getOrDefault("content", ""));
         };

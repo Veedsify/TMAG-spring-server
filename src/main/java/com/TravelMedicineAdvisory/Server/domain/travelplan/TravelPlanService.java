@@ -22,6 +22,8 @@ import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.doctor.AssignedDoctorDto;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMember;
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
@@ -105,19 +107,56 @@ public class TravelPlanService {
     }
 
     @Transactional(readOnly = true)
+    public TravelPlanResponse findByIdInternal(Long id) {
+        TravelPlan entity = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("TravelPlan not found"));
+        GeneratedPlanPayload generated = generatedPlanRepository.findByTravelPlanId(id)
+                .map(this::toGeneratedPayload)
+                .orElse(null);
+        return toResponse(entity, generated);
+    }
+
+    @Transactional(readOnly = true)
     public TravelPlanPdfExport exportPdfForUser(Long planId, Long currentUserId) {
         TravelPlan plan = repository.findById(planId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Travel plan not found"));
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        if (!isUserPdfAvailable(plan)) {
+        if (!isPlanCompleted(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan PDF is only available after required doctor approval");
+                    "Travel plan PDF is only available when the plan is completed");
         }
-        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
+        GeneratedPlan generated = requireActiveGeneratedPlanForPdf(planId);
         byte[] pdf = travelPlanPdfGenerator.generate(plan, generated);
         return new TravelPlanPdfExport(pdf, slugifyFilename(plan.getDestination()));
+    }
+
+    private GeneratedPlan requireActiveGeneratedPlanForPdf(Long planId) {
+        GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Generated plan is not ready yet, please try again shortly"));
+        if ("failed".equalsIgnoreCase(generated.getStatus())) {
+            String message = StringUtils.hasText(generated.getErrorMessage())
+                    ? "Generated plan failed: " + generated.getErrorMessage()
+                    : "Generated plan failed";
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        if (!"active".equalsIgnoreCase(generated.getStatus()) || !StringUtils.hasText(generated.getPlanJson())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Generated plan is not ready yet, please try again shortly");
+        }
+        try {
+            JsonNode root = objectMapper.readTree(generated.getPlanJson());
+            if (root == null || !root.isObject() || root.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Generated plan contains no renderable data");
+            }
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Generated plan JSON is invalid");
+        }
+        return generated;
     }
 
     @Transactional(readOnly = true)
@@ -127,13 +166,13 @@ public class TravelPlanService {
         if (plan.getUser() == null || !plan.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this plan");
         }
-        if (!isUserPdfAvailable(plan)) {
+        if (!isPlanCompleted(plan)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan summary PDF is only available after required doctor approval");
+                    "Travel plan summary PDF is only available when the plan is completed");
         }
         if (plan.getPlanTier() == null || plan.getPlanTier() == PlanTier.FREE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Travel plan summary PDF is only available for standard and premium plans");
+                    "Travel plan summary PDF is not available for this plan");
         }
         GeneratedPlan generated = generatedPlanRepository.findByTravelPlanId(planId).orElse(null);
         String url = generated != null ? generated.getSummaryPdfUrl() : null;
@@ -156,15 +195,9 @@ public class TravelPlanService {
         return s.length() > 48 ? s.substring(0, 48) : s;
     }
 
-    private boolean isUserPdfAvailable(TravelPlan plan) {
+    private boolean isPlanCompleted(TravelPlan plan) {
         String status = plan.getStatus();
-        if (status == null || !"COMPLETED".equalsIgnoreCase(status)) {
-            return false;
-        }
-        DoctorValidationStatus validationStatus = plan.getDoctorValidationStatus();
-        return validationStatus == null
-                || validationStatus == DoctorValidationStatus.NOT_REQUIRED
-                || validationStatus == DoctorValidationStatus.APPROVED;
+        return status != null && "COMPLETED".equalsIgnoreCase(status);
     }
 
     private boolean canAccessPlan(TravelPlan plan, Long currentUserId) {
@@ -248,6 +281,52 @@ public class TravelPlanService {
         planGenerationService.enqueueGeneration(saved.getId(), user.getId());
 
         return toResponse(saved);
+    }
+
+    @Deprecated
+    @Transactional
+    public TravelPlan createForFamilyMember(FamilyTripMember member, FamilyTrip trip) {
+        TravelPlan plan = new TravelPlan();
+        plan.setUser(trip.getUser());
+        plan.setDestination(trip.getDestination());
+        plan.setCountry(trip.getCountry());
+        plan.setDuration(trip.getDuration());
+        plan.setPurpose(trip.getPurpose());
+        plan.setTripType(trip.getTripType());
+        plan.setTripDetailsJson(trip.getTripDetailsJson());
+        plan.setStatus("QUEUED");
+        plan.setFamilyTrip(trip);
+        plan.setFamilyTripMember(member);
+        plan.setTravellerDisplayName(member.getFirstName() + " " + member.getLastName());
+        plan.setTravellerRelationship(member.getRelationship().name());
+        
+        String tier = resolvePlanTier(trip.getUser());
+        plan.setPlanTier(PlanTier.valueOf(tier));
+        plan.setDoctorValidationStatus(
+                tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+
+        return repository.save(plan);
+    }
+
+    @Transactional
+    public TravelPlan createForFamilyTrip(com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTrip trip) {
+        TravelPlan plan = new TravelPlan();
+        plan.setUser(trip.getUser());
+        plan.setDestination(trip.getDestination());
+        plan.setCountry(trip.getCountry());
+        plan.setDuration(trip.getDuration());
+        plan.setPurpose(trip.getPurpose());
+        plan.setTripType(trip.getTripType());
+        plan.setTripDetailsJson(trip.getTripDetailsJson());
+        plan.setStatus("QUEUED");
+        plan.setFamilyTrip(trip);
+        plan.setFamilyTripMember(null);
+        plan.setTravellerDisplayName(trip.getUser().getFirstName() + " family");
+        String tier = resolvePlanTier(trip.getUser());
+        plan.setPlanTier(PlanTier.valueOf(tier));
+        plan.setDoctorValidationStatus(
+                tier.equalsIgnoreCase(PlanTier.FREE.name()) ? DoctorValidationStatus.NOT_REQUIRED : DoctorValidationStatus.PENDING);
+        return repository.save(plan);
     }
 
     private void persistQuestionnaireResponses(TravelPlanRequest request, TravelPlan travelPlan) {

@@ -1,0 +1,445 @@
+### ============================================================================
+### MISC — Abuse Flags, AI Request Logs, Users CRUD, Company Onboarding, Company Admin
+### ============================================================================
+
+### ─── Users CRUD — /api/v1/users ────────────────────────────
+
+### List users (paginated)
+GET {{baseUrl}}/api/v1/users?page=0&size=20
+Authorization: Bearer {{adminToken}}
+
+### Get user by ID
+GET {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+### Create user
+POST {{baseUrl}}/api/v1/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "first_name": "New",
+  "last_name": "User",
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "TempPass123!",
+  "type": "INDIVIDUAL",
+  "role_id": 2,
+  "billing_currency": "USD"
+}
+
+### Update user
+PUT {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "first_name": "Updated",
+  "last_name": "Name",
+  "username": "updateduser",
+  "email": "updated@example.com",
+  "type": "INDIVIDUAL",
+  "role_id": 2,
+  "billing_currency": "USD"
+}
+
+### Delete user
+DELETE {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+### ─── Abuse Flags — /api/v1/abuseflags ──────────────────────
+
+### List abuse flags (paginated)
+GET {{baseUrl}}/api/v1/abuseflags?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get abuse flag by ID
+GET {{baseUrl}}/api/v1/abuseflags/{{abuseFlagId}}
+Authorization: Bearer {{authToken}}
+
+### Create abuse flag
+POST {{baseUrl}}/api/v1/abuseflags
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "reason": "Suspicious activity: multiple rapid plan generations",
+  "userId": {{userId}},
+  "flaggedByUserId": {{userId}}
+}
+
+### Update abuse flag
+PUT {{baseUrl}}/api/v1/abuseflags/{{abuseFlagId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "reason": "Confirmed abuse: multiple rapid plan generations",
+  "resolved": true
+}
+
+### Delete abuse flag
+DELETE {{baseUrl}}/api/v1/abuseflags/{{abuseFlagId}}
+Authorization: Bearer {{authToken}}
+
+### ─── AI Request Logs — /api/v1/airequestlogs ───────────────
+
+### List AI request logs (paginated)
+GET {{baseUrl}}/api/v1/airequestlogs?page=0&size=20
+Authorization: Bearer {{authToken}}
+
+### Get AI request log by ID
+GET {{baseUrl}}/api/v1/airequestlogs/{{aiRequestLogId}}
+Authorization: Bearer {{authToken}}
+
+### Create AI request log
+POST {{baseUrl}}/api/v1/airequestlogs
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "userId": {{userId}},
+  "planId": {{planId}},
+  "model": "gpt-4",
+  "promptTokens": 500,
+  "completionTokens": 1200,
+  "totalTokens": 1700,
+  "status": "SUCCESS"
+}
+
+### Update AI request log
+PUT {{baseUrl}}/api/v1/airequestlogs/{{aiRequestLogId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "status": "FLAGGED"
+}
+
+### Delete AI request log
+DELETE {{baseUrl}}/api/v1/airequestlogs/{{aiRequestLogId}}
+Authorization: Bearer {{authToken}}
+
+### ─── Company Onboarding (Public) — /api/v1/public/company-onboarding ──
+
+### Submit onboarding request (multipart — requires JSON file + optional CSV)
+POST {{baseUrl}}/api/v1/public/company-onboarding
+Content-Type: multipart/form-data; boundary=co-boundary
+
+--co-boundary
+Content-Disposition: form-data; name="request"; filename="request.json"
+Content-Type: application/json
+
+< ./onboarding-request.json
+--co-boundary
+Content-Disposition: form-data; name="teamMembersCsv"; filename="team.csv"
+Content-Type: text/csv
+
+< ./team.csv
+--co-boundary--
+
+### Initiate payment for onboarding
+POST {{baseUrl}}/api/v1/public/company-onboarding/{{companyOnboardingId}}/pay
+
+### Verify payment for onboarding
+GET {{baseUrl}}/api/v1/public/company-onboarding/verify?tx_ref={{txRef}}&transaction_id=
+
+### Get onboarding status
+GET {{baseUrl}}/api/v1/public/company-onboarding/{{companyOnboardingId}}/status
+
+### Get pricing preview
+GET {{baseUrl}}/api/v1/public/company-onboarding/pricing?credits=100
+
+### Onboarding payment callback (redirect)
+GET {{baseUrl}}/api/v1/public/company-onboarding/callback?tx_ref={{txRef}}&status=successful
+
+### ─── Company Onboarding (Admin) — /api/v1/admin/company-onboarding ──
+
+### List onboarding requests
+GET {{baseUrl}}/api/v1/admin/company-onboarding?status=PENDING
+Authorization: Bearer {{adminToken}}
+
+### Get onboarding request
+GET {{baseUrl}}/api/v1/admin/company-onboarding/{{companyOnboardingId}}
+Authorization: Bearer {{adminToken}}
+
+### Approve company registration
+POST {{baseUrl}}/api/v1/admin/company-onboarding/{{companyOnboardingId}}/approve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "adminEmail": "admin@tmag.com"
+}
+
+### Reject company registration
+POST {{baseUrl}}/api/v1/admin/company-onboarding/{{companyOnboardingId}}/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Insufficient documentation",
+  "adminEmail": "admin@tmag.com"
+}
+
+### ─── Company Admin Auth — /api/v1/company-admin/auth ───────
+
+### Company admin login
+POST {{baseUrl}}/api/v1/company-admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "companyadmin@example.com",
+  "password": "CompanyAdmin123!"
+}
+
+### Company admin logout
+POST {{baseUrl}}/api/v1/company-admin/auth/logout
+Authorization: Bearer {{companyAdminToken}}
+
+### Company admin me
+GET {{baseUrl}}/api/v1/company-admin/auth/me
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin Management — /api/v1/company-admin ───────
+
+### View team members
+GET {{baseUrl}}/api/v1/company-admin/team-members?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### List users
+GET {{baseUrl}}/api/v1/company-admin/users?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Create user
+POST {{baseUrl}}/api/v1/company-admin/users
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "companyId": {{companyId}},
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@company.com",
+  "password": "TempPass123!",
+  "role": "EMPLOYEE",
+  "department": "Engineering",
+  "creditsAllocated": 50
+}
+
+### Update user
+PUT {{baseUrl}}/api/v1/company-admin/users/{{companyUserId}}
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@company.com",
+  "role": "EMPLOYEE",
+  "department": "Engineering",
+  "employeeStatus": "active",
+  "creditsAllocated": 75
+}
+
+### Delete user
+DELETE {{baseUrl}}/api/v1/company-admin/users/{{companyUserId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Restrict user access
+PUT {{baseUrl}}/api/v1/company-admin/users/{{companyUserId}}/restrict-access
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "restricted": true
+}
+
+### Remove employee
+DELETE {{baseUrl}}/api/v1/company-admin/employees/{{employeeId}}?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export company data
+GET {{baseUrl}}/api/v1/company-admin/export/company-data?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Delete company
+DELETE {{baseUrl}}/api/v1/company-admin/companies/{{companyId}}
+Authorization: Bearer {{adminToken}}
+
+### ─── Company Admin Plans — /api/v1/company-admin/plans ─────
+
+### List credit plans
+GET {{baseUrl}}/api/v1/company-admin/plans
+Authorization: Bearer {{companyAdminToken}}
+
+### Get credit plan by ID
+GET {{baseUrl}}/api/v1/company-admin/plans/{{creditPlanId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin API Keys — /api/v1/company-admin/api-keys ──
+
+### List API keys
+GET {{baseUrl}}/api/v1/company-admin/api-keys?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Create API key
+POST {{baseUrl}}/api/v1/company-admin/api-keys
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "name": "Production API Key",
+  "companyId": {{companyId}},
+  "expiresAt": "2026-12-31T23:59:59"
+}
+
+### Revoke API key
+DELETE {{baseUrl}}/api/v1/company-admin/api-keys/{{apiKeyId}}?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin Credits — /api/v1/company-admin/credits ──
+
+### Get company pricing
+GET {{baseUrl}}/api/v1/company-admin/credits/pricing?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Get quote
+POST {{baseUrl}}/api/v1/company-admin/credits/quote?companyId={{companyId}}&credits=100
+Authorization: Bearer {{companyAdminToken}}
+
+### Initiate purchase
+POST {{baseUrl}}/api/v1/company-admin/credits/purchase
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "companyId": {{companyId}},
+  "credits": 100
+}
+
+### Initiate HR billing purchase
+POST {{baseUrl}}/api/v1/company-admin/credits/purchase/hr
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "companyId": {{companyId}},
+  "credits": 200
+}
+
+### Payment callback
+GET {{baseUrl}}/api/v1/company-admin/credits/callback?tx_ref={{txRef}}&status=successful
+
+### Verify purchase
+GET {{baseUrl}}/api/v1/company-admin/credits/verify/{{txRef}}
+
+### Purchase history
+GET {{baseUrl}}/api/v1/company-admin/credits/history?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Get purchase by txRef
+GET {{baseUrl}}/api/v1/company-admin/credits/{{txRef}}
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin Reports — /api/v1/company-admin/reports ──
+
+### Dashboard analytics
+GET {{baseUrl}}/api/v1/company-admin/reports/dashboard/analytics?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Usage report
+GET {{baseUrl}}/api/v1/company-admin/reports/usage?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Usage report CSV
+GET {{baseUrl}}/api/v1/company-admin/reports/usage/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Plan history
+GET {{baseUrl}}/api/v1/company-admin/reports/plans?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Plan history CSV
+GET {{baseUrl}}/api/v1/company-admin/reports/plans/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Compliance report
+GET {{baseUrl}}/api/v1/company-admin/reports/compliance?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Compliance report CSV
+GET {{baseUrl}}/api/v1/company-admin/reports/compliance/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Team report
+GET {{baseUrl}}/api/v1/company-admin/reports/team?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Team report CSV
+GET {{baseUrl}}/api/v1/company-admin/reports/team/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin Settings — /api/v1/company-admin/settings ──
+
+### Get company settings
+GET {{baseUrl}}/api/v1/company-admin/settings?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Update company settings
+PUT {{baseUrl}}/api/v1/company-admin/settings
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+{
+  "companyId": {{companyId}},
+  "settings": {
+    "maxCreditsPerEmployee": {"value": "100", "type": "INTEGER"},
+    "requiresDoctorApproval": {"value": "true", "type": "BOOLEAN"}
+  }
+}
+
+### Update billing currency
+PUT {{baseUrl}}/api/v1/company-admin/settings/billing-currency?companyId={{companyId}}&currency=USD
+Authorization: Bearer {{companyAdminToken}}
+
+### ─── Company Admin Data Export — /api/v1/company-admin/data-export ──
+
+### Export employees (JSON)
+GET {{baseUrl}}/api/v1/company-admin/data-export/employees?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export employees (CSV)
+GET {{baseUrl}}/api/v1/company-admin/data-export/employees/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export plans (JSON)
+GET {{baseUrl}}/api/v1/company-admin/data-export/plans?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export plans (CSV)
+GET {{baseUrl}}/api/v1/company-admin/data-export/plans/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export credit requests (JSON)
+GET {{baseUrl}}/api/v1/company-admin/data-export/requests?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export credit requests (CSV)
+GET {{baseUrl}}/api/v1/company-admin/data-export/requests/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export billing (JSON)
+GET {{baseUrl}}/api/v1/company-admin/data-export/billing?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Export billing (CSV)
+GET {{baseUrl}}/api/v1/company-admin/data-export/billing/csv?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+
+### Send export notification
+POST {{baseUrl}}/api/v1/company-admin/data-export/notify?companyId={{companyId}}
+Authorization: Bearer {{companyAdminToken}}
+Content-Type: application/json
+
+["employees", "plans", "billing"]

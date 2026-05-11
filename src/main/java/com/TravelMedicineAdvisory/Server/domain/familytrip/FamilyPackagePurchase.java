@@ -1,0 +1,283 @@
+package com.TravelMedicineAdvisory.Server.domain.familytrip;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.SQLDelete;
+
+import com.TravelMedicineAdvisory.Server.core.base.BaseEntity;
+import com.TravelMedicineAdvisory.Server.domain.user.User;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "family_package_purchases", indexes = {
+    @Index(name = "idx_family_purchases_user_status", columnList = "user_id, status")
+})
+@SQLDelete(sql = "UPDATE family_package_purchases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+public class FamilyPackagePurchase extends BaseEntity {
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = true)
+  private User user;
+
+  @Column(name = "guest_email")
+  private String guestEmail;
+
+  @Column(name = "guest_name")
+  private String guestName;
+
+  @Column(name = "guest_phone")
+  private String guestPhone;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "package_type", nullable = false)
+  private FamilyPackageType packageType;
+
+  @Column(name = "trips_allowed", nullable = false)
+  private Integer tripsAllowed;
+
+  @Column(name = "trips_used", nullable = false)
+  private Integer tripsUsed = 0;
+
+  @Column(name = "additional_members", nullable = false)
+  private Integer additionalMembers = 0;
+
+  @Column(name = "total_members", nullable = false)
+  private Integer totalMembers = 6;
+
+  @Column(name = "amount_paid_minor", nullable = false)
+  private Long amountPaidMinor;
+
+  @Column(nullable = false)
+  private String currency;
+
+  @Column(name = "payment_provider")
+  private String paymentProvider;
+
+  @Column(name = "payment_reference")
+  private String paymentReference;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private FamilyPackagePurchaseStatus status;
+
+  @Column(name = "expires_at")
+  private LocalDateTime expiresAt;
+
+  @Column(name = "tx_ref", nullable = false, unique = true)
+  private String txRef;
+
+  @Column(name = "flw_ref")
+  private String flwRef;
+
+  @Column(name = "flutterwave_status")
+  private String flutterwaveStatus;
+
+  @Column(name = "failed_reason")
+  private String failedReason;
+
+  @Column(name = "paid_at")
+  private LocalDateTime paidAt;
+
+  @Column(name = "affiliate_referral_code", length = 40)
+  private String affiliateReferralCode;
+
+  @Column(name = "affiliate_discount_rate", precision = 5, scale = 2)
+  private BigDecimal affiliateDiscountRate;
+
+  @Column(name = "affiliate_discount_amount", precision = 10, scale = 2)
+  private BigDecimal affiliateDiscountAmount;
+
+  public User getUser() {
+    return user;
+  }
+
+  public void setUser(User user) {
+    this.user = user;
+  }
+
+  public String getGuestEmail() {
+    return guestEmail;
+  }
+
+  public void setGuestEmail(String guestEmail) {
+    this.guestEmail = guestEmail;
+  }
+
+  public String getGuestName() {
+    return guestName;
+  }
+
+  public void setGuestName(String guestName) {
+    this.guestName = guestName;
+  }
+
+  public String getGuestPhone() {
+    return guestPhone;
+  }
+
+  public void setGuestPhone(String guestPhone) {
+    this.guestPhone = guestPhone;
+  }
+
+  public FamilyPackageType getPackageType() {
+    return packageType;
+  }
+
+  public void setPackageType(FamilyPackageType packageType) {
+    this.packageType = packageType;
+  }
+
+  public Integer getTripsAllowed() {
+    return tripsAllowed;
+  }
+
+  public void setTripsAllowed(Integer tripsAllowed) {
+    this.tripsAllowed = tripsAllowed;
+  }
+
+  public Integer getTripsUsed() {
+    return tripsUsed;
+  }
+
+  public void setTripsUsed(Integer tripsUsed) {
+    this.tripsUsed = tripsUsed;
+  }
+
+  public Integer getAdditionalMembers() {
+    return additionalMembers;
+  }
+
+  public void setAdditionalMembers(Integer additionalMembers) {
+    this.additionalMembers = additionalMembers;
+  }
+
+  public Integer getTotalMembers() {
+    return totalMembers;
+  }
+
+  public void setTotalMembers(Integer totalMembers) {
+    this.totalMembers = totalMembers;
+  }
+
+  public Long getAmountPaidMinor() {
+    return amountPaidMinor;
+  }
+
+  public void setAmountPaidMinor(Long amountPaidMinor) {
+    this.amountPaidMinor = amountPaidMinor;
+  }
+
+  public String getCurrency() {
+    return currency;
+  }
+
+  public void setCurrency(String currency) {
+    this.currency = currency;
+  }
+
+  public String getPaymentProvider() {
+    return paymentProvider;
+  }
+
+  public void setPaymentProvider(String paymentProvider) {
+    this.paymentProvider = paymentProvider;
+  }
+
+  public String getPaymentReference() {
+    return paymentReference;
+  }
+
+  public void setPaymentReference(String paymentReference) {
+    this.paymentReference = paymentReference;
+  }
+
+  public FamilyPackagePurchaseStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(FamilyPackagePurchaseStatus status) {
+    this.status = status;
+  }
+
+  public LocalDateTime getExpiresAt() {
+    return expiresAt;
+  }
+
+  public void setExpiresAt(LocalDateTime expiresAt) {
+    this.expiresAt = expiresAt;
+  }
+
+  public String getTxRef() {
+    return txRef;
+  }
+
+  public void setTxRef(String txRef) {
+    this.txRef = txRef;
+  }
+
+  public String getFlwRef() {
+    return flwRef;
+  }
+
+  public void setFlwRef(String flwRef) {
+    this.flwRef = flwRef;
+  }
+
+  public String getFlutterwaveStatus() {
+    return flutterwaveStatus;
+  }
+
+  public void setFlutterwaveStatus(String flutterwaveStatus) {
+    this.flutterwaveStatus = flutterwaveStatus;
+  }
+
+  public String getFailedReason() {
+    return failedReason;
+  }
+
+  public void setFailedReason(String failedReason) {
+    this.failedReason = failedReason;
+  }
+
+  public LocalDateTime getPaidAt() {
+    return paidAt;
+  }
+
+  public void setPaidAt(LocalDateTime paidAt) {
+    this.paidAt = paidAt;
+  }
+
+  public String getAffiliateReferralCode() {
+    return affiliateReferralCode;
+  }
+
+  public void setAffiliateReferralCode(String affiliateReferralCode) {
+    this.affiliateReferralCode = affiliateReferralCode;
+  }
+
+  public BigDecimal getAffiliateDiscountRate() {
+    return affiliateDiscountRate;
+  }
+
+  public void setAffiliateDiscountRate(BigDecimal affiliateDiscountRate) {
+    this.affiliateDiscountRate = affiliateDiscountRate;
+  }
+
+  public BigDecimal getAffiliateDiscountAmount() {
+    return affiliateDiscountAmount;
+  }
+
+  public void setAffiliateDiscountAmount(BigDecimal affiliateDiscountAmount) {
+    this.affiliateDiscountAmount = affiliateDiscountAmount;
+  }
+}

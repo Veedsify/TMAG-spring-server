@@ -6,5 +6,6 @@ public enum Roles {
     Hr,
     Individual,
     CustomerSupport,
-    Doctor
+    Doctor,
+    Affiliate
 }

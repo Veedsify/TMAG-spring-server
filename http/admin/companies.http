@@ -1,0 +1,62 @@
+### ============================================================================
+### ADMIN → COMPANIES — /api/v1/admin/companies
+### ============================================================================
+
+### List companies
+GET {{baseUrl}}/api/v1/admin/companies
+Authorization: Bearer {{adminToken}}
+
+### Get company by ID
+GET {{baseUrl}}/api/v1/admin/companies/{{companyId}}
+Authorization: Bearer {{adminToken}}
+
+### Create company
+POST {{baseUrl}}/api/v1/admin/companies
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Acme Corp",
+  "industry": "Healthcare",
+  "totalCredits": 1000,
+  "billing_currency": "NGN"
+}
+
+### Get company employees
+GET {{baseUrl}}/api/v1/admin/companies/{{companyId}}/employees
+Authorization: Bearer {{adminToken}}
+
+### Update company
+PUT {{baseUrl}}/api/v1/admin/companies/{{companyId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Acme Corp Updated",
+  "industry": "Pharmaceuticals"
+}
+
+### Freeze company
+POST {{baseUrl}}/api/v1/admin/companies/{{companyId}}/freeze
+Authorization: Bearer {{adminToken}}
+
+### Unfreeze company
+POST {{baseUrl}}/api/v1/admin/companies/{{companyId}}/unfreeze
+Authorization: Bearer {{adminToken}}
+
+### Add credits to company
+POST {{baseUrl}}/api/v1/admin/companies/{{companyId}}/add-credits
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 500
+}
+
+### Upgrade company tier
+POST {{baseUrl}}/api/v1/admin/companies/{{companyId}}/upgrade-tier
+Authorization: Bearer {{adminToken}}
+
+### Delete company
+DELETE {{baseUrl}}/api/v1/admin/companies/{{companyId}}
+Authorization: Bearer {{adminToken}}

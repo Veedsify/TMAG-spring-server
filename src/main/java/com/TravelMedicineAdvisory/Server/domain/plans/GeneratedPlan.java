@@ -8,6 +8,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -38,6 +39,12 @@ public class GeneratedPlan extends BaseEntity {
     private String status;
     private String provider;
     private String modelUsed;
+
+    @Column(name = "system_prompt", nullable = true, length = 1000000)
+    private String systemPrompt;
+
+    @Column(name = "user_prompt", nullable = true, length = 1000000)
+    private String userPrompt;
 
     @Column(name = "tokens_used")
     private Integer tokensUsed;
@@ -152,6 +159,22 @@ public class GeneratedPlan extends BaseEntity {
 
     public void setTokensUsed(Integer tokensUsed) {
         this.tokensUsed = tokensUsed;
+    }
+
+    public String getSystemPrompt() {
+        return systemPrompt;
+    }
+
+    public void setSystemPrompt(String systemPrompt) {
+        this.systemPrompt = systemPrompt;
+    }
+
+    public String getUserPrompt() {
+        return userPrompt;
+    }
+
+    public void setUserPrompt(String userPrompt) {
+        this.userPrompt = userPrompt;
     }
 
     public Integer getPlanGenerationTokensUsed() {
