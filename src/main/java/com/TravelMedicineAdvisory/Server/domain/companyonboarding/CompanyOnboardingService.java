@@ -130,9 +130,10 @@ public class CompanyOnboardingService {
 
         List<User> AdminUser = userRepository.findByRoleName(Roles.SuperAdmin.name());
         if (AdminUser.isEmpty()) {
-            throw new IllegalStateException("No super admin user found. At least one user with role SUPERADMIN is required to receive contact form submissions.");
+            logger.warn("No super admin user found. Defaulting to hardcoded email for notifications.");
+        } else {
+            this.superadminEmail = AdminUser.get(0).getEmail();
         }
-        this.superadminEmail = AdminUser.get(0).getEmail();
     }
 
     public CompanyOnboardingResponse submitOnboarding(CompanyOnboardingSubmitRequest req, MultipartFile teamMembersCsv) {
@@ -382,13 +383,13 @@ public class CompanyOnboardingService {
                     "variables", Map.of(
                             "firstName", "Admin",
                             "content", "<p>A new company registration is pending your approval.</p>"
-                                    + "<p><strong>Company:</strong> " + entity.getCompanyName() + "</p>"
-                                    + "<p><strong>Plan:</strong> " + entity.getSelectedPlanCode() + "</p>"
-                                    + "<p><strong>Credits:</strong> " + (entity.getCreditCount() != null ? entity.getCreditCount() : 0) + "</p>"
-                                    + "<p><strong>Amount Paid:</strong> " + entity.getPaymentAmount() + " " + entity.getPaymentCurrency() + "</p>"
-                                    + "<p><strong>Contact:</strong> " + entity.getContactEmail() + "</p>"
-                                    + "<p><a href=\"" + frontendUrl.replace("localhost:3000", "localhost:3002")
-                                    + "/admin/company-registrations\">Review and Approve</a></p>")));
+                            + "<p><strong>Company:</strong> " + entity.getCompanyName() + "</p>"
+                            + "<p><strong>Plan:</strong> " + entity.getSelectedPlanCode() + "</p>"
+                            + "<p><strong>Credits:</strong> " + (entity.getCreditCount() != null ? entity.getCreditCount() : 0) + "</p>"
+                            + "<p><strong>Amount Paid:</strong> " + entity.getPaymentAmount() + " " + entity.getPaymentCurrency() + "</p>"
+                            + "<p><strong>Contact:</strong> " + entity.getContactEmail() + "</p>"
+                            + "<p><a href=\"" + frontendUrl.replace("localhost:3000", "localhost:3002")
+                            + "/admin/company-registrations\">Review and Approve</a></p>")));
 
             logger.info("Onboarding payment verified: id={}, txRef={}, status=pending_approval",
                     entity.getId(), txRef);
@@ -408,7 +409,6 @@ public class CompanyOnboardingService {
     }
 
     // ============ ADMIN ENDPOINTS ============
-
     public List<CompanyOnboardingResponse> getRequestsByStatus(OnboardingStatus status) {
         List<CompanyOnboardingEntity> entities = status != null
                 ? onboardingRepository.findByStatusOrderByCreatedAtDesc(status)
@@ -458,11 +458,11 @@ public class CompanyOnboardingService {
                 "variables", Map.of(
                         "firstName", "there",
                         "content", "<p>Congratulations! Your company <strong>\"" + entity.getCompanyName()
-                                + "\"</strong> has been approved on TMAG.</p>"
-                                + "<p>Your team members will receive invitation emails shortly.</p>"
-                                + "<p><strong>Plan:</strong> " + entity.getSelectedPlanCode() + "</p>"
-                                + "<p><strong>Credits:</strong> " + credits + " credits</p>"
-                                + "<p>If you have any questions, please contact our support team.</p>")));
+                        + "\"</strong> has been approved on TMAG.</p>"
+                        + "<p>Your team members will receive invitation emails shortly.</p>"
+                        + "<p><strong>Plan:</strong> " + entity.getSelectedPlanCode() + "</p>"
+                        + "<p><strong>Credits:</strong> " + credits + " credits</p>"
+                        + "<p>If you have any questions, please contact our support team.</p>")));
 
         logger.info("Onboarding request approved: id={}, company={}, admin={}",
                 id, entity.getCompanyName(), adminEmail);
@@ -490,10 +490,10 @@ public class CompanyOnboardingService {
                 "variables", Map.of(
                         "firstName", "there",
                         "content", "<p>We regret to inform you that your company registration for <strong>\""
-                                + entity.getCompanyName() + "\"</strong> has not been approved at this time.</p>"
-                                + "<p><strong>Reason:</strong> " + (reason != null ? reason : "No reason provided") + "</p>"
-                                + "<p>If you believe this is an error or would like to reapply, "
-                                + "please contact our support team.</p>")));
+                        + entity.getCompanyName() + "\"</strong> has not been approved at this time.</p>"
+                        + "<p><strong>Reason:</strong> " + (reason != null ? reason : "No reason provided") + "</p>"
+                        + "<p>If you believe this is an error or would like to reapply, "
+                        + "please contact our support team.</p>")));
 
         logger.info("Onboarding request rejected: id={}, company={}, admin={}, reason={}",
                 id, entity.getCompanyName(), adminEmail, reason);
@@ -502,7 +502,6 @@ public class CompanyOnboardingService {
     }
 
     // ============ PRIVATE METHODS ============
-
     private Company createCompanyFromRequest(CompanyOnboardingEntity entity) {
         String companyCode = String.format("TMA-%s", randomNumberGenerator.generateNumber());
 
@@ -746,7 +745,8 @@ public class CompanyOnboardingService {
 
     private List<TeamMemberRequest> parseTeamMembers(String json) {
         try {
-            return objectMapper.readValue(json, new TypeReference<List<TeamMemberRequest>>() {});
+            return objectMapper.readValue(json, new TypeReference<List<TeamMemberRequest>>() {
+            });
         } catch (JsonProcessingException e) {
             logger.error("Failed to parse team members JSON: {}", e.getMessage());
             return new ArrayList<>();
@@ -754,9 +754,12 @@ public class CompanyOnboardingService {
     }
 
     private List<PlatformEmployeeRequest> parsePlatformEmployees(String json) {
-        if (json == null || json.isBlank()) return new ArrayList<>();
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<PlatformEmployeeRequest>>() {});
+            return objectMapper.readValue(json, new TypeReference<List<PlatformEmployeeRequest>>() {
+            });
         } catch (JsonProcessingException e) {
             logger.error("Failed to parse platform employees JSON: {}", e.getMessage());
             return new ArrayList<>();
@@ -764,11 +767,15 @@ public class CompanyOnboardingService {
     }
 
     private List<TeamMemberRequest> normalizeTeamMembers(List<TeamMemberRequest> teamMembers) {
-        if (teamMembers == null) return new ArrayList<>();
+        if (teamMembers == null) {
+            return new ArrayList<>();
+        }
 
         List<TeamMemberRequest> normalized = new ArrayList<>();
         for (TeamMemberRequest member : teamMembers) {
-            if (member == null) continue;
+            if (member == null) {
+                continue;
+            }
             String firstName = member.firstName() != null ? member.firstName().trim() : "";
             String lastName = member.lastName() != null ? member.lastName().trim() : "";
             String email = member.email() != null ? member.email().trim().toLowerCase() : "";
@@ -827,8 +834,8 @@ public class CompanyOnboardingService {
                 entity.getPaymentStatus() != null ? entity.getPaymentStatus().name().toLowerCase() : "pending",
                 entity.getPaymentAmount(),
                 entity.getPaymentAmount() != null && entity.getAffiliateDiscountAmount() != null
-                        ? entity.getPaymentAmount().add(entity.getAffiliateDiscountAmount())
-                        : entity.getPaymentAmount(),
+                ? entity.getPaymentAmount().add(entity.getAffiliateDiscountAmount())
+                : entity.getPaymentAmount(),
                 entity.getAffiliateDiscountAmount(),
                 entity.getPaymentCurrency(),
                 entity.getStatus() != null ? entity.getStatus().name().toLowerCase() : "pending_payment",
