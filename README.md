@@ -120,14 +120,16 @@ Use `spring-server/.env` for local configuration. The file is loaded by `spring-
 
 | Variable | Purpose |
 | --- | --- |
-| `APP_STORAGE_PROVIDER` | Storage provider, usually `local`, `s3`, or compatible object storage. |
+| `APP_STORAGE_PROVIDER` | Storage provider: `local`, `gcs`, `s3`, or `r2`. |
 | `APP_STORAGE_PATH` | Local upload path. |
 | `APP_STORAGE_BASE_URL` | Public base URL for uploaded files. |
 | `APP_STORAGE_MAX_SIZE` | Maximum upload size in bytes. |
 | `APP_STORAGE_MAX_FILE_SIZE` | Spring multipart file limit. |
 | `APP_STORAGE_MAX_REQUEST_SIZE` | Spring multipart request limit. |
 | `APP_STORAGE_GCS_BUCKET` / `APP_STORAGE_GCS_PROJECT_ID` | Google Cloud Storage settings. |
-| `APP_STORAGE_S3_BUCKET`, `APP_STORAGE_S3_REGION`, `APP_STORAGE_S3_ACCESS_KEY`, `APP_STORAGE_S3_SECRET_KEY`, `APP_STORAGE_S3_ENDPOINT` | S3, R2, or MinIO-compatible storage settings. |
+| `APP_STORAGE_R2_ACCOUNT_ID`, `APP_STORAGE_R2_BUCKET`, `APP_STORAGE_R2_ACCESS_KEY`, `APP_STORAGE_R2_SECRET_KEY` | Cloudflare R2 settings used when `APP_STORAGE_PROVIDER=r2`. The R2 token must have Object Read & Write permission for the bucket. |
+| `APP_STORAGE_R2_PUBLIC_URL` | Optional public base URL for R2 objects, such as `https://pub-xxxx.r2.dev` or a custom domain. |
+| `APP_STORAGE_S3_BUCKET`, `APP_STORAGE_S3_REGION`, `APP_STORAGE_S3_ACCESS_KEY`, `APP_STORAGE_S3_SECRET_KEY`, `APP_STORAGE_S3_ENDPOINT` | AWS S3 or MinIO-compatible storage settings used when `APP_STORAGE_PROVIDER=s3`. |
 
 ### Cache and queues
 
