@@ -118,8 +118,8 @@ public class FamilyPackagePurchaseService {
         int tripsAllowed = 1;
         int additionalMembers = Math.max(0, request.additionalMembers());
 
-        BillingCurrency currency = request.currency() != null ? request.currency() :
-                (user != null && user.getBillingCurrency() != null ? user.getBillingCurrency() : BillingCurrency.USD);
+        BillingCurrency currency = request.currency() != null ? request.currency()
+                : (user != null && user.getBillingCurrency() != null ? user.getBillingCurrency() : BillingCurrency.USD);
         BigDecimal basePriceMinor;
         BigDecimal additionalMemberPriceMinor;
         String currencySymbol = currency == BillingCurrency.NGN ? "₦" : "$";
@@ -137,9 +137,11 @@ public class FamilyPackagePurchaseService {
 
         // Resolve affiliate discount
         var affiliateDiscount = affiliateService.resolveDiscountForUser(user, request.affiliateReferralCode());
-        BigDecimal discountRate = affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::rate).orElse(BigDecimal.ZERO);
+        BigDecimal discountRate = affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::rate)
+                .orElse(BigDecimal.ZERO);
         BigDecimal discountAmount = discountRate.compareTo(BigDecimal.ZERO) > 0
-                ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP).setScale(2, java.math.RoundingMode.HALF_UP)
+                ? baseAmount.multiply(discountRate).divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                        .setScale(2, java.math.RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
         BigDecimal priceMinor = baseAmount.subtract(discountAmount);
 
@@ -158,7 +160,8 @@ public class FamilyPackagePurchaseService {
         purchase.setCurrency(currency.name());
         purchase.setStatus(FamilyPackagePurchaseStatus.PENDING);
         purchase.setTxRef(txRef);
-        purchase.setAffiliateReferralCode(affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::referralCode).orElse(null));
+        purchase.setAffiliateReferralCode(
+                affiliateDiscount.map(AffiliateService.AffiliatePurchaseDiscount::referralCode).orElse(null));
         purchase.setAffiliateDiscountRate(discountRate);
         purchase.setAffiliateDiscountAmount(discountAmount);
 
@@ -170,10 +173,13 @@ public class FamilyPackagePurchaseService {
 
         purchaseRepository.save(purchase);
 
-        logger.info("Initiating family package checkout: txRef={}, packageType={}, baseAmount={}, discountRate={}, discountAmount={}, totalAmount={}, guest={}, additionalMembers={}, totalMembers={}",
-                txRef, packageType, baseAmount, discountRate, discountAmount, priceMinor, userId == null, additionalMembers, totalMembers);
+        logger.info(
+                "Initiating family package checkout: txRef={}, packageType={}, baseAmount={}, discountRate={}, discountAmount={}, totalAmount={}, guest={}, additionalMembers={}, totalMembers={}",
+                txRef, packageType, baseAmount, discountRate, discountAmount, priceMinor, userId == null,
+                additionalMembers, totalMembers);
 
-        String description = "TMAG Family Plan - " + totalMembers + " member" + (totalMembers > 1 ? "s" : "") + ", " + tripsAllowed + " trip";
+        String description = "TMAG Family Plan - " + totalMembers + " member" + (totalMembers > 1 ? "s" : "") + ", "
+                + tripsAllowed + " trip";
 
         FlutterwavePaymentRequest paymentRequest = new FlutterwavePaymentRequest(
                 priceMinor,
@@ -192,7 +198,8 @@ public class FamilyPackagePurchaseService {
         FlutterwavePaymentResponse paymentResponse = flutterwaveService.initiatePayment(paymentRequest);
 
         if (paymentResponse.success() && paymentResponse.paymentLink() != null) {
-            logger.info("Flutterwave payment initiated: txRef={}, paymentLink={}", txRef, paymentResponse.paymentLink());
+            logger.info("Flutterwave payment initiated: txRef={}, paymentLink={}", txRef,
+                    paymentResponse.paymentLink());
             return new CheckoutResult(
                     txRef,
                     paymentResponse.paymentLink(),
@@ -218,7 +225,6 @@ public class FamilyPackagePurchaseService {
     public FamilyPackagePurchaseResponse verifyAndCompletePurchase(String txRef, String transactionId) {
         FamilyPackagePurchase purchase = purchaseRepository.findByTxRef(txRef)
                 .orElseThrow(() -> new NoSuchElementException("Purchase not found with txRef: " + txRef));
-
 
         if (purchase.getStatus() == FamilyPackagePurchaseStatus.ACTIVE) {
             return FamilyPackagePurchaseResponse.from(purchase);
@@ -252,7 +258,8 @@ public class FamilyPackagePurchaseService {
         if (purchase.getUser() == null && purchase.getGuestEmail() != null) {
             User user = findOrCreateUser(purchase.getGuestEmail(), purchase.getGuestName(), purchase.getGuestPhone());
             purchase.setUser(user);
-            logger.info("Linked guest family purchase to user: email={}, userId={}", purchase.getGuestEmail(), user.getId());
+            logger.info("Linked guest family purchase to user: email={}, userId={}", purchase.getGuestEmail(),
+                    user.getId());
         }
 
         purchase.setStatus(FamilyPackagePurchaseStatus.ACTIVE);
@@ -271,7 +278,8 @@ public class FamilyPackagePurchaseService {
         try {
             affiliateService.recordCommissionForFamilyPackagePurchase(purchase);
         } catch (Exception e) {
-            logger.error("Failed to record affiliate commission for family purchase: id={}, error={}", purchase.getId(), e.getMessage(), e);
+            logger.error("Failed to record affiliate commission for family purchase: id={}, error={}", purchase.getId(),
+                    e.getMessage(), e);
         }
 
         return FamilyPackagePurchaseResponse.from(purchase);
@@ -292,9 +300,11 @@ public class FamilyPackagePurchaseService {
         if ("successful".equalsIgnoreCase(status)) {
             // Link guest purchase to user on activation
             if (purchase.getUser() == null && purchase.getGuestEmail() != null) {
-                User user = findOrCreateUser(purchase.getGuestEmail(), purchase.getGuestName(), purchase.getGuestPhone());
+                User user = findOrCreateUser(purchase.getGuestEmail(), purchase.getGuestName(),
+                        purchase.getGuestPhone());
                 purchase.setUser(user);
-                logger.info("Linked guest family purchase to user (webhook): email={}, userId={}", purchase.getGuestEmail(),
+                logger.info("Linked guest family purchase to user (webhook): email={}, userId={}",
+                        purchase.getGuestEmail(),
                         user.getId());
             }
 
@@ -314,7 +324,8 @@ public class FamilyPackagePurchaseService {
             try {
                 affiliateService.recordCommissionForFamilyPackagePurchase(purchase);
             } catch (Exception e) {
-                logger.error("Failed to record affiliate commission for family purchase (webhook): id={}, error={}", purchase.getId(), e.getMessage(), e);
+                logger.error("Failed to record affiliate commission for family purchase (webhook): id={}, error={}",
+                        purchase.getId(), e.getMessage(), e);
             }
 
             return FamilyPackagePurchaseResponse.from(purchase);
@@ -345,8 +356,6 @@ public class FamilyPackagePurchaseService {
                 .toList();
     }
 
-
-
     private User findOrCreateUser(String email, String guestName, String guestPhone) {
         Optional<User> existing = userRepository.findByEmailIgnoreCase(email);
         if (existing.isPresent()) {
@@ -355,7 +364,7 @@ public class FamilyPackagePurchaseService {
 
         String[] nameParts = guestName != null && guestName.contains(" ")
                 ? guestName.split(" ", 2)
-                : new String[]{guestName != null ? guestName : "Guest", ""};
+                : new String[] { guestName != null ? guestName : "Guest", "" };
 
         String username = email.split("@")[0];
         String baseUsername = username;
@@ -384,7 +393,7 @@ public class FamilyPackagePurchaseService {
         user.setType("FAMILY");
         user.setOnboardingStage(5);
         user.setOnboarded(true);
-        user.setVerified(false);
+        user.setVerified(true);
         user.setIsActive(true);
         user.setRole(individualRole.get());
 

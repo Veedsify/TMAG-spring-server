@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -71,6 +72,10 @@ public class FamilyTrip extends BaseEntity {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "travel_plan_id")
+    private com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan travelPlan;
+
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 
@@ -115,4 +120,7 @@ public class FamilyTrip extends BaseEntity {
 
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
+
+    public com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan getTravelPlan() { return travelPlan; }
+    public void setTravelPlan(com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan travelPlan) { this.travelPlan = travelPlan; }
 }

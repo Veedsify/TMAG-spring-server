@@ -15,5 +15,6 @@ public record FamilyTripResponse(
     Integer extraMemberCount,
     Long totalFiatCost,
     String currency,
+    Long familyPlanId,
     List<FamilyTripMemberResponse> members
 ) {}

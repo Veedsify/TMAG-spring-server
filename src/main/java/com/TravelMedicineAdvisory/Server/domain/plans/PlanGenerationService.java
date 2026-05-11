@@ -33,6 +33,7 @@ import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMemberRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -42,6 +43,7 @@ import com.TravelMedicineAdvisory.Server.domain.useronboarding.UserOnboardingRep
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * AI generation pipeline for travel health plans created by end users
@@ -79,6 +81,7 @@ public class PlanGenerationService {
     private final TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator;
     private final StorageService storageService;
     private final TravelPlanDoctorAssignmentRepository assignmentRepository;
+    private final FamilyTripMemberRepository familyTripMemberRepository;
 
     public PlanGenerationService(
             TravelPlanRepository travelPlanRepository,
@@ -97,7 +100,8 @@ public class PlanGenerationService {
             SystemPromptBuilder systemPromptBuilder,
             TravelPlanSummaryPdfGenerator travelPlanSummaryPdfGenerator,
             StorageService storageService,
-            TravelPlanDoctorAssignmentRepository assignmentRepository) {
+            TravelPlanDoctorAssignmentRepository assignmentRepository,
+            FamilyTripMemberRepository familyTripMemberRepository) {
         this.travelPlanRepository = travelPlanRepository;
         this.generatedPlanRepository = generatedPlanRepository;
         this.contextService = contextService;
@@ -115,6 +119,7 @@ public class PlanGenerationService {
         this.travelPlanSummaryPdfGenerator = travelPlanSummaryPdfGenerator;
         this.storageService = storageService;
         this.assignmentRepository = assignmentRepository;
+        this.familyTripMemberRepository = familyTripMemberRepository;
     }
 
     public void enqueueGeneration(Long travelPlanId, Long userId) {
@@ -155,6 +160,12 @@ public class PlanGenerationService {
 
         Instant startedAt = Instant.now();
         AiRequestLog aiLog = buildAiLog(travelPlan);
+
+        // Family trip aggregate plan — dispatch to dedicated handler
+        if (travelPlan.getFamilyTrip() != null && travelPlan.getFamilyTripMember() == null) {
+            processFamilyGeneration(travelPlan, generatedPlan, aiLog, startedAt);
+            return;
+        }
 
         try {
             List<PlanGenerationContext> contexts = contextService.findEnabled();
@@ -853,5 +864,151 @@ public class PlanGenerationService {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private void processFamilyGeneration(TravelPlan travelPlan, GeneratedPlan generatedPlan, AiRequestLog aiLog, Instant startedAt) {
+        Long tripId = travelPlan.getFamilyTrip().getId();
+
+        // Load all member questionnaire data from the aggregate questionnaire
+        TravelPlanQuestionnaire questionnaire = travelPlanQuestionnaireRepository
+                .findByTravelPlan_Id(travelPlan.getId())
+                .orElse(null);
+
+        String membersJson = null;
+        if (questionnaire != null && org.springframework.util.StringUtils.hasText(questionnaire.getResponsesJson())) {
+            try {
+                JsonNode root = objectMapper.readTree(questionnaire.getResponsesJson());
+                if (root.has("members")) {
+                    membersJson = objectMapper.writeValueAsString(root.get("members"));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse family aggregate questionnaire for planId={}", travelPlan.getId(), e);
+            }
+        }
+
+        if (membersJson == null || membersJson.equals("null")) {
+            log.warn("No family member data found for planId={}, aborting generation", travelPlan.getId());
+            generatedPlan.setStatus("failed");
+            generatedPlan.setErrorMessage("No member questionnaire data");
+            generatedPlanRepository.save(generatedPlan);
+            travelPlan.setStatus("FAILED");
+            travelPlanRepository.save(travelPlan);
+            return;
+        }
+
+        List<PlanGenerationContext> contexts = contextService.findEnabled();
+        String systemPrompt = systemPromptBuilder.buildFamily();
+        String userPrompt = buildFamilyUserPrompt(travelPlan, membersJson, contexts);
+
+        AiModelSelection modelSelection = modelForTier(travelPlan.getPlanTier());
+        AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt,
+                modelSelection.provider(), modelSelection.model());
+        JsonNode structuredOutput = parseJson(result.content());
+        structuredOutput = applyFamilyDisplayLabels(structuredOutput, membersJson);
+
+        long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
+
+        generatedPlan.setPlanJson(writeJson(structuredOutput));
+        generatedPlan.setStatus("active");
+        generatedPlan.setProvider(result.provider());
+        generatedPlan.setModelUsed(result.model());
+        generatedPlan.setTokensUsed(result.estimatedTokens());
+        generatedPlan.setPlanGenerationTokensUsed(result.estimatedTokens());
+        generatedPlan.setProcessingTimeMs(elapsedMs);
+        generatedPlan.setErrorMessage(null);
+        generatedPlanRepository.save(generatedPlan);
+
+        travelPlan.setStatus("COMPLETED");
+        travelPlanRepository.save(travelPlan);
+
+        log.info("Family plan generation completed: planId={} tripId={} elapsedMs={}", travelPlan.getId(), tripId, elapsedMs);
+
+        aiLog.setStatus("success");
+        aiLog.setTokensUsed(result.estimatedTokens());
+        aiLog.setProcessingTimeMs(elapsedMs);
+        aiRequestLogRepository.save(aiLog);
+
+        attachSummaryPdfIfEligible(travelPlan, generatedPlan);
+        handlePostGeneration(travelPlan);
+    }
+
+    private JsonNode applyFamilyDisplayLabels(JsonNode structuredOutput, String membersJson) {
+        if (structuredOutput == null || !structuredOutput.isObject()) {
+            return structuredOutput;
+        }
+        try {
+            JsonNode inputMembers = objectMapper.readTree(membersJson);
+            if (!inputMembers.isArray()) {
+                return structuredOutput;
+            }
+            Map<Long, JsonNode> inputByMemberId = new java.util.HashMap<>();
+            for (JsonNode inputMember : inputMembers) {
+                if (inputMember.path("memberId").isNumber()) {
+                    inputByMemberId.put(inputMember.path("memberId").asLong(), inputMember);
+                }
+            }
+
+            JsonNode outputMembers = structuredOutput.path("members");
+            if (!outputMembers.isArray()) {
+                return structuredOutput;
+            }
+            for (JsonNode outputMember : outputMembers) {
+                if (!outputMember.isObject() || !outputMember.path("memberId").isNumber()) {
+                    continue;
+                }
+                JsonNode inputMember = inputByMemberId.get(outputMember.path("memberId").asLong());
+                if (inputMember == null) {
+                    continue;
+                }
+                ObjectNode outputObject = (ObjectNode) outputMember;
+                copyTextField(inputMember, outputObject, "displayLabel", true);
+                copyTextField(inputMember, outputObject, "relationshipToMainApplicant", false);
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to apply family display labels to generated plan JSON", ex);
+        }
+        return structuredOutput;
+    }
+
+    private void copyTextField(JsonNode source, ObjectNode target, String field, boolean overwrite) {
+        String value = source.path(field).asText("");
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        if (overwrite || !StringUtils.hasText(target.path(field).asText(""))) {
+            target.put(field, value);
+        }
+    }
+
+    private String buildFamilyUserPrompt(TravelPlan plan, String membersJson, List<PlanGenerationContext> contexts) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Generate a family travel health plan for this trip.\n\n");
+
+        builder.append("### Trip details (authoritative for destination, country, duration, dates)\n");
+        builder.append("Destination: ").append(nullSafe(plan.getDestination())).append("\n");
+        builder.append("Country: ").append(nullSafe(plan.getCountry())).append("\n");
+        builder.append("Duration Days: ").append(plan.getDuration() != null ? plan.getDuration() : 0).append("\n");
+        builder.append("Purpose: ").append(nullSafe(plan.getPurpose())).append("\n");
+        builder.append("Trip Type: ").append(resolveTripType(plan.getTripType())).append("\n");
+        appendReturnScheduleLines(plan, builder);
+        builder.append("Trip Stops JSON: ").append(extractTripStopsJson(plan)).append("\n\n");
+
+        builder.append("### Family members with individual health questionnaires\n");
+        builder.append("Each entry has: memberId, firstName, lastName, relationship, relationshipToMainApplicant, displayLabel, writingPerspective, ageAtDeparture, responses (health questionnaire).\n");
+        builder.append("The main applicant is the reader of the plan. Write member-specific advice in second person, relative to the main applicant.\n");
+        builder.append("Use each member's displayLabel when introducing or referring to them, e.g. 'Your son Bob should...' or 'For your spouse Sarah...'.\n");
+        builder.append("Do not use detached third-person biography language such as 'Bob is a 15 year old male' or 'the traveller is'.\n");
+        builder.append("Generate a full, personalised medical section for each member in the `members` array.\n");
+        builder.append("Use the memberId value exactly as given — do NOT change it.\n\n");
+        builder.append("Members JSON:\n").append(membersJson).append("\n\n");
+
+        if (!contexts.isEmpty()) {
+            builder.append("### Platform reference materials\n");
+            for (PlanGenerationContext ctx : contexts) {
+                builder.append("- ").append(ctx.getTitle()).append(":\n")
+                        .append(trimContext(ctx.getSynthesizedText())).append("\n\n");
+            }
+        }
+        return builder.toString();
     }
 }

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,8 @@ import com.TravelMedicineAdvisory.Server.domain.user.User;
 import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Service
 @Transactional
@@ -39,6 +42,7 @@ public class FamilyTripService {
     private final UserRepository userRepository;
     private final TravelPlanService travelPlanService;
     private final TravelPlanQuestionnaireRepository questionnaireRepository;
+    private final FamilyTripMemberQuestionnaireRepository memberQuestionnaireRepository;
     private final PlanGenerationService planGenerationService;
     private final FamilyMemberAuthService authService;
     private final ObjectMapper objectMapper;
@@ -49,6 +53,7 @@ public class FamilyTripService {
                              UserRepository userRepository,
                              TravelPlanService travelPlanService,
                              TravelPlanQuestionnaireRepository questionnaireRepository,
+                             FamilyTripMemberQuestionnaireRepository memberQuestionnaireRepository,
                              PlanGenerationService planGenerationService,
                              FamilyMemberAuthService authService,
                              ObjectMapper objectMapper) {
@@ -58,6 +63,7 @@ public class FamilyTripService {
         this.userRepository = userRepository;
         this.travelPlanService = travelPlanService;
         this.questionnaireRepository = questionnaireRepository;
+        this.memberQuestionnaireRepository = memberQuestionnaireRepository;
         this.planGenerationService = planGenerationService;
         this.authService = authService;
         this.objectMapper = objectMapper;
@@ -253,18 +259,11 @@ public class FamilyTripService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        List<FamilyTripMember> members = memberRepository.findByFamilyTripIdAndDeletedAtIsNullOrderBySortOrder(tripId);
-        return members.stream()
-            .filter(m -> m.getTravelPlan() != null)
-            .map(m -> {
-                try {
-                    return travelPlanService.findByIdInternal(m.getTravelPlan().getId());
-                } catch (Exception e) {
-                    return null;
-                }
-            })
-            .filter(p -> p != null)
-            .toList();
+        if (trip.getTravelPlan() != null) {
+            return List.of(travelPlanService.findByIdInternal(trip.getTravelPlan().getId()));
+        }
+
+        return List.of();
     }
 
     @Transactional
@@ -276,30 +275,27 @@ public class FamilyTripService {
         if (trip.getStatus() != FamilyTripStatus.DRAFT && trip.getStatus() != FamilyTripStatus.PAYMENT_REQUIRED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip is not in a submittable state");
         }
-        
+
         List<FamilyTripMember> members = memberRepository.findByFamilyTripIdAndDeletedAtIsNullOrderBySortOrder(tripId);
-        
+
         for (FamilyTripMember m : members) {
             if (!"COMPLETE".equals(m.getQuestionnaireStatus()) && (m.getQuestionnaireResponsesJson() == null || m.getQuestionnaireResponsesJson().isEmpty())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Member " + m.getFirstName() + " has incomplete questionnaire");
             }
         }
-        
+
         User user = trip.getUser();
-        // LocalDate departureDate = extractDepartureDate(trip.getTripDetailsJson());
-        
+
         long spouseCount = members.stream().filter(m -> m.getRelationship() == FamilyMemberRelationship.SPOUSE).count();
         if (spouseCount > 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only 1 spouse allowed");
         }
-        
-        // Handle allowance
+
         FamilyPackagePurchase allowance = findActiveAllowance(userId);
         if (allowance == null) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "No active family package allowance. Please purchase a Family Package.");
         }
-        
-        // Recalculate extra cost based on what the purchase actually covers
+
         int memberCount = members.size();
         int coveredByPurchase = allowance.getTotalMembers();
         int additionalMembers = Math.max(0, memberCount - coveredByPurchase);
@@ -312,40 +308,276 @@ public class FamilyTripService {
                 extraFiatCost = additionalMembers * (25000 * 100L);
             }
         }
-        
+
         if (extraFiatCost > 0) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Additional payment required for extra members beyond your plan. Please complete checkout.");
         }
-        
+
         allowance.setTripsUsed(allowance.getTripsUsed() + 1);
         if (allowance.getTripsUsed() >= allowance.getTripsAllowed()) {
             allowance.setStatus(FamilyPackagePurchaseStatus.EXHAUSTED);
         }
         purchaseRepository.save(allowance);
-        
+
         trip.setFamilyPackagePurchase(allowance);
         trip.setStatus(FamilyTripStatus.QUEUED);
         trip.setSubmittedAt(LocalDateTime.now());
         familyTripRepository.save(trip);
-        
+
+        // ONE plan for the whole family
+        TravelPlan familyPlan = travelPlanService.createForFamilyTrip(trip);
+        trip.setTravelPlan(familyPlan);
+        familyTripRepository.save(trip);
+
+        // Aggregate all member questionnaire data into one JSON array.
+        // Include second-person relationship labels so future AI output reads as advice
+        // to the main applicant, not detached third-person biographies.
+        ArrayNode membersJson = buildFamilyMembersGenerationPayload(members);
+
+        ObjectNode aggregateResponses = objectMapper.createObjectNode();
+        aggregateResponses.put("type", "family");
+        aggregateResponses.set("members", membersJson);
+
+        TravelPlanQuestionnaire questionnaire = new TravelPlanQuestionnaire();
+        questionnaire.setTravelPlan(familyPlan);
+        questionnaire.setUser(user);
+        questionnaire.setSource("family-aggregate");
+        questionnaire.setResponsesJson(aggregateResponses.toString());
+        questionnaireRepository.save(questionnaire);
+
+        // Persist per-member questionnaire records
+        for (FamilyTripMember m : members) {
+            FamilyTripMemberQuestionnaire mq = new FamilyTripMemberQuestionnaire();
+            mq.setFamilyTripMember(m);
+            mq.setTravelPlan(familyPlan);
+            mq.setResponsesJson(m.getQuestionnaireResponsesJson());
+            mq.setSource("family-member");
+            memberQuestionnaireRepository.save(mq);
+        }
+
+        // Generate login codes for all members (skip MAIN_APPLICANT)
         for (FamilyTripMember member : members) {
-            TravelPlan plan = travelPlanService.createForFamilyMember(member, trip);
-            member.setTravelPlan(plan);
-            
-            TravelPlanQuestionnaire questionnaire = new TravelPlanQuestionnaire();
-            questionnaire.setTravelPlan(plan);
-            questionnaire.setUser(user);
-            questionnaire.setSource("family-plan");
-            questionnaire.setResponsesJson(member.getQuestionnaireResponsesJson());
-            questionnaireRepository.save(questionnaire);
-            
+            if (member.getRelationship() == FamilyMemberRelationship.MAIN_APPLICANT) {
+                continue;
+            }
             authService.generateAndSendCode(member);
             memberRepository.save(member);
-            
-            planGenerationService.enqueueGeneration(plan.getId(), user.getId());
         }
-        
+
+        planGenerationService.enqueueGeneration(familyPlan.getId(), user.getId());
+
         return toResponse(trip);
+    }
+
+    private ArrayNode buildFamilyMembersGenerationPayload(List<FamilyTripMember> members) {
+        ArrayNode payload = objectMapper.createArrayNode();
+        for (FamilyTripMember member : members) {
+            JsonNode responses = parseResponsesJson(member.getQuestionnaireResponsesJson());
+            String displayLabel = familyMemberDisplayLabel(member, responses);
+
+            ObjectNode memberNode = payload.addObject();
+            memberNode.put("memberId", member.getId());
+            memberNode.put("firstName", nullSafe(member.getFirstName()));
+            memberNode.put("lastName", nullSafe(member.getLastName()));
+            memberNode.put("fullName", memberFullName(member));
+            memberNode.put("relationship", member.getRelationship() != null ? member.getRelationship().name() : "");
+            memberNode.put("relationshipToMainApplicant", relationshipLabel(member.getRelationship(), responses));
+            memberNode.put("displayLabel", displayLabel);
+            memberNode.put("writingPerspective", "Address this member as '" + displayLabel + "' and write to the main applicant in second person.");
+            memberNode.put("ageAtDeparture", member.getAgeAtDeparture() != null ? member.getAgeAtDeparture() : 0);
+            memberNode.set("responses", responses);
+        }
+        return payload;
+    }
+
+    private JsonNode parseResponsesJson(String responsesJson) {
+        if (responsesJson == null || responsesJson.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+        try {
+            return objectMapper.readTree(responsesJson);
+        } catch (Exception ex) {
+            ObjectNode fallback = objectMapper.createObjectNode();
+            fallback.put("_raw", responsesJson);
+            return fallback;
+        }
+    }
+
+    private String familyMemberDisplayLabel(FamilyTripMember member, JsonNode responses) {
+        String name = memberPreferredName(member);
+        FamilyMemberRelationship relationship = member.getRelationship();
+        if (relationship == null) {
+            return appendName("Your family member", name);
+        }
+        return switch (relationship) {
+            case MAIN_APPLICANT -> name.isBlank() ? "You" : "You, " + name;
+            case SPOUSE -> appendName("Your spouse", name);
+            case CHILD, ADDITIONAL_CHILD -> appendName(childRelationshipLabel(responses), name);
+            case PARENT -> appendName(parentRelationshipLabel(responses), name);
+            case DEPENDENT -> appendName("Your dependent", name);
+            case ADDITIONAL_ADULT -> appendName("Your family member", name);
+        };
+    }
+
+    private String childRelationshipLabel(JsonNode responses) {
+        String gender = inferGender(responses);
+        if ("male".equals(gender)) {
+            return "Your son";
+        }
+        if ("female".equals(gender)) {
+            return "Your daughter";
+        }
+        return "Your child";
+    }
+
+    private String parentRelationshipLabel(JsonNode responses) {
+        String gender = inferGender(responses);
+        if ("male".equals(gender)) {
+            return "Your father";
+        }
+        if ("female".equals(gender)) {
+            return "Your mother";
+        }
+        return "Your parent";
+    }
+
+    private String relationshipLabel(FamilyMemberRelationship relationship, JsonNode responses) {
+        if (relationship == null) {
+            return "family member";
+        }
+        return switch (relationship) {
+            case MAIN_APPLICANT -> "you";
+            case SPOUSE -> "spouse";
+            case CHILD, ADDITIONAL_CHILD -> childRelationshipLabel(responses).replace("Your ", "");
+            case PARENT -> parentRelationshipLabel(responses).replace("Your ", "");
+            case DEPENDENT -> "dependent";
+            case ADDITIONAL_ADULT -> "family member";
+        };
+    }
+
+    private String inferGender(JsonNode responses) {
+        String value = findTextValue(responses, "gender", "sex", "biologicalSex", "biological_sex");
+        if (value == null) {
+            return "";
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.contains("female") || normalized.equals("f") || normalized.contains("woman")) {
+            return "female";
+        }
+        if (normalized.contains("male") || normalized.equals("m") || normalized.contains("man")) {
+            return "male";
+        }
+        return "";
+    }
+
+    private String findTextValue(JsonNode node, String... fieldsToFind) {
+        if (node == null || node.isNull() || node.isMissingNode()) {
+            return null;
+        }
+        if (node.isObject()) {
+            String keyedAnswer = keyedAnswerText(node, fieldsToFind);
+            if (keyedAnswer != null && !keyedAnswer.isBlank()) {
+                return keyedAnswer;
+            }
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                var entry = fields.next();
+                if (matchesField(entry.getKey(), fieldsToFind)) {
+                    String value = readableText(entry.getValue());
+                    if (value != null && !value.isBlank()) {
+                        return value;
+                    }
+                }
+                String nested = findTextValue(entry.getValue(), fieldsToFind);
+                if (nested != null && !nested.isBlank()) {
+                    return nested;
+                }
+            }
+        } else if (node.isArray()) {
+            for (JsonNode child : node) {
+                String nested = findTextValue(child, fieldsToFind);
+                if (nested != null && !nested.isBlank()) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String keyedAnswerText(JsonNode node, String... fieldsToFind) {
+        String key = firstReadableChild(node, "key", "questionKey", "field", "name");
+        if (!matchesField(key, fieldsToFind)) {
+            return null;
+        }
+        return firstReadableChild(node, "value", "answer", "response", "selectedValue", "selected", "label");
+    }
+
+    private String firstReadableChild(JsonNode node, String... fieldNames) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            String value = readableText(node.path(fieldName));
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private boolean matchesField(String candidate, String... fieldsToFind) {
+        if (candidate == null) {
+            return false;
+        }
+        String normalizedCandidate = normalizeFieldName(candidate);
+        for (String field : fieldsToFind) {
+            if (normalizedCandidate.equals(normalizeFieldName(field))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String readableText(JsonNode node) {
+        if (node == null || node.isNull() || node.isMissingNode()) {
+            return null;
+        }
+        if (node.isTextual() || node.isNumber() || node.isBoolean()) {
+            return node.asText();
+        }
+        if (node.isObject()) {
+            String value = findTextValue(node, "value", "label", "text", "answer");
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String normalizeFieldName(String value) {
+        return value == null ? "" : value.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
+    }
+
+    private String appendName(String label, String name) {
+        return name == null || name.isBlank() ? label : label + " " + name;
+    }
+
+    private String memberPreferredName(FamilyTripMember member) {
+        String firstName = member.getFirstName() == null ? "" : member.getFirstName().trim();
+        if (!firstName.isBlank()) {
+            return firstName;
+        }
+        String fullName = memberFullName(member);
+        return fullName.startsWith("Member #") ? "" : fullName;
+    }
+
+    private String memberFullName(FamilyTripMember member) {
+        String fullName = (nullSafe(member.getFirstName()) + " " + nullSafe(member.getLastName())).trim();
+        return fullName.isBlank() ? "Member #" + member.getId() : fullName;
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
     }
     
     public List<FamilyTripResponse> getUserTrips(Long userId) {
@@ -353,6 +585,11 @@ public class FamilyTripService {
             .stream()
             .map(this::toResponse)
             .toList();
+    }
+
+    public org.springframework.data.domain.Page<FamilyTripResponse> getUserTrips(Long userId, org.springframework.data.domain.Pageable pageable) {
+        return familyTripRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+            .map(this::toResponse);
     }
 
     public FamilyTripResponse getById(Long id, Long userId) {
@@ -431,7 +668,9 @@ public class FamilyTripService {
                 m.getTravelPlan() != null ? m.getTravelPlan().getId() : null,
                 m.getLoginCode()
             )).collect(Collectors.toList());
-            
+
+        Long familyPlanId = trip.getTravelPlan() != null ? trip.getTravelPlan().getId() : null;
+
         return new FamilyTripResponse(
             trip.getId(),
             trip.getStatus().name(),
@@ -445,6 +684,7 @@ public class FamilyTripService {
             trip.getExtraMemberCount(),
             trip.getTotalFiatCost(),
             trip.getCurrency(),
+            familyPlanId,
             memberResponses
         );
     }

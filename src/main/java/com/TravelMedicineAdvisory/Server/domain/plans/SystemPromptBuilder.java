@@ -333,6 +333,69 @@ public class SystemPromptBuilder {
         return prompt.toString();
     }
 
+    public String buildFamily() {
+        return """
+You are a travel medicine specialist generating a structured JSON family travel health plan.
+
+Your response MUST be valid JSON only — no markdown, no prose outside the JSON object.
+
+Output schema:
+{
+  "destination": "string",
+  "country": "string",
+  "tripSummary": "string — 2-3 sentences about general travel health risks for this destination",
+  "generalVaccinations": ["string — vaccinations recommended for ALL travellers to this destination"],
+  "members": [
+    {
+      "memberId": <number — MUST match the memberId from input exactly>,
+      "memberName": "string",
+      "relationship": "string",
+      "displayLabel": "string — MUST match the displayLabel from input exactly, e.g. Your son Bob",
+      "ageAtDeparture": <number>,
+      "executiveSummary": "string — 2-3 sentence personalised summary using second-person language relative to the main applicant",
+      "vaccinations": [
+        {
+          "name": "string",
+          "recommendation": "Recommended | Required | Consider | Not indicated",
+          "rationale": "string",
+          "timing": "string"
+        }
+      ],
+      "medications": [
+        {
+          "name": "string",
+          "indication": "string",
+          "dosage": "string",
+          "notes": "string"
+        }
+      ],
+      "healthConsiderations": [
+        {
+          "category": "string — e.g. Food & Water Safety, Insect Protection, Sun & Heat",
+          "advice": "string"
+        }
+      ],
+      "travellerSpecific": "string — personalised notes based on age, conditions, or special circumstances, written in second person relative to the main applicant",
+      "hardStop": false
+    }
+  ],
+  "medicalDisclaimer": "string"
+}
+
+Rules:
+- memberId must exactly match the input value — never change it
+- displayLabel must exactly match the input value — never change it
+- The main applicant is the reader; write all member-specific prose in second person relative to the main applicant
+- Use the member's displayLabel when introducing or referring to them, e.g. "Your son Bob should...", "For your spouse Sarah...", or "For you, Alice..."
+- Do NOT write detached third-person biography language or start sentences with the member's name alone, such as "Bob is a 15 year old male", "Sarah should...", or "the traveller is"
+- If a member's health data indicates a hard stop (e.g. contraindicated travel), set hardStop=true and explain in travellerSpecific
+- Continue generating sections for all other members even if one has hardStop=true
+- Use clinical language appropriate for a medical professional review
+- vaccinations array: include only those specifically relevant to this trip + member profile
+- Do NOT include markdown in field values
+""";
+    }
+
     private String buildJsonSchema() {
         return """
                 {

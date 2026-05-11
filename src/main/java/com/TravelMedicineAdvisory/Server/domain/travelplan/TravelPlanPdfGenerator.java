@@ -107,7 +107,12 @@ public class TravelPlanPdfGenerator {
 
         JsonNode structured = parseStructuredJson(generatedPlan);
         if (structured != null && structured.isObject()) {
-            appendStructuredBody(sb, structured);
+            JsonNode members = structured.path("members");
+            if (members.isArray() && members.size() > 0) {
+                appendFamilyStructuredBody(sb, structured, members);
+            } else {
+                appendStructuredBody(sb, structured);
+            }
             appendMedicalDisclaimer(sb, structured);
         } else {
             appendLegacyBody(sb, plan);
@@ -133,7 +138,12 @@ public class TravelPlanPdfGenerator {
 
         JsonNode structured = parseStructuredJson(generatedPlan);
         if (structured != null && structured.isObject()) {
-            appendSummaryBody(sb, structured);
+            JsonNode members = structured.path("members");
+            if (members.isArray() && members.size() > 0) {
+                appendFamilySummaryBody(sb, structured, members);
+            } else {
+                appendSummaryBody(sb, structured);
+            }
             appendMedicalDisclaimer(sb, structured);
         } else {
             appendLegacyBody(sb, plan);
@@ -408,6 +418,12 @@ public class TravelPlanPdfGenerator {
 
     // ── Structured body ───────────────────────────────────────────────────────
     private void appendSummaryBody(StringBuilder sb, JsonNode root) {
+        JsonNode members = root.path("members");
+        if (members.isArray() && !members.isEmpty()) {
+            appendFamilySummaryBody(sb, root, members);
+            return;
+        }
+
         JsonNode risks = root.path("healthRiskOverview");
         if (risks.isArray() && risks.size() > 0) {
             appendTableStart(sb, "Key health risks", 3);
@@ -518,7 +534,81 @@ public class TravelPlanPdfGenerator {
         sb.append("</table>");
     }
 
+    private void appendFamilySummaryBody(StringBuilder sb, JsonNode root, JsonNode members) {
+        String tripSummary = root.path("tripSummary").asText("");
+        if (StringUtils.hasText(tripSummary)) {
+            appendTableStart(sb, "Trip summary", 1);
+            sb.append("<tr><td class=\"val\">").append(escapeHtml(tripSummary)).append("</td></tr>");
+            sb.append("</table>");
+        }
+
+        appendGeneralVaccinations(sb, root.path("generalVaccinations"));
+
+        for (JsonNode member : members) {
+            String heading = familyMemberSummaryHeading(member);
+            sb.append("<table class=\"sec\" cellspacing=\"0\" cellpadding=\"0\">")
+                    .append("<tr><td class=\"cap\" style=\"background:")
+                    .append(TEAL_DEEP)
+                    .append(";color:#ffffff;\">")
+                    .append(escapeHtml(heading))
+                    .append("</td></tr></table>");
+            appendFamilyMemberSummaryBody(sb, member);
+        }
+    }
+
+    private void appendSingleSummaryBody(StringBuilder sb, JsonNode root) {
+        JsonNode risks = root.path("healthRiskOverview");
+        if (risks.isArray() && risks.size() > 0) {
+            appendTableStart(sb, "Key health risks", 3);
+            sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Level</th><th class=\"h\">Summary</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = risks.elements(); it.hasNext(); rowIdx++) {
+                JsonNode r = it.next();
+                String lvl = r.path("level").asText("\u2014");
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("category").asText("\u2014"))).append("</td>")
+                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">")
+                        .append(escapeHtml(lvl.toUpperCase())).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("summary").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        appendSummaryRecommendations(sb, root.path("vaccinations"), "Vaccination actions", "vaccine", "recommendation", "action");
+        appendMalariaSummary(sb, root.path("malariaPrevention"));
+        appendSummaryRecommendations(sb, root.path("recommendations"), "Priority medical advice", "title", "details", null);
+        appendTextArraySection(sb, root.path("clinicalFlags"), "Clinical flags");
+        appendTextArraySection(sb, root.path("contraindications"), "Contraindications");
+
+        JsonNode afterReturn = root.path("afterReturn");
+        if (afterReturn.isObject() && afterReturnNonEmpty(afterReturn)) {
+            appendTableStart(sb, "After return red flags", 1);
+            if (afterReturn.path("redFlag").isTextual() && StringUtils.hasText(afterReturn.get("redFlag").asText())) {
+                sb.append("<tr><td class=\"val\">").append(escapeHtml(afterReturn.get("redFlag").asText())).append("</td></tr>");
+            }
+            appendBulletSubTable(sb, afterReturn.path("within1Week"), "Within 1 week");
+            appendBulletSubTable(sb, afterReturn.path("within4Weeks"), "Within 4 weeks");
+            sb.append("</table>");
+        }
+
+        JsonNode medicalCare = root.path("medicalCare");
+        if (medicalCare.isObject() && medicalCare.path("emergencyContacts").isArray()
+                && medicalCare.path("emergencyContacts").size() > 0) {
+            appendTableStart(sb, "Emergency contacts", 1);
+            appendBulletSubTable(sb, medicalCare.path("emergencyContacts"), "Contacts");
+            sb.append("</table>");
+        }
+    }
+
     private void appendStructuredBody(StringBuilder sb, JsonNode root) {
+        JsonNode members = root.path("members");
+        if (members.isArray() && !members.isEmpty()) {
+            appendFamilyStructuredBody(sb, root, members);
+            return;
+        }
+
         JsonNode glance = root.path("tripAtGlance");
         if (glance.isObject() && glance.size() > 0) {
             int rows = countGlanceRows(glance);
@@ -993,6 +1083,831 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
+    }
+
+    // ── Family body ───────────────────────────────────────────────────────────
+    private void appendFamilyStructuredBody(StringBuilder sb, JsonNode root, JsonNode members) {
+        String tripSummary = root.path("tripSummary").asText("");
+        if (StringUtils.hasText(tripSummary)) {
+            appendTableStart(sb, "Trip summary", 1);
+            sb.append("<tr><td class=\"val\">").append(escapeHtml(tripSummary)).append("</td></tr>");
+            sb.append("</table>");
+        }
+
+        appendGeneralVaccinations(sb, root.path("generalVaccinations"));
+
+        for (JsonNode member : members) {
+            String heading = familyMemberHeading(member);
+            sb.append("<table class=\"sec\" cellspacing=\"0\" cellpadding=\"0\">")
+                    .append("<tr><td class=\"cap\" style=\"background:")
+                    .append(TEAL_DEEP)
+                    .append(";color:#ffffff;\">")
+                    .append(escapeHtml(heading))
+                    .append("</td></tr></table>");
+            appendFamilyMemberBody(sb, member);
+        }
+    }
+
+    private void appendFamilyMemberSummaryBody(StringBuilder sb, JsonNode member) {
+        if (isFamilyPlanMemberSchema(member)) {
+            appendFamilyMemberSections(sb, member);
+            return;
+        }
+        appendSingleSummaryBody(sb, member);
+    }
+
+    private void appendFamilyMemberBody(StringBuilder sb, JsonNode member) {
+        if (isFamilyPlanMemberSchema(member)) {
+            appendFamilyMemberSections(sb, member);
+            return;
+        }
+        appendSinglePlanBody(sb, member);
+    }
+
+    private void appendFamilyMemberSections(StringBuilder sb, JsonNode member) {
+        boolean wrote = false;
+        wrote |= appendFamilyExecutiveSummary(sb, member);
+        wrote |= appendFamilyHardStop(sb, member);
+        wrote |= appendFamilyVaccinationTable(sb, member.path("vaccinations"));
+        wrote |= appendFamilyMedicationTable(sb, member.path("medications"));
+        wrote |= appendFamilyHealthConsiderations(sb, member.path("healthConsiderations"));
+        wrote |= appendFamilyTravellerSpecific(sb, member);
+        if (!wrote) {
+            appendTableStart(sb, "Member advisory", 1);
+            sb.append("<tr><td class=\"val\">No member-specific advisory details were returned for this traveller.</td></tr>");
+            sb.append("</table>");
+        }
+    }
+
+    private void appendGeneralVaccinations(StringBuilder sb, JsonNode generalVacs) {
+        if (!generalVacs.isArray() || generalVacs.isEmpty()) {
+            return;
+        }
+        StringBuilder rows = new StringBuilder();
+        for (Iterator<JsonNode> it = generalVacs.elements(); it.hasNext();) {
+            JsonNode v = it.next();
+            String line = familyGeneralVaccinationLine(v);
+            if (StringUtils.hasText(line)) {
+                rows.append("<tr><td class=\"bull\">").append(escapeHtml(line)).append("</td></tr>");
+            }
+        }
+        if (rows.isEmpty()) {
+            return;
+        }
+        appendTableStart(sb, "General vaccinations for all travellers", 1);
+        sb.append(rows);
+        sb.append("</table>");
+    }
+
+    private boolean appendFamilyExecutiveSummary(StringBuilder sb, JsonNode member) {
+        String summary = firstText(member, "executiveSummary", "summary", "personalisedSummary");
+        if (!StringUtils.hasText(summary)) {
+            return false;
+        }
+        appendTableStart(sb, "Member summary", 1);
+        sb.append("<tr><td class=\"val\">").append(escapeHtml(summary)).append("</td></tr>");
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean appendFamilyHardStop(StringBuilder sb, JsonNode member) {
+        JsonNode hardStop = member.path("hardStop");
+        boolean triggered = (hardStop.isBoolean() && hardStop.asBoolean()) || hardStop.isObject()
+                || (hardStop.isTextual() && StringUtils.hasText(hardStop.asText()));
+        if (!triggered) {
+            return false;
+        }
+        String details = "This traveller requires medical review before travel.";
+        if (hardStop.isTextual() && StringUtils.hasText(hardStop.asText())) {
+            details = hardStop.asText();
+        } else if (hardStop.isObject()) {
+            String condition = firstText(hardStop, "conditionTriggered", "condition", "title");
+            String reason = firstText(hardStop, "reason", "details", "recommendation");
+            String specialist = firstText(hardStop, "recommendedSpecialist", "specialist");
+            StringJoiner joiner = new StringJoiner("\n");
+            if (StringUtils.hasText(condition)) {
+                joiner.add(condition);
+            }
+            if (StringUtils.hasText(reason)) {
+                joiner.add(reason);
+            }
+            if (StringUtils.hasText(specialist)) {
+                joiner.add("Recommended specialist: " + specialist);
+            }
+            if (joiner.length() > 0) {
+                details = joiner.toString();
+            }
+        } else {
+            String travellerSpecific = firstText(member, "travellerSpecific", "personalisedNotes");
+            if (StringUtils.hasText(travellerSpecific)) {
+                details = travellerSpecific;
+            }
+        }
+        appendTableStart(sb, "Clinical hard stop", 1);
+        sb.append("<tr><td class=\"val\"><div class=\"alert\"><div class=\"alert-t\">Medical review required before travel</div>")
+                .append("<div class=\"alert-b\">").append(escapeHtml(details)).append("</div></div></td></tr>");
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean appendFamilyVaccinationTable(StringBuilder sb, JsonNode vaccinations) {
+        if (!vaccinations.isArray() || vaccinations.isEmpty()) {
+            return false;
+        }
+        StringBuilder rows = new StringBuilder();
+        int rowIdx = 0;
+        for (Iterator<JsonNode> it = vaccinations.elements(); it.hasNext();) {
+            JsonNode v = it.next();
+            String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+            if (v.isTextual()) {
+                String text = v.asText();
+                if (StringUtils.hasText(text)) {
+                    rows.append("<tr").append(alt).append("><td class=\"c\" colspan=\"4\">")
+                            .append(escapeHtml(text)).append("</td></tr>");
+                    rowIdx++;
+                }
+                continue;
+            }
+            String name = firstText(v, "name", "vaccine", "title");
+            String recommendation = firstText(v, "recommendation", "status");
+            String rationale = firstText(v, "rationale", "details");
+            String timing = firstText(v, "timing", "action");
+            if (!StringUtils.hasText(name) && !StringUtils.hasText(recommendation)
+                    && !StringUtils.hasText(rationale) && !StringUtils.hasText(timing)) {
+                continue;
+            }
+            rows.append("<tr").append(alt).append(">")
+                    .append("<td class=\"c\"><strong>").append(escapeHtml(valueOrDash(name))).append("</strong></td>")
+                    .append("<td class=\"c\">").append(escapeHtml(valueOrDash(recommendation))).append("</td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(rationale))).append("</td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(timing))).append("</td>")
+                    .append("</tr>");
+            rowIdx++;
+        }
+        if (rows.isEmpty()) {
+            return false;
+        }
+        appendTableStart(sb, "Vaccinations", 4);
+        sb.append("<tr><th class=\"h\">Vaccine</th><th class=\"h\">Recommendation</th><th class=\"h\">Rationale</th><th class=\"h\">Timing</th></tr>");
+        sb.append(rows);
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean appendFamilyMedicationTable(StringBuilder sb, JsonNode medications) {
+        if (!medications.isArray() || medications.isEmpty()) {
+            return false;
+        }
+        StringBuilder rows = new StringBuilder();
+        int rowIdx = 0;
+        for (Iterator<JsonNode> it = medications.elements(); it.hasNext();) {
+            JsonNode med = it.next();
+            String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+            if (med.isTextual()) {
+                String text = med.asText();
+                if (StringUtils.hasText(text)) {
+                    rows.append("<tr").append(alt).append("><td class=\"c\" colspan=\"4\">")
+                            .append(escapeHtml(text)).append("</td></tr>");
+                    rowIdx++;
+                }
+                continue;
+            }
+            String name = firstText(med, "name", "medication", "medicine");
+            String indication = firstText(med, "indication", "purpose");
+            String dosage = firstText(med, "dosage", "dose");
+            String notes = firstText(med, "notes", "details", "rationale");
+            if (!StringUtils.hasText(name) && !StringUtils.hasText(indication)
+                    && !StringUtils.hasText(dosage) && !StringUtils.hasText(notes)) {
+                continue;
+            }
+            rows.append("<tr").append(alt).append(">")
+                    .append("<td class=\"c\"><strong>").append(escapeHtml(valueOrDash(name))).append("</strong></td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(indication))).append("</td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(dosage))).append("</td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(notes))).append("</td>")
+                    .append("</tr>");
+            rowIdx++;
+        }
+        if (rows.isEmpty()) {
+            return false;
+        }
+        appendTableStart(sb, "Medications", 4);
+        sb.append("<tr><th class=\"h\">Medication</th><th class=\"h\">Indication</th><th class=\"h\">Dosage</th><th class=\"h\">Notes</th></tr>");
+        sb.append(rows);
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean appendFamilyHealthConsiderations(StringBuilder sb, JsonNode considerations) {
+        if (!considerations.isArray() || considerations.isEmpty()) {
+            return false;
+        }
+        StringBuilder rows = new StringBuilder();
+        int rowIdx = 0;
+        for (Iterator<JsonNode> it = considerations.elements(); it.hasNext();) {
+            JsonNode item = it.next();
+            String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+            if (item.isTextual()) {
+                String text = item.asText();
+                if (StringUtils.hasText(text)) {
+                    rows.append("<tr").append(alt).append("><td class=\"c\" colspan=\"2\">")
+                            .append(escapeHtml(text)).append("</td></tr>");
+                    rowIdx++;
+                }
+                continue;
+            }
+            String category = firstText(item, "category", "title", "name");
+            String advice = firstText(item, "advice", "details", "recommendation");
+            if (!StringUtils.hasText(category) && !StringUtils.hasText(advice)) {
+                continue;
+            }
+            rows.append("<tr").append(alt).append(">")
+                    .append("<td class=\"c\" style=\"width:32%\"><strong>").append(escapeHtml(valueOrDash(category))).append("</strong></td>")
+                    .append("<td class=\"c\">").append(escapeHtml(nullSafe(advice))).append("</td>")
+                    .append("</tr>");
+            rowIdx++;
+        }
+        if (rows.isEmpty()) {
+            return false;
+        }
+        appendTableStart(sb, "Health considerations", 2);
+        sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Advice</th></tr>");
+        sb.append(rows);
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean appendFamilyTravellerSpecific(StringBuilder sb, JsonNode member) {
+        String notes = firstText(member, "travellerSpecific", "travelerSpecific", "personalisedNotes", "personalizedNotes");
+        if (!StringUtils.hasText(notes)) {
+            return false;
+        }
+        appendTableStart(sb, "Traveller-specific notes", 1);
+        sb.append("<tr><td class=\"val\">").append(escapeHtml(notes)).append("</td></tr>");
+        sb.append("</table>");
+        return true;
+    }
+
+    private boolean isFamilyPlanMemberSchema(JsonNode member) {
+        if (member == null || !member.isObject()) {
+            return false;
+        }
+        if (member.has("memberName") || member.has("displayLabel") || member.has("executiveSummary") || member.has("medications")
+                || member.has("healthConsiderations") || member.has("travellerSpecific")) {
+            return true;
+        }
+        JsonNode vaccinations = member.path("vaccinations");
+        if (vaccinations.isArray()) {
+            for (JsonNode v : vaccinations) {
+                if (v.isObject() && (v.has("name") || v.has("rationale") || v.has("timing"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String familyMemberHeading(JsonNode member) {
+        String displayLabel = familyMemberDisplayLabel(member);
+        if (StringUtils.hasText(displayLabel)) {
+            return displayLabel;
+        }
+        return "Member: " + familyMemberDisplayName(member);
+    }
+
+    private String familyMemberSummaryHeading(JsonNode member) {
+        String displayLabel = familyMemberDisplayLabel(member);
+        return StringUtils.hasText(displayLabel) ? displayLabel : familyMemberDisplayName(member);
+    }
+
+    private String familyMemberDisplayLabel(JsonNode member) {
+        return firstText(member, "displayLabel", "relationshipDisplayLabel", "secondPersonLabel");
+    }
+
+    private String familyMemberDisplayName(JsonNode member) {
+        String memberName = firstText(member, "memberName", "travellerName", "travelerName", "name");
+        if (StringUtils.hasText(memberName)) {
+            return memberName;
+        }
+        String firstName = firstText(member, "firstName");
+        String lastName = firstText(member, "lastName");
+        String fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+        if (StringUtils.hasText(fullName)) {
+            return fullName;
+        }
+        if (member.path("memberId").isNumber()) {
+            return "Member #" + member.path("memberId").asLong();
+        }
+        return "Member";
+    }
+
+    private String familyGeneralVaccinationLine(JsonNode vaccination) {
+        if (vaccination.isTextual()) {
+            return vaccination.asText();
+        }
+        if (!vaccination.isObject()) {
+            return "";
+        }
+        String label = firstText(vaccination, "vaccine", "name", "title");
+        String status = firstText(vaccination, "status", "recommendation");
+        String timing = firstText(vaccination, "timing", "action");
+        String rationale = firstText(vaccination, "rationale", "details");
+        StringJoiner joiner = new StringJoiner(" — ");
+        if (StringUtils.hasText(label)) {
+            joiner.add(label);
+        }
+        if (StringUtils.hasText(status)) {
+            joiner.add(status);
+        }
+        if (StringUtils.hasText(timing)) {
+            joiner.add(timing);
+        }
+        if (StringUtils.hasText(rationale)) {
+            joiner.add(rationale);
+        }
+        return joiner.toString();
+    }
+
+    private static String firstText(JsonNode node, String... fields) {
+        if (node == null || fields == null) {
+            return null;
+        }
+        for (String field : fields) {
+            JsonNode value = node.path(field);
+            if (value.isTextual()) {
+                String text = value.asText();
+                if (StringUtils.hasText(text)) {
+                    return text;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String valueOrDash(String value) {
+        return StringUtils.hasText(value) ? value : "—";
+    }
+
+    private void appendSinglePlanBody(StringBuilder sb, JsonNode root) {
+        JsonNode glance = root.path("tripAtGlance");
+        if (glance.isObject() && glance.size() > 0) {
+            int rows = countGlanceRows(glance);
+            if (rows > 0) {
+                appendTableStart(sb, "Trip at a glance", 2);
+                int i = 0;
+                i += appendKVRow(sb, "Duration", glance.path("durationDays").isNumber()
+                        ? glance.get("durationDays").asInt() + " days"
+                        : null, i, rows);
+                i += appendKVRow(sb, "Purpose", textOrNull(glance, "purpose"), i, rows);
+                i += appendKVRow(sb, "Travelling", textOrNull(glance, "travelling"), i, rows);
+                i += appendKVRow(sb, "Accommodation", textOrNull(glance, "accommodation"), i, rows);
+                appendKVRow(sb, "Insurance", textOrNull(glance, "insurance"), i, rows);
+                sb.append("</table>");
+            }
+        }
+
+        JsonNode itinerary = root.path("itineraryGuidance");
+        if (itinerary.isObject() && itineraryNonEmpty(itinerary)) {
+            appendTableStart(sb, "Itinerary-specific guidance", 1);
+            if (itinerary.path("tripType").isTextual() && StringUtils.hasText(itinerary.get("tripType").asText())) {
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append("<strong>Trip type:</strong> ")
+                        .append(escapeHtml(itinerary.get("tripType").asText()))
+                        .append("</td></tr>");
+            }
+            if (itinerary.path("summary").isTextual() && StringUtils.hasText(itinerary.get("summary").asText())) {
+                sb.append("<tr><td class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT).append("\">")
+                        .append(escapeHtml(itinerary.get("summary").asText()))
+                        .append("</td></tr>");
+            }
+
+            JsonNode routeAdvice = itinerary.path("routeAdvice");
+            if (routeAdvice.isArray() && routeAdvice.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Route guidance by stop</td></tr>");
+                sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none\">");
+                sb.append("<tr><th class=\"h\">Stop</th><th class=\"h\">Country</th><th class=\"h\">Guidance</th></tr>");
+                int rowIdx = 0;
+                for (Iterator<JsonNode> it = routeAdvice.elements(); it.hasNext(); rowIdx++) {
+                    JsonNode stop = it.next();
+                    String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                    sb.append("<tr").append(alt).append(">")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("stop").asText("—")))
+                            .append("</td>")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("country").asText("—")))
+                            .append("</td>")
+                            .append("<td class=\"c\">").append(escapeHtml(stop.path("guidance").asText("")))
+                            .append("</td>")
+                            .append("</tr>");
+                }
+                sb.append("</table></td></tr>");
+            }
+
+            JsonNode returnGuidance = itinerary.path("returnGuidance");
+            if (returnGuidance.isArray() && returnGuidance.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Return leg guidance</td></tr>");
+                for (Iterator<JsonNode> it = returnGuidance.elements(); it.hasNext();) {
+                    JsonNode line = it.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode risks = root.path("healthRiskOverview");
+        if (risks.isArray() && risks.size() > 0) {
+            appendTableStart(sb, "Health risk overview", 3);
+            sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Level</th><th class=\"h\">Summary</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = risks.elements(); it.hasNext(); rowIdx++) {
+                JsonNode r = it.next();
+                String lvl = r.path("level").asText("—");
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("category").asText("—"))).append("</td>")
+                        .append("<td class=\"c ").append(levelClass(lvl)).append("\">")
+                        .append(escapeHtml(lvl.toUpperCase())).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("summary").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode flight = root.path("flightHealth");
+        if (flight.isObject() && flightNonEmpty(flight)) {
+            appendTableStart(sb, "Flight &amp; journey health", 2);
+            if (flight.path("vteRiskLevel").isTextual() && StringUtils.hasText(flight.get("vteRiskLevel").asText())) {
+                String vteLvl = flight.get("vteRiskLevel").asText();
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
+                        .append("<strong>VTE Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(vteLvl)).append("\">")
+                        .append(escapeHtml(vteLvl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            JsonNode prevention = flight.path("preventionMeasures");
+            if (prevention.isArray() && prevention.size() > 0) {
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Prevention measures</td></tr>");
+                for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
+                    JsonNode line = pit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
+                    }
+                }
+            }
+            if (flight.path("medifClearanceRequired").asBoolean(false)) {
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
+                        .append("<div class=\"alert\"><div class=\"alert-t\">Airline MEDIF clearance required</div>")
+                        .append("<div class=\"alert-b\">Contact your airline to arrange medical clearance before travel.</div></div>")
+                        .append("</td></tr>");
+            }
+            if (flight.path("medicationTimingGuidance").isTextual()
+                    && StringUtils.hasText(flight.get("medicationTimingGuidance").asText())) {
+                appendKVRow(sb, "Medication timing guidance", flight.get("medicationTimingGuidance").asText(), 0, 1);
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode vacs = root.path("vaccinations");
+        if (vacs.isArray() && vacs.size() > 0) {
+            appendTableStart(sb, "Vaccinations", 3);
+            sb.append("<tr><th class=\"h\">Vaccine</th><th class=\"h\">Status</th><th class=\"h\">Guidance</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = vacs.elements(); it.hasNext(); rowIdx++) {
+                JsonNode v = it.next();
+                StringBuilder guide = new StringBuilder();
+                if (v.path("recommendation").isTextual()) {
+                    guide.append(v.get("recommendation").asText());
+                }
+                if (v.path("action").isTextual()) {
+                    if (!guide.isEmpty()) {
+                        guide.append("\n\n");
+                    }
+                    guide.append(v.get("action").asText());
+                }
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\"><strong>").append(escapeHtml(v.path("vaccine").asText("—")))
+                        .append("</strong></td>")
+                        .append("<td class=\"c\">").append(escapeHtml(v.path("status").asText("—"))).append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(guide.toString())).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode malaria = root.path("malariaPrevention");
+        if (malaria.isObject() && malariaNonEmpty(malaria)) {
+            appendTableStart(sb, "Malaria prevention", 3);
+            if (malaria.path("riskLevel").isTextual() && StringUtils.hasText(malaria.get("riskLevel").asText())) {
+                String mrl = malaria.get("riskLevel").asText();
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
+                        .append("<strong>Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(mrl)).append("\">")
+                        .append(escapeHtml(mrl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            if (malaria.path("recommendedAgent").isTextual()
+                    && StringUtils.hasText(malaria.get("recommendedAgent").asText())) {
+                StringBuilder agentInfo = new StringBuilder();
+                agentInfo.append(malaria.get("recommendedAgent").asText());
+                if (malaria.path("rationale").isTextual() && StringUtils.hasText(malaria.get("rationale").asText())) {
+                    agentInfo.append("\n\n").append(malaria.get("rationale").asText());
+                }
+                appendKVRow(sb, "Recommended chemoprophylaxis", agentInfo.toString(), 0, 1);
+            }
+            JsonNode mosquito = malaria.path("mosquitoProtection");
+            if (mosquito.isArray() && mosquito.size() > 0) {
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Mosquito protection measures</td></tr>");
+                for (Iterator<JsonNode> mit = mosquito.elements(); mit.hasNext();) {
+                    JsonNode line = mit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
+                    }
+                }
+            }
+            if (malaria.path("contraindications").isTextual()
+                    && StringUtils.hasText(malaria.get("contraindications").asText())) {
+                appendKVRow(sb, "Contraindications / alternatives", malaria.get("contraindications").asText(), 0, 1);
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode recs = root.path("recommendations");
+        if (recs.isArray() && recs.size() > 0) {
+            appendTableStart(sb, "Medical advice &amp; recommendations", 2);
+            sb.append("<tr><th class=\"h\">Topic</th><th class=\"h\">Details</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = recs.elements(); it.hasNext(); rowIdx++) {
+                JsonNode r = it.next();
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                        .append(escapeHtml(r.path("title").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\">").append(escapeHtml(r.path("details").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode conditions = root.path("medicalConditions");
+        if (conditions.isArray() && conditions.size() > 0) {
+            appendTableStart(sb, "Medical conditions &amp; precautions", 2);
+            sb.append("<tr><th class=\"h\">Condition</th><th class=\"h\">Precautions</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = conditions.elements(); it.hasNext(); rowIdx++) {
+                JsonNode c = it.next();
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\" style=\"width:32%\"><strong>")
+                        .append(escapeHtml(c.path("condition").asText("—"))).append("</strong></td>")
+                        .append("<td class=\"c\">").append(escapeHtml(c.path("precautions").asText(""))).append("</td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode medLog = root.path("medicationLogistics");
+        if (medLog.isObject() && medicationLogisticsNonEmpty(medLog)) {
+            appendTableStart(sb, "Medication logistics", 2);
+            int rows = countMedicationLogisticsRows(medLog);
+            int i = 0;
+            i += appendKVRow(sb, "Packaging", textOrNull(medLog, "packaging"), i, rows);
+            i += appendKVRow(sb, "Supply rule", textOrNull(medLog, "supplyRule"), i, rows);
+            if (medLog.path("destinationLegalityCheck").asBoolean(false)) {
+                i += appendKVRow(sb, "Destination legality verified",
+                        "Yes \u2014 confirm all medications are legal at destination.", i, rows);
+            }
+            if (medLog.path("coldChainRequired").asBoolean(false)) {
+                i += appendKVRow(sb, "Cold chain required",
+                        "Yes \u2014 use insulated pouches (e.g. Frio) and verify refrigeration availability.", i, rows);
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode clinicalFlags = root.path("clinicalFlags");
+        if (clinicalFlags.isArray() && clinicalFlags.size() > 0) {
+            appendTableStart(sb, "Clinical decision flags", 1);
+            for (Iterator<JsonNode> it = clinicalFlags.elements(); it.hasNext();) {
+                JsonNode flag = it.next();
+                if (flag.isTextual()) {
+                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(flag.asText())).append("</td></tr>");
+                }
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode contraindications = root.path("contraindications");
+        if (contraindications.isArray() && contraindications.size() > 0) {
+            appendTableStart(sb, "Contraindications (medications &amp; vaccines)", 1);
+            for (Iterator<JsonNode> it = contraindications.elements(); it.hasNext();) {
+                JsonNode item = it.next();
+                if (item.isTextual()) {
+                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(item.asText())).append("</td></tr>");
+                }
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode referrals = root.path("specialistReferrals");
+        if (referrals.isArray() && referrals.size() > 0) {
+            appendTableStart(sb, "Specialist referrals", 3);
+            sb.append("<tr><th class=\"h\">Condition</th><th class=\"h\">Specialist</th><th class=\"h\">Urgency</th></tr>");
+            int rowIdx = 0;
+            for (Iterator<JsonNode> it = referrals.elements(); it.hasNext(); rowIdx++) {
+                JsonNode ref = it.next();
+                String urgency = ref.path("urgency").asText("\u2014");
+                String urgencyBadge = urgencyBadgeClass(urgency);
+                String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                sb.append("<tr").append(alt).append(">")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("condition").asText("\u2014")))
+                        .append("</td>")
+                        .append("<td class=\"c\">").append(escapeHtml(ref.path("specialist").asText("\u2014")))
+                        .append("</td>")
+                        .append("<td class=\"c\" style=\"text-align:center\"><span class=\"urgency ")
+                        .append(urgencyBadge).append("\">")
+                        .append(escapeHtml(urgency)).append("</span></td>")
+                        .append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode sexualHealth = root.path("sexualHealth");
+        if (sexualHealth.isObject() && sexualHealthNonEmpty(sexualHealth)) {
+            appendTableStart(sb, "Sexual health &amp; risk behaviours", 3);
+            if (sexualHealth.path("riskLevel").isTextual()
+                    && StringUtils.hasText(sexualHealth.get("riskLevel").asText())) {
+                String shl = sexualHealth.get("riskLevel").asText();
+                sb.append("<tr><td colspan=\"3\" class=\"val\" style=\"border-bottom:1px solid ").append(BORDER_LT)
+                        .append("\">")
+                        .append("<strong>Risk Level:</strong> ")
+                        .append("<span class=\"").append(levelClass(shl)).append("\">")
+                        .append(escapeHtml(shl.toUpperCase()))
+                        .append("</span></td></tr>");
+            }
+            JsonNode prevention = sexualHealth.path("preventionAdvice");
+            if (prevention.isArray() && prevention.size() > 0) {
+                sb.append("<tr><td colspan=\"3\" class=\"cap-sub\">Prevention advice</td></tr>");
+                for (Iterator<JsonNode> pit = prevention.elements(); pit.hasNext();) {
+                    JsonNode line = pit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td colspan=\"3\" class=\"bull\">").append(escapeHtml(line.asText()))
+                                .append("</td></tr>");
+                    }
+                }
+            }
+            if (sexualHealth.path("prepPepDiscussion").asBoolean(false)) {
+                appendKVRow(sb, "PrEP/PEP", "PrEP/PEP availability discussed for high-risk destination.", 0, 1);
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode pregnancy = root.path("pregnancyGuidance");
+        if (pregnancy.isObject() && pregnancyNonEmpty(pregnancy)) {
+            appendTableStart(sb, "Pregnancy &amp; reproductive health", 1);
+            if (pregnancy.path("trimesterSpecificAdvice").isTextual()
+                    && StringUtils.hasText(pregnancy.get("trimesterSpecificAdvice").asText())) {
+                appendKVRow(sb, "Trimester guidance", pregnancy.get("trimesterSpecificAdvice").asText(), 0, 1);
+            }
+            if (pregnancy.path("antimalarialSafety").isTextual()
+                    && StringUtils.hasText(pregnancy.get("antimalarialSafety").asText())) {
+                appendKVRow(sb, "Antimalarial safety", pregnancy.get("antimalarialSafety").asText(), 0, 1);
+            }
+            JsonNode liveVaxCx = pregnancy.path("liveVaccineContraindications");
+            if (liveVaxCx.isArray() && liveVaxCx.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Live vaccine contraindications</td></tr>");
+                for (Iterator<JsonNode> lit = liveVaxCx.elements(); lit.hasNext();) {
+                    JsonNode line = lit.next();
+                    if (line.isTextual()) {
+                        sb.append("<tr><td class=\"bull\">").append(escapeHtml(line.asText())).append("</td></tr>");
+                    }
+                }
+            }
+            if (pregnancy.path("airlineRestrictions").isTextual()
+                    && StringUtils.hasText(pregnancy.get("airlineRestrictions").asText())) {
+                appendKVRow(sb, "Airline restrictions", pregnancy.get("airlineRestrictions").asText(), 0, 1);
+            }
+            if (pregnancy.path("contraceptionCounselling").isTextual()
+                    && StringUtils.hasText(pregnancy.get("contraceptionCounselling").asText())) {
+                appendKVRow(sb, "Contraception counselling", pregnancy.get("contraceptionCounselling").asText(), 0, 1);
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode ar = root.path("afterReturn");
+        if (ar.isObject() && afterReturnNonEmpty(ar)) {
+            appendTableStart(sb, "After you return", 1);
+            if (ar.path("redFlag").isTextual() && StringUtils.hasText(ar.get("redFlag").asText())) {
+                sb.append("<tr><td class=\"val\" style=\"border:none;padding:6px 12px 4px\">")
+                        .append("<div class=\"alert\"><div class=\"alert-t\">Red flags \u2014 seek immediate care if you experience</div>")
+                        .append("<div class=\"alert-b\">").append(escapeHtml(ar.get("redFlag").asText()))
+                        .append("</div></div>")
+                        .append("</td></tr>");
+            }
+            appendBulletSubTable(sb, ar.path("within1Week"), "Within 1 week");
+            appendBulletSubTable(sb, ar.path("within4Weeks"), "Within 4 weeks");
+            appendBulletSubTable(sb, ar.path("beyond4Weeks"), "Beyond 4 weeks");
+            sb.append("</table>");
+        }
+
+        JsonNode mc = root.path("medicalCare");
+        if (mc.isObject() && medicalCareNonEmpty(mc)) {
+            appendTableStart(sb, "Medical care &amp; contacts", 1);
+            JsonNode clinics = mc.path("clinics");
+            if (clinics.isArray() && clinics.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Clinics &amp; facilities</td></tr>");
+                sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none\">");
+                sb.append("<tr><th class=\"h\">Name</th><th class=\"h\">Location &amp; notes</th></tr>");
+                int rowIdx = 0;
+                for (Iterator<JsonNode> cit = clinics.elements(); cit.hasNext(); rowIdx++) {
+                    JsonNode c = cit.next();
+                    StringBuilder det = new StringBuilder();
+                    if (c.path("address").isTextual()) {
+                        det.append(c.get("address").asText());
+                    }
+                    String phone = c.path("phone").asText("");
+                    String dist = c.path("distance").asText("");
+                    if (StringUtils.hasText(phone) || StringUtils.hasText(dist)) {
+                        if (!det.isEmpty()) {
+                            det.append("\n");
+                        }
+                        StringJoiner sj = new StringJoiner(" \u00B7 ");
+                        if (StringUtils.hasText(phone)) {
+                            sj.add(phone);
+                        }
+                        if (StringUtils.hasText(dist)) {
+                            sj.add(dist);
+                        }
+                        det.append(sj);
+                    }
+                    if (c.path("notes").isTextual()) {
+                        if (!det.isEmpty()) {
+                            det.append("\n\n");
+                        }
+                        det.append(c.get("notes").asText());
+                    }
+                    String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                    sb.append("<tr").append(alt).append(">")
+                            .append("<td class=\"c\" style=\"width:34%\"><strong>")
+                            .append(escapeHtml(c.path("name").asText("\u2014"))).append("</strong></td>")
+                            .append("<td class=\"c\">").append(escapeHtml(det.toString())).append("</td>")
+                            .append("</tr>");
+                }
+                sb.append("</table></td></tr>");
+            }
+            JsonNode emb = mc.path("embassyContacts");
+            if (emb.isArray() && emb.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Embassy &amp; consular</td></tr>");
+                sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none\">");
+                sb.append("<tr><th class=\"h\">Name</th><th class=\"h\">Details</th></tr>");
+                int rowIdx = 0;
+                for (Iterator<JsonNode> eit = emb.elements(); eit.hasNext(); rowIdx++) {
+                    JsonNode e = eit.next();
+                    String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                    sb.append("<tr").append(alt).append(">")
+                            .append("<td class=\"c\"><strong>").append(escapeHtml(e.path("name").asText("\u2014")))
+                            .append("</strong></td>")
+                            .append("<td class=\"c\">").append(escapeHtml(e.path("details").asText(""))).append("</td>")
+                            .append("</tr>");
+                }
+                sb.append("</table></td></tr>");
+            }
+            JsonNode ec = mc.path("emergencyContacts");
+            if (ec.isArray() && ec.size() > 0) {
+                sb.append("<tr><td class=\"cap-sub\">Emergency numbers</td></tr>");
+                sb.append("<tr><td style=\"padding:0\"><table class=\"sec\" style=\"margin:0;border:none;width:100%\">");
+                sb.append("<tr><th class=\"h\">Label</th><th class=\"h\">Contact</th></tr>");
+                int rowIdx = 0;
+                for (Iterator<JsonNode> xit = ec.elements(); xit.hasNext(); rowIdx++) {
+                    JsonNode x = xit.next();
+                    String alt = (rowIdx % 2 == 1) ? " class=\"alt\"" : "";
+                    sb.append("<tr").append(alt).append(">")
+                            .append("<td class=\"c\">").append(escapeHtml(x.path("label").asText(""))).append("</td>")
+                            .append("<td class=\"c\"><strong>").append(escapeHtml(x.path("value").asText("")))
+                            .append("</strong></td>")
+                            .append("</tr>");
+                }
+                sb.append("</table></td></tr>");
+            }
+            sb.append("</table>");
+        }
+
+        JsonNode steps = root.path("nextSteps");
+        if (steps.isArray() && steps.size() > 0) {
+            appendTableStart(sb, "Next steps", 1);
+            for (Iterator<JsonNode> sit = steps.elements(); sit.hasNext();) {
+                JsonNode s = sit.next();
+                if (s.isTextual()) {
+                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(s.asText())).append("</td></tr>");
+                }
+            }
+            sb.append("</table>");
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
