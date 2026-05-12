@@ -3,6 +3,7 @@ package com.TravelMedicineAdvisory.Server.domain.contact;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 @Service
 public class ContactService {
 
+    Logger logger = org.slf4j.LoggerFactory.getLogger(ContactService.class);
+
     private final ContactRepository repository;
     private final QueueService queueService;
 
@@ -29,9 +32,10 @@ public class ContactService {
         this.queueService = queueService;
         List<User> AdminUser = userRepository.findByRoleName(Roles.SuperAdmin.name());
         if (AdminUser.isEmpty()) {
-            throw new IllegalStateException("No super admin user found. At least one user with role SUPERADMIN is required to receive contact form submissions.");
+            logger.warn("No SuperAdmin user found. Admin email will default to hardcoded value: " + adminEmail);
+        } else {
+            this.adminEmail = AdminUser.get(0).getEmail();
         }
-        this.adminEmail = AdminUser.get(0).getEmail();
     }
 
     @Transactional
