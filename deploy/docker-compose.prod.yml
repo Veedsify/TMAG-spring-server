@@ -29,9 +29,12 @@ services:
       APP_AFFILIATE_APP: ${APP_AFFILIATE_APP}
       APP_SUPPORT_APP: ${APP_SUPPORT_APP}
       APP_HOST: ${APP_HOST}
+      VERTEX_CREDENTIALS_PATH: /app/keys/gcp-service-account.json
+      GOOGLE_APPLICATION_CREDENTIALS: /app/keys/gcp-service-account.json
     volumes:
       - app-storage:/app/storage/upload
       - app-logs:/app/logs
+      - /opt/tmag/keys/project-8762201a-3bf0-45a6-abe-23e994af3ebf.json:/app/keys/gcp-service-account.json:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 30s
