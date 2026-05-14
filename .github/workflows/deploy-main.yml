@@ -78,7 +78,10 @@ jobs:
           PROD_HOST: ${{ secrets.PROD_HOST }}
           PROD_USER: ${{ secrets.PROD_USER }}
         run: |
-          scp deploy/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:/opt/tmag/docker-compose.prod.yml"
+          remote_tmp="$(ssh -o BatchMode=yes "$PROD_USER@$PROD_HOST" 'mktemp /tmp/tmag-compose.XXXXXX.yml')"
+          scp -o BatchMode=yes deploy/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:$remote_tmp"
+          ssh -o BatchMode=yes "$PROD_USER@$PROD_HOST" \
+            "sudo install -D -m 0644 \"$remote_tmp\" /opt/tmag/docker-compose.prod.yml && rm -f \"$remote_tmp\""
 
       - name: Pull & restart spring-server
         env:
