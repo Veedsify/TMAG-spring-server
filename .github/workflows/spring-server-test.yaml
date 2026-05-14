@@ -2,7 +2,7 @@ name: Spring Server Tests
 
 on:
     push:
-        branches: ['feature/**']
+        branches: ['feature/**', 'bugfix/**', 'staging']
         paths:
             - "src/**"
             - "pom.xml"
