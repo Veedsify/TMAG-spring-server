@@ -2,13 +2,13 @@ name: Spring Server Tests
 
 on:
     push:
-        branches: ['feature/**']
+        branches: ['feature/**', 'bugfix/**', 'staging']
         paths:
             - "src/**"
             - "pom.xml"
             - ".github/workflows/spring-server-test.yaml"
     pull_request:
-        branches: [staging]
+        branches: ['staging', 'main']
         paths:
             - "src/**"
             - "pom.xml"
