@@ -1,0 +1,147 @@
+# Staging Docker Compose
+# Env vars are written by deploy-staging.sh from GitHub Secrets.
+# Override image tag at deploy time: TAG=sha-abc1234 docker compose up -d
+#
+# Usage:
+#   TAG=sha-abc1234 docker compose -f docker-compose.staging.yml up -d
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  # ── Frontend apps (nginx-served SPAs) ────────────────────────────────────
+  client:
+    image: ghcr.io/${GHCR_ORG}/tmag-client:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    <<: [*restart, *logging]
+
+  affiliate:
+    image: ghcr.io/${GHCR_ORG}/tmag-affiliate:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "3010:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    <<: [*restart, *logging]
+
+  super-admin:
+    image: ghcr.io/${GHCR_ORG}/tmag-super-admin:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "3001:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    <<: [*restart, *logging]
+
+  admin-dashboard:
+    image: ghcr.io/${GHCR_ORG}/tmag-admin-dashboard:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "3002:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    <<: [*restart, *logging]
+
+  support:
+    image: ghcr.io/${GHCR_ORG}/tmag-support:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "3020:3000"
+    environment:
+      NODE_ENV: production
+      ORIGIN: ${SUPPORT_ORIGIN:-http://localhost:3020}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    <<: [*restart, *logging]
+
+  # ── Spring Boot API ───────────────────────────────────────────────────────
+  spring-server:
+    image: ghcr.io/${GHCR_ORG}/tmag-spring-server:${IMAGE_TAG:-latest-staging}
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      APP_ENV: staging
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
+      APP_SUPER_ADMIN_APP: ${APP_SUPER_ADMIN_APP:-http://localhost:3001}
+      APP_ADMIN_APP: ${APP_ADMIN_APP:-http://localhost:3002}
+      APP_AFFILIATE_APP: ${APP_AFFILIATE_APP:-http://localhost:3010}
+      APP_SUPPORT_APP: ${APP_SUPPORT_APP:-http://localhost:3020}
+      APP_HOST: ${APP_HOST:-http://localhost:8080}
+    volumes:
+      - app-storage:/app/storage/upload
+      - app-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    <<: [*restart, *logging]
+
+  # ── Infrastructure ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: travel-medicine-advisory-staging
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    <<: [*restart, *logging]
+
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    <<: [*restart, *logging]
+
+volumes:
+  pgdata:
+  redisdata:
+  app-storage:
+  app-logs:

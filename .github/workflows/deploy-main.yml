@@ -1,0 +1,132 @@
+name: Deploy — Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production-spring-server
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/tmag-spring-server
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.tag }}
+            type=raw,value=latest
+
+      # Maven layer cache — avoids re-downloading dependencies on every build
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/tmag-spring-server:latest
+          cache-to: type=inline
+
+  deploy:
+    name: Deploy spring-server to production
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PROD_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
+
+      - run: ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy compose file to server
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          scp deploy/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:/opt/tmag/docker-compose.prod.yml"
+
+      - name: Pull & restart spring-server
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+          IMAGE_TAG: ${{ needs.build-push.outputs.tag }}
+          GHCR_ORG: ${{ github.repository_owner }}
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh "$PROD_USER@$PROD_HOST" \
+            IMAGE_TAG="$IMAGE_TAG" \
+            GHCR_ORG="$GHCR_ORG" \
+            GHCR_ACTOR="$GHCR_ACTOR" \
+            GHCR_TOKEN="$GHCR_TOKEN" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+          cd /opt/tmag
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull spring-server
+          IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up -d --no-deps spring-server
+          docker compose -f docker-compose.prod.yml ps spring-server
+          REMOTE
+
+  health-check:
+    name: Health check
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
+
+      - run: ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Check Spring Boot Actuator internally
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          ssh "$PROD_USER@$PROD_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for i in $(seq 1 15); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+              "http://localhost:8080/actuator/health" || echo "000")
+            [[ "$status" == "200" ]] && { echo "OK (HTTP $status)"; exit 0; }
+            echo "Retry $i/15 (HTTP $status)..."; sleep 10
+          done
+          echo "::error::spring-server internal health check failed after 15 retries (2.5 min)"
+          exit 1
+          REMOTE

@@ -1,0 +1,45 @@
+# Production Docker Compose — spring-server only
+# Postgres and Redis are external (managed services); all credentials live in
+# /opt/tmag/.env on the server — this file never touches secrets.
+#
+# Usage (on server, after pull):
+#   IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.prod.yml up -d --no-deps spring-server
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  spring-server:
+    image: ghcr.io/${GHCR_ORG}/tmag-spring-server:${IMAGE_TAG:-latest}
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL}
+      APP_SUPER_ADMIN_APP: ${APP_SUPER_ADMIN_APP}
+      APP_ADMIN_APP: ${APP_ADMIN_APP}
+      APP_AFFILIATE_APP: ${APP_AFFILIATE_APP}
+      APP_SUPPORT_APP: ${APP_SUPPORT_APP}
+      APP_HOST: ${APP_HOST}
+    volumes:
+      - app-storage:/app/storage/upload
+      - app-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    <<: [*restart, *logging]
+
+volumes:
+  app-storage:
+  app-logs:
