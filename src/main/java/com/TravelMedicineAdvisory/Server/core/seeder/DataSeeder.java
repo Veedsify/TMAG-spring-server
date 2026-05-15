@@ -295,6 +295,8 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, individual, permMap, "report", "read");
         addPermissions(assignments, individual, permMap, "notification", "read");
         addPermissions(assignments, individual, permMap, "user_onboarding", "create", "read", "update");
+        addPermissions(assignments, individual, permMap, "invoice", "read", "list");
+        addPermissions(assignments, individual, permMap, "plan_usage_ledger", "read", "list");
 
         // Doctor
         Role doctor = roleMap.get("Doctor");
@@ -309,12 +311,16 @@ public class DataSeeder implements CommandLineRunner {
         addPermissions(assignments, doctor, permMap, "notification", "read", "list");
         addPermissions(assignments, doctor, permMap, "pricing_plan", "read", "list");
         addPermissions(assignments, doctor, permMap, "user_onboarding", "read");
+        addPermissions(assignments, doctor, permMap, "invoice", "read", "list");
+        addPermissions(assignments, doctor, permMap, "plan_usage_ledger", "read", "list");
 
         // Affiliate
         Role affiliate = roleMap.get("Affiliate");
         addPermissions(assignments, affiliate, permMap, "profile", "read", "update");
         addPermissions(assignments, affiliate, permMap, "affiliate", "create", "read", "update", "list");
         addPermissions(assignments, affiliate, permMap, "pricing_plan", "read", "list");
+        addPermissions(assignments, affiliate, permMap, "invoice", "read", "list");
+        addPermissions(assignments, affiliate, permMap, "plan_usage_ledger", "read", "list");
 
         List<RolePermission> newAssignments = assignments.stream()
                 .filter(rp -> rp.getRole() != null && rp.getPermission() != null)
