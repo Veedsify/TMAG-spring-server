@@ -426,7 +426,7 @@ public class TravelPlanPdfGenerator {
 
         JsonNode risks = root.path("healthRiskOverview");
         if (risks.isArray() && risks.size() > 0) {
-            appendTableStart(sb, "Key health risks", 3);
+            appendTableStart(sb, "Key health risks", 4);
             sb.append("<tr><th class=\"h\">Category</th><th class=\"h\">Level</th><th class=\"h\">Summary</th></tr>");
             int rowIdx = 0;
             for (Iterator<JsonNode> it = risks.elements(); it.hasNext(); rowIdx++) {
@@ -446,7 +446,6 @@ public class TravelPlanPdfGenerator {
         appendSummaryRecommendations(sb, root.path("vaccinations"), "Vaccination actions", "vaccine", "recommendation", "action");
         appendMalariaSummary(sb, root.path("malariaPrevention"));
         appendSummaryRecommendations(sb, root.path("recommendations"), "Priority medical advice", "title", "details", null);
-        appendTextArraySection(sb, root.path("clinicalFlags"), "Clinical flags");
         appendTextArraySection(sb, root.path("contraindications"), "Contraindications");
 
         JsonNode afterReturn = root.path("afterReturn");
@@ -579,7 +578,6 @@ public class TravelPlanPdfGenerator {
         appendSummaryRecommendations(sb, root.path("vaccinations"), "Vaccination actions", "vaccine", "recommendation", "action");
         appendMalariaSummary(sb, root.path("malariaPrevention"));
         appendSummaryRecommendations(sb, root.path("recommendations"), "Priority medical advice", "title", "details", null);
-        appendTextArraySection(sb, root.path("clinicalFlags"), "Clinical flags");
         appendTextArraySection(sb, root.path("contraindications"), "Contraindications");
 
         JsonNode afterReturn = root.path("afterReturn");
@@ -856,18 +854,6 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
-        // Clinical Flags
-        JsonNode clinicalFlags = root.path("clinicalFlags");
-        if (clinicalFlags.isArray() && clinicalFlags.size() > 0) {
-            appendTableStart(sb, "Clinical decision flags", 1);
-            for (Iterator<JsonNode> it = clinicalFlags.elements(); it.hasNext();) {
-                JsonNode flag = it.next();
-                if (flag.isTextual()) {
-                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(flag.asText())).append("</td></tr>");
-                }
-            }
-            sb.append("</table>");
-        }
 
         // Contraindications
         JsonNode contraindications = root.path("contraindications");
@@ -1690,17 +1676,6 @@ public class TravelPlanPdfGenerator {
             sb.append("</table>");
         }
 
-        JsonNode clinicalFlags = root.path("clinicalFlags");
-        if (clinicalFlags.isArray() && clinicalFlags.size() > 0) {
-            appendTableStart(sb, "Clinical decision flags", 1);
-            for (Iterator<JsonNode> it = clinicalFlags.elements(); it.hasNext();) {
-                JsonNode flag = it.next();
-                if (flag.isTextual()) {
-                    sb.append("<tr><td class=\"bull\">").append(escapeHtml(flag.asText())).append("</td></tr>");
-                }
-            }
-            sb.append("</table>");
-        }
 
         JsonNode contraindications = root.path("contraindications");
         if (contraindications.isArray() && contraindications.size() > 0) {
@@ -1913,7 +1888,7 @@ public class TravelPlanPdfGenerator {
     // ── Helpers ───────────────────────────────────────────────────────────────
     private void appendTableStart(StringBuilder sb, String title, int colspan) {
         sb.append("<table class=\"sec\" cellspacing=\"0\" cellpadding=\"0\">")
-                .append("<tr><td class=\"cap\" colspan=\"").append(colspan).append("\">")
+                .append("<tr ><td class=\"cap\" colspan=\"").append(colspan).append("\">")
                 .append(title)
                 .append("</td></tr>");
     }
@@ -1926,7 +1901,7 @@ public class TravelPlanPdfGenerator {
             return 0;
         }
         boolean last = (index + 1 >= totalRows);
-        sb.append("<tr").append(last ? " class=\"last\"" : "").append(">")
+        sb.append("<tr").append(last ? " class=\"last\" colspan=\"2\" " : "").append(">")
                 .append("<td class=\"lbl\">").append(escapeHtml(label)).append("</td>")
                 .append("<td class=\"val\">").append(escapeHtml(value)).append("</td>")
                 .append("</tr>");

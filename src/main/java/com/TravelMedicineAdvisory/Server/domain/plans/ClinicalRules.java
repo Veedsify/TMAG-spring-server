@@ -491,4 +491,10 @@ public final class ClinicalRules {
             "Malaria and other chemoprophylaxis (state if not indicated)",
             "Traveller-specific considerations (from health context)"
     );
+
+    public static final String MANDATORY_RULES = """
+        - Do not list hospitals, clinics, or phone numbers. Only include the official emergency number for the destination country if it's classified as high-risk.
+        - Do not include generic travel tips that are not directly relevant to the traveller's specific risks and context.
+        - Remove all unnecessary words, phrases, or sentences or padded characters like - _ that do not add specific value to this traveller's advisory. Be concise and focused on actionable information.
+        """;
 }
