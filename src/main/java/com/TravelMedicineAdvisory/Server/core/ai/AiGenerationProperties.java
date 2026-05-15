@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.ai")
 public class AiGenerationProperties {
 
-    private String provider = "vertex";
+    private String provider = "gemini";
     private String mainProvider = "";
     private String summaryProvider = "";
     private String freeProvider = "";
@@ -16,201 +16,111 @@ public class AiGenerationProperties {
     private String freeModel = "";
     private String standardPremiumModel = "";
     private double temperature = 0.3d;
-    private int maxOutputTokens = 4096;
-    private int summaryMaxOutputTokens = 2048;
+    private int maxOutputTokens = 24576;
+    private int summaryMaxOutputTokens = 4096;
 
     private final Vertex vertex = new Vertex();
-    private final OpenAi openai = new OpenAi();
+    private final Gemini gemini = new Gemini();
     private final Anthropic anthropic = new Anthropic();
 
-    public String getProvider() {
-        return provider;
-    }
+    public String getProvider() { return provider; }
 
-    public void setProvider(String provider) {
-        this.provider = provider;
-    }
+    public void setProvider(String provider) { this.provider = provider; }
 
-    public String getMainProvider() {
-        return mainProvider;
-    }
+    public String getMainProvider() { return mainProvider; }
 
-    public void setMainProvider(String mainProvider) {
-        this.mainProvider = mainProvider;
-    }
+    public void setMainProvider(String mainProvider) { this.mainProvider = mainProvider; }
 
-    public String getSummaryProvider() {
-        return summaryProvider;
-    }
+    public String getSummaryProvider() { return summaryProvider; }
 
-    public void setSummaryProvider(String summaryProvider) {
-        this.summaryProvider = summaryProvider;
-    }
+    public void setSummaryProvider(String summaryProvider) { this.summaryProvider = summaryProvider; }
 
-    public String getFreeProvider() {
-        return freeProvider;
-    }
+    public String getFreeProvider() { return freeProvider; }
 
-    public void setFreeProvider(String freeProvider) {
-        this.freeProvider = freeProvider;
-    }
+    public void setFreeProvider(String freeProvider) { this.freeProvider = freeProvider; }
 
-    public String getStandardPremiumProvider() {
-        return standardPremiumProvider;
-    }
+    public String getStandardPremiumProvider() { return standardPremiumProvider; }
 
-    public void setStandardPremiumProvider(String standardPremiumProvider) {
-        this.standardPremiumProvider = standardPremiumProvider;
-    }
+    public void setStandardPremiumProvider(String standardPremiumProvider) { this.standardPremiumProvider = standardPremiumProvider; }
 
-    public String getDefaultModel() {
-        return defaultModel;
-    }
+    public String getDefaultModel() { return defaultModel; }
 
-    public void setDefaultModel(String defaultModel) {
-        this.defaultModel = defaultModel;
-    }
+    public void setDefaultModel(String defaultModel) { this.defaultModel = defaultModel; }
 
-    public String getMainModel() {
-        return mainModel;
-    }
+    public String getMainModel() { return mainModel; }
 
-    public void setMainModel(String mainModel) {
-        this.mainModel = mainModel;
-    }
+    public void setMainModel(String mainModel) { this.mainModel = mainModel; }
 
-    public String getSummaryModel() {
-        return summaryModel;
-    }
+    public String getSummaryModel() { return summaryModel; }
 
-    public void setSummaryModel(String summaryModel) {
-        this.summaryModel = summaryModel;
-    }
+    public void setSummaryModel(String summaryModel) { this.summaryModel = summaryModel; }
 
-    public String getFreeModel() {
-        return freeModel;
-    }
+    public String getFreeModel() { return freeModel; }
 
-    public void setFreeModel(String freeModel) {
-        this.freeModel = freeModel;
-    }
+    public void setFreeModel(String freeModel) { this.freeModel = freeModel; }
 
-    public String getStandardPremiumModel() {
-        return standardPremiumModel;
-    }
+    public String getStandardPremiumModel() { return standardPremiumModel; }
 
-    public void setStandardPremiumModel(String standardPremiumModel) {
-        this.standardPremiumModel = standardPremiumModel;
-    }
+    public void setStandardPremiumModel(String standardPremiumModel) { this.standardPremiumModel = standardPremiumModel; }
 
-    public double getTemperature() {
-        return temperature;
-    }
+    public double getTemperature() { return temperature; }
 
-    public void setTemperature(double temperature) {
-        this.temperature = temperature;
-    }
+    public void setTemperature(double temperature) { this.temperature = temperature; }
 
-    public int getMaxOutputTokens() {
-        return maxOutputTokens;
-    }
+    public int getMaxOutputTokens() { return maxOutputTokens; }
 
-    public void setMaxOutputTokens(int maxOutputTokens) {
-        this.maxOutputTokens = maxOutputTokens;
-    }
+    public void setMaxOutputTokens(int maxOutputTokens) { this.maxOutputTokens = maxOutputTokens; }
 
-    public int getSummaryMaxOutputTokens() {
-        return summaryMaxOutputTokens;
-    }
+    public int getSummaryMaxOutputTokens() { return summaryMaxOutputTokens; }
 
-    public void setSummaryMaxOutputTokens(int summaryMaxOutputTokens) {
-        this.summaryMaxOutputTokens = summaryMaxOutputTokens;
-    }
+    public void setSummaryMaxOutputTokens(int summaryMaxOutputTokens) { this.summaryMaxOutputTokens = summaryMaxOutputTokens; }
 
-    public Vertex getVertex() {
-        return vertex;
-    }
+    public Vertex getVertex() { return vertex; }
 
-    public OpenAi getOpenai() {
-        return openai;
-    }
+    public Gemini getGemini() { return gemini; }
 
-    public Anthropic getAnthropic() {
-        return anthropic;
-    }
+    public Anthropic getAnthropic() { return anthropic; }
 
     public static class Vertex {
         private String projectId = "";
         private String location = "us-central1";
         private String model = "gemini-2.5-pro";
-        /**
-         * Absolute or relative path to a service account JSON key. If empty,
-         * {@code GOOGLE_APPLICATION_CREDENTIALS}
-         * is tried, then Application Default Credentials.
-         */
+        /** Absolute or relative path to a service account JSON key. */
         private String credentialsPath = "";
 
-        public String getProjectId() {
-            return projectId;
-        }
+        public String getProjectId() { return projectId; }
 
-        public void setProjectId(String projectId) {
-            this.projectId = projectId;
-        }
+        public void setProjectId(String projectId) { this.projectId = projectId; }
 
-        public String getLocation() {
-            return location;
-        }
+        public String getLocation() { return location; }
 
-        public void setLocation(String location) {
-            this.location = location;
-        }
+        public void setLocation(String location) { this.location = location; }
 
-        public String getModel() {
-            return model;
-        }
+        public String getModel() { return model; }
 
-        public void setModel(String model) {
-            this.model = model;
-        }
+        public void setModel(String model) { this.model = model; }
 
-        public String getCredentialsPath() {
-            return credentialsPath;
-        }
+        public String getCredentialsPath() { return credentialsPath; }
 
-        public void setCredentialsPath(String credentialsPath) {
-            this.credentialsPath = credentialsPath;
-        }
+        public void setCredentialsPath(String credentialsPath) { this.credentialsPath = credentialsPath; }
     }
 
-    public static class OpenAi {
+    public static class Gemini {
         private String apiKey = "";
-        private String model = "gpt-4.1";
-        private String baseUrl = "https://api.openai.com/v1";
+        private String model = "gemini-2.5-pro";
+        private String baseUrl = "";
 
-        public String getApiKey() {
-            return apiKey;
-        }
+        public String getApiKey() { return apiKey; }
 
-        public void setApiKey(String apiKey) {
-            this.apiKey = apiKey;
-        }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
 
-        public String getModel() {
-            return model;
-        }
+        public String getModel() { return model; }
 
-        public void setModel(String model) {
-            this.model = model;
-        }
+        public void setModel(String model) { this.model = model; }
 
-        public String getBaseUrl() {
-            return baseUrl;
-        }
+        public String getBaseUrl() { return baseUrl; }
 
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
     }
 
     public static class Anthropic {
@@ -218,28 +128,16 @@ public class AiGenerationProperties {
         private String model = "claude-sonnet-4-6";
         private String baseUrl = "https://api.anthropic.com/v1";
 
-        public String getApiKey() {
-            return apiKey;
-        }
+        public String getApiKey() { return apiKey; }
 
-        public void setApiKey(String apiKey) {
-            this.apiKey = apiKey;
-        }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
 
-        public String getModel() {
-            return model;
-        }
+        public String getModel() { return model; }
 
-        public void setModel(String model) {
-            this.model = model;
-        }
+        public void setModel(String model) { this.model = model; }
 
-        public String getBaseUrl() {
-            return baseUrl;
-        }
+        public String getBaseUrl() { return baseUrl; }
 
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
     }
 }

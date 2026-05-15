@@ -67,7 +67,6 @@ public class SystemPromptBuilder {
 
             5. Pre-computed clinical context above provides:
                - overallRiskLevel: Use this value in your JSON output
-               - clinicalFlags: Copy the "Triggered Decision Trees" list to this field
                - contraindications: Copy the "Active Contraindications" list to this field
                - specialistReferrals: Copy the "Specialist Referrals Required" list to this field
                - hardStop: If "HARD STOP TRIGGERED" appears above, populate this object; otherwise null
@@ -281,8 +280,8 @@ public class SystemPromptBuilder {
         prompt.append("Advisory Section Order (text advisory — Part 7 of original system-prompt.txt):\n");
         prompt.append(ClinicalRules.OUTPUT_FORMAT).append("\n\n");
 
-        prompt.append("Return ONLY valid JSON matching this exact schema:\n");
-        prompt.append(buildJsonSchema()).append("\n\n");
+        prompt.append("Output is constrained to a structured JSON schema by the provider API.\n");
+        prompt.append("Return exactly one top-level JSON object and no text outside it.\n\n");
         prompt.append(CRITICAL_INSTRUCTIONS).append("\n\n");
         prompt.append(JSON_OUTPUT_GUARD).append("\n\n");
 
@@ -329,6 +328,7 @@ public class SystemPromptBuilder {
         prompt.append("═══════════════════════════════════════════════════════════\n\n");
         prompt.append("Append this exact disclaimer to EVERY advisory:\n\n");
         prompt.append(ClinicalRules.MANDATORY_DISCLAIMER).append("\n");
+        prompt.append(ClinicalRules.MANDATORY_RULES).append("\n");
 
         return prompt.toString();
     }
@@ -339,48 +339,16 @@ You are a travel medicine specialist generating a structured JSON family travel 
 
 Your response MUST be valid JSON only — no markdown, no prose outside the JSON object.
 
-Output schema:
-{
-  "destination": "string",
-  "country": "string",
-  "tripSummary": "string — 2-3 sentences about general travel health risks for this destination",
-  "generalVaccinations": ["string — vaccinations recommended for ALL travellers to this destination"],
-  "members": [
-    {
-      "memberId": <number — MUST match the memberId from input exactly>,
-      "memberName": "string",
-      "relationship": "string",
-      "displayLabel": "string — MUST match the displayLabel from input exactly, e.g. Your son Bob",
-      "ageAtDeparture": <number>,
-      "executiveSummary": "string — 2-3 sentence personalised summary using second-person language relative to the main applicant",
-      "vaccinations": [
-        {
-          "name": "string",
-          "recommendation": "Recommended | Required | Consider | Not indicated",
-          "rationale": "string",
-          "timing": "string"
-        }
-      ],
-      "medications": [
-        {
-          "name": "string",
-          "indication": "string",
-          "dosage": "string",
-          "notes": "string"
-        }
-      ],
-      "healthConsiderations": [
-        {
-          "category": "string — e.g. Food & Water Safety, Insect Protection, Sun & Heat",
-          "advice": "string"
-        }
-      ],
-      "travellerSpecific": "string — personalised notes based on age, conditions, or special circumstances, written in second person relative to the main applicant",
-      "hardStop": false
-    }
-  ],
-  "medicalDisclaimer": "string"
-}
+Output is constrained to a structured JSON schema via the API. The exact
+field names, types, and nesting — including memberId, displayLabel,
+memberName, relationship, ageAtDeparture, and all nested arrays — are
+defined in the request parameter (responseSchema for Gemini,
+outputConfig for Anthropic).
+
+Do NOT include any text outside the JSON object.
+Do NOT add markdown fences, comments, or explanatory text.
+Return exactly one top-level JSON object and nothing else.
+Do NOT change the memberId or displayLabel values from the input.
 
 Rules:
 - memberId must exactly match the input value — never change it
@@ -394,96 +362,5 @@ Rules:
 - vaccinations array: include only those specifically relevant to this trip + member profile
 - Do NOT include markdown in field values
 """;
-    }
-
-    private String buildJsonSchema() {
-        return """
-                {
-                  "reportTitle": "string",
-                  "travellerName": "string",
-                  "destination": "string",
-                  "travelDates": "string",
-                  "overallRiskLevel": "LOW|MEDIUM|HIGH|VERY_HIGH",
-                  "hardStop": null | {
-                    "conditionTriggered": "string",
-                    "reason": "string",
-                    "recommendedSpecialist": "string"
-                  },
-                  "tripAtGlance": {
-                    "durationDays": number,
-                    "purpose": "string",
-                    "travelling": "string",
-                    "accommodation": "string",
-                    "insurance": "string"
-                  },
-                  "healthRiskOverview": [
-                    {"category":"string","level":"LOW|MODERATE|HIGH","summary":"string"}
-                  ],
-                  "vaccinations": [
-                    {"vaccine":"string","status":"string","recommendation":"string","action":"string"}
-                  ],
-                  "malariaPrevention": null | {
-                    "riskLevel": "LOW|MODERATE|HIGH|NOT_INDICATED",
-                    "recommendedAgent": "string",
-                    "rationale": "string",
-                    "mosquitoProtection": ["string"],
-                    "contraindications": "string"
-                  },
-                  "recommendations": [
-                    {"title":"string","details":"string"}
-                  ],
-                  "clinicalFlags": ["string"],
-                  "contraindications": ["string"],
-                  "specialistReferrals": [
-                    {"condition":"string","specialist":"string","urgency":"ROUTINE|BEFORE_TRAVEL|URGENT"}
-                  ],
-                  "flightHealth": null | {
-                    "vteRiskLevel": "LOW|MEDIUM|HIGH",
-                    "preventionMeasures": ["string"],
-                    "medifClearanceRequired": "boolean",
-                    "medicationTimingGuidance": "string"
-                  },
-                  "medicalConditions": [
-                    {"condition":"string","precautions":"string"}
-                  ],
-                  "medicationLogistics": {
-                    "packaging":"string",
-                    "supplyRule":"string",
-                    "destinationLegalityCheck":"boolean",
-                    "coldChainRequired":"boolean"
-                  },
-                  "sexualHealth": null | {
-                    "riskLevel": "LOW|MODERATE|HIGH",
-                    "preventionAdvice": ["string"],
-                    "prepPepDiscussion": "boolean"
-                  },
-                  "pregnancyGuidance": null | {
-                    "trimesterSpecificAdvice": "string",
-                    "liveVaccineContraindications": ["string"],
-                    "antimalarialSafety": "string",
-                    "airlineRestrictions": "string",
-                    "contraceptionCounselling": "string"
-                  },
-                  "afterReturn": {
-                    "within1Week":["string"],
-                    "within4Weeks":["string"],
-                    "beyond4Weeks":["string"],
-                    "redFlag":"string"
-                  },
-                  "medicalCare": {
-                    "clinics":[{"name":"string","address":"string","phone":"string","distance":"string","notes":"string"}],
-                    "embassyContacts":[{"name":"string","details":"string"}],
-                    "emergencyContacts":[{"label":"string","value":"string"}]
-                  },
-                  "itineraryGuidance": {
-                    "tripType":"ONE_WAY|RETURN|MULTI_STOP",
-                    "summary":"string",
-                    "routeAdvice":[{"stop":"string","country":"string","guidance":"string"}],
-                    "returnGuidance":["string"]
-                  },
-                  "nextSteps": ["string"],
-                  "medicalDisclaimer":"string"
-                }
-                """;
     }
 }
