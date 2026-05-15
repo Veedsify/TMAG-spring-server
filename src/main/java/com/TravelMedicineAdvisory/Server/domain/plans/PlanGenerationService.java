@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationProperties;
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
+import com.TravelMedicineAdvisory.Server.core.ai.AiCallOptions;
+import com.TravelMedicineAdvisory.Server.core.ai.StructuredAiResult;
+import com.TravelMedicineAdvisory.Server.core.ai.StructuredAiRouter;
 import com.TravelMedicineAdvisory.Server.core.queue.JobType;
 import com.TravelMedicineAdvisory.Server.core.queue.QueueService;
 import com.TravelMedicineAdvisory.Server.core.storage.StorageService;
@@ -27,13 +27,13 @@ import com.TravelMedicineAdvisory.Server.domain.airequestlog.AiRequestLogReposit
 import com.TravelMedicineAdvisory.Server.domain.doctor.DoctorValidationStatus;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignment;
 import com.TravelMedicineAdvisory.Server.domain.doctor.TravelPlanDoctorAssignmentRepository;
+import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMemberRepository;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContext;
 import com.TravelMedicineAdvisory.Server.domain.plangenerationcontext.PlanGenerationContextService;
 import com.TravelMedicineAdvisory.Server.domain.role.Roles;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlan;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplan.TravelPlanSummaryPdfGenerator;
-import com.TravelMedicineAdvisory.Server.domain.familytrip.FamilyTripMemberRepository;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaire;
 import com.TravelMedicineAdvisory.Server.domain.travelplanquestionnaire.TravelPlanQuestionnaireRepository;
 import com.TravelMedicineAdvisory.Server.domain.user.User;
@@ -69,8 +69,7 @@ public class PlanGenerationService {
     private final PlanGenerationContextService contextService;
     private final UserOnboardingRepository userOnboardingRepository;
     private final TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository;
-    private final AiGenerationClient aiGenerationClient;
-    private final AiGenerationProperties aiGenerationProperties;
+    private final StructuredAiRouter structuredAiRouter;
     private final AiRequestLogRepository aiRequestLogRepository;
     private final ObjectMapper objectMapper;
     private final QueueService queueService;
@@ -89,8 +88,7 @@ public class PlanGenerationService {
             PlanGenerationContextService contextService,
             UserOnboardingRepository userOnboardingRepository,
             TravelPlanQuestionnaireRepository travelPlanQuestionnaireRepository,
-            AiGenerationClient aiGenerationClient,
-            AiGenerationProperties aiGenerationProperties,
+            StructuredAiRouter structuredAiRouter,
             AiRequestLogRepository aiRequestLogRepository,
             ObjectMapper objectMapper,
             QueueService queueService,
@@ -107,8 +105,7 @@ public class PlanGenerationService {
         this.contextService = contextService;
         this.userOnboardingRepository = userOnboardingRepository;
         this.travelPlanQuestionnaireRepository = travelPlanQuestionnaireRepository;
-        this.aiGenerationClient = aiGenerationClient;
-        this.aiGenerationProperties = aiGenerationProperties;
+        this.structuredAiRouter = structuredAiRouter;
         this.aiRequestLogRepository = aiRequestLogRepository;
         this.objectMapper = objectMapper;
         this.queueService = queueService;
@@ -200,21 +197,67 @@ public class PlanGenerationService {
                     clinicalContext.triggeredTrees().size(),
                     clinicalContext.overallRiskLevel());
 
-            AiModelSelection modelSelection = modelForTier(travelPlan.getPlanTier());
-            AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt,
-                    modelSelection.provider(), modelSelection.model());
-            JsonNode structuredOutput = parseJson(result.content());
+            AiCallOptions planOpts = structuredAiRouter.resolvePlanOptions(
+                    travelPlan.getPlanTier() != null ? travelPlan.getPlanTier().name() : "FREE");
+            boolean isAnthropic = planOpts.providerOverride() != null
+                    && planOpts.providerOverride().toLowerCase().contains("anthropic");
+            TravelPlanOutputSchemas.TravelHealthPlanOutput structuredValue;
+            String planJson;
+            String provider;
+            String model;
+            Integer estimatedTokens;
+            // Anthropic derives its grammar from the Java class, not the Gemini Schema;
+            // use a genuinely smaller output type to avoid the compiled-grammar limit.
+            if (isAnthropic) {
+                // Split into two calls to stay under Anthropic grammar size limits
+                var coreResult = structuredAiRouter.generate(anthropicSingleSystemPrompt(systemPrompt),
+                        anthropicSingleUserPrompt(userPrompt),
+                        TravelPlanOutputSchemas.SINGLE_TRAVELLER_ANTHROPIC_CORE, planOpts);
+                TravelPlanOutputSchemas.AnthropicTravelHealthPlanSupplemental suppValue = null;
+                int suppTokens = 0;
+                try {
+                    var suppResult = structuredAiRouter.generate(anthropicSingleSystemPrompt(systemPrompt),
+                            anthropicSupplementalUserPrompt(userPrompt),
+                            TravelPlanOutputSchemas.SINGLE_TRAVELLER_ANTHROPIC_SUPP, planOpts);
+                    suppValue = suppResult.value();
+                    suppTokens = suppResult.estimatedTokens() != null ? suppResult.estimatedTokens() : 0;
+                } catch (Exception e) {
+                    log.warn("Anthropic supplemental call failed for travelPlanId={}; continuing with core sections only: {}",
+                            travelPlanId, e.getMessage());
+                }
+                structuredValue = TravelPlanOutputSchemas.expandAnthropic(coreResult.value(), suppValue);
+                structuredValue = TravelPlanOutputSchemas.withMandatoryDisclaimer(structuredValue);
+                structuredValue = TravelPlanOutputSchemas.withoutDecisionFlags(structuredValue);
+                TravelPlanOutputValidator.validateLite(structuredValue);
+                planJson = objectMapper.valueToTree(structuredValue).toString();
+                provider = coreResult.provider();
+                model = coreResult.model();
+                estimatedTokens = (coreResult.estimatedTokens() != null ? coreResult.estimatedTokens() : 0)
+                        + suppTokens;
+            } else {
+                StructuredAiResult<TravelPlanOutputSchemas.TravelHealthPlanOutput> result
+                        = structuredAiRouter.generate(systemPrompt, userPrompt,
+                                TravelPlanOutputSchemas.SINGLE_TRAVELLER, planOpts);
+                structuredValue = TravelPlanOutputSchemas.withMandatoryDisclaimer(result.value());
+                structuredValue = TravelPlanOutputSchemas.withoutDecisionFlags(structuredValue);
+                TravelPlanOutputValidator.validate(structuredValue);
+                planJson = objectMapper.valueToTree(structuredValue).toString();
+                provider = result.provider();
+                model = result.model();
+                estimatedTokens = result.estimatedTokens();
+            }
+            JsonNode structuredOutput = objectMapper.valueToTree(structuredValue);
 
             long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
 
-            generatedPlan.setPlanJson(writeJson(structuredOutput));
+            generatedPlan.setPlanJson(planJson);
             generatedPlan.setStatus("active");
-            generatedPlan.setSystemPrompt(systemPrompt);
+            generatedPlan.setSystemPrompt("");
             generatedPlan.setUserPrompt(userPrompt);
-            generatedPlan.setProvider(result.provider());
-            generatedPlan.setModelUsed(result.model());
-            generatedPlan.setTokensUsed(result.estimatedTokens());
-            generatedPlan.setPlanGenerationTokensUsed(result.estimatedTokens());
+            generatedPlan.setProvider(provider);
+            generatedPlan.setModelUsed(model);
+            generatedPlan.setTokensUsed(estimatedTokens);
+            generatedPlan.setPlanGenerationTokensUsed(estimatedTokens);
             generatedPlan.setProcessingTimeMs(elapsedMs);
             generatedPlan.setErrorMessage(null);
 
@@ -231,23 +274,23 @@ public class PlanGenerationService {
 
             aiLog.setStatus("success");
             aiLog.setOutputSummary(compactSummary(structuredOutput));
-            aiLog.setTokensUsed(result.estimatedTokens());
-            aiLog.setPlanGenerationTokensUsed(result.estimatedTokens());
+            aiLog.setTokensUsed(estimatedTokens);
+            aiLog.setPlanGenerationTokensUsed(estimatedTokens);
             aiLog.setSummaryGenerationTokensUsed(generatedPlan.getSummaryGenerationTokensUsed());
-            aiLog.setTokensUsed((result.estimatedTokens() != null ? result.estimatedTokens() : 0)
+            aiLog.setTokensUsed((estimatedTokens != null ? estimatedTokens : 0)
                     + (generatedPlan.getSummaryGenerationTokensUsed() != null
                             ? generatedPlan.getSummaryGenerationTokensUsed()
                             : 0));
-            aiLog.setModelUsed(result.model());
+            aiLog.setModelUsed(model);
             aiLog.setProcessingTimeMs(elapsedMs);
             aiRequestLogRepository.save(aiLog);
 
             log.info(
                     "Travel plan generation completed: travelPlanId={} provider={} model={} tokens≈{} durationMs={}",
                     travelPlanId,
-                    result.provider(),
-                    result.model(),
-                    result.estimatedTokens(),
+                    provider,
+                    model,
+                    estimatedTokens,
                     elapsedMs);
 
             handlePostGeneration(travelPlan);
@@ -353,34 +396,6 @@ public class PlanGenerationService {
         generatedPlanRepository.save(generatedPlan);
 
         log.info("Summary PDF generation completed: travelPlanId={} generatedPlanId={}", travelPlanId, generatedPlanId);
-    }
-
-    private AiModelSelection modelForTier(PlanTier tier) {
-        if (tier == PlanTier.STANDARD || tier == PlanTier.PREMIUM) {
-            return new AiModelSelection(
-                    firstNonBlank(aiGenerationProperties.getStandardPremiumProvider(),
-                            aiGenerationProperties.getMainProvider(), aiGenerationProperties.getProvider()),
-                    firstNonBlank(aiGenerationProperties.getStandardPremiumModel(),
-                            aiGenerationProperties.getMainModel(),
-                            aiGenerationProperties.getDefaultModel()));
-        }
-        return new AiModelSelection(
-                firstNonBlank(aiGenerationProperties.getFreeProvider(), aiGenerationProperties.getMainProvider(),
-                        aiGenerationProperties.getProvider()),
-                firstNonBlank(aiGenerationProperties.getFreeModel(), aiGenerationProperties.getMainModel(),
-                        aiGenerationProperties.getDefaultModel()));
-    }
-
-    private record AiModelSelection(String provider, String model) {
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (StringUtils.hasText(value)) {
-                return value;
-            }
-        }
-        return null;
     }
 
     private void sendReadyEmail(TravelPlan travelPlan) {
@@ -779,37 +794,67 @@ public class PlanGenerationService {
         }
     }
 
-    private JsonNode parseJson(String content) {
-        String normalized = content.trim();
-        if (normalized.startsWith("```")) {
-            normalized = normalized.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
-        }
-        int firstBrace = normalized.indexOf("{");
-        int lastBrace = normalized.lastIndexOf("}");
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            normalized = normalized.substring(firstBrace, lastBrace + 1);
-        }
-        try {
-            return objectMapper.readTree(normalized);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("AI returned invalid JSON output", ex);
-        }
-    }
-
-    private String writeJson(JsonNode jsonNode) {
-        try {
-            return objectMapper.writeValueAsString(jsonNode);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed to store generated JSON", ex);
-        }
-    }
-
     private String compactSummary(JsonNode jsonNode) {
         String destination = jsonNode.path("destination").asText("");
         int recommendationCount = jsonNode.path("recommendations").isArray()
                 ? jsonNode.path("recommendations").size()
                 : 0;
         return "Generated structured plan for " + destination + " with " + recommendationCount + " recommendations";
+    }
+
+    private String anthropicSingleSystemPrompt(String basePrompt) {
+        return basePrompt + """
+ 
+ ANTHROPIC STRUCTURED OUTPUT CONTRACT — CORE PLAN
+ The response schema is flattened to stay under Claude's grammar limit.
+ Populate parallel arrays by index (same length for related arrays):
+ - healthRiskCategories, healthRiskLevels, healthRiskSummaries
+ - vaccinationVaccines, vaccinationStatuses, vaccinationRecommendations, vaccinationActions
+ - recommendationTitles, recommendationDetails
+ - routeAdviceStops, routeAdviceCountries, routeAdviceGuidance
+ - emergencyContactLabels, emergencyContactValues (parallel)
+ 
+ A separate supplemental call handles remaining sections (flight, malaria, medical conditions,
+ medications, specialist referrals, sexual health, pregnancy, after-return, clinics, embassies).
+ Focus this call on the core sections listed above.
+ Do not emit TREE_<number>_<NAME> identifiers. Keep entries brief.
+ """;
+    }
+
+    private String anthropicSingleUserPrompt(String basePrompt) {
+        return basePrompt + """
+ 
+ CORE PLAN CALL: include essential dossier content only — health risks, vaccinations,
+ recommendations, itinerary guidance, emergency contacts, next steps, trip snapshot, and
+ medical disclaimer. Supplementary sections (flight, malaria, medical conditions, medications,
+ specialist referrals, sexual health, pregnancy, after-return clinics) come in a second call.
+ Keep entries concise to stay within the token budget.
+ """;
+    }
+
+    private String anthropicSupplementalUserPrompt(String basePrompt) {
+        return basePrompt + """
+ 
+ SUPPLEMENTAL CALL: provide the following additional dossier sections only.
+ Do NOT repeat the core sections (foreword, health risks, vaccinations, recommendations,
+ itinerary, emergency contacts, next steps, disclaimer) — those were already generated.
+ Produce only: flightHealth, malariaPrevention, medicalConditions, medicationLogistics,
+ specialistReferrals, sexualHealth, pregnancyGuidance, afterReturn,
+ clinics, embassyContacts. Keep entries brief.
+ """;
+    }
+
+    private String anthropicFamilySystemPrompt(String basePrompt) {
+        return basePrompt + """
+ 
+ ANTHROPIC STRUCTURED OUTPUT CONTRACT
+ The response schema is flattened to keep Claude's compiled grammar small.
+ Populate all member array fields by index. Each index describes one family member:
+ memberIds, memberNames, relationships, relationshipToMainApplicants, displayLabels,
+ ageAtDepartures, executiveSummaries, vaccinationSummaries, medicationSummaries,
+ healthConsiderationSummaries, travellerSpecific, hardStops.
+ Keep each member summary concise and preserve memberIds and displayLabels exactly.
+ """;
     }
 
     private String joinArray(JsonNode root, String fieldName) {
@@ -908,20 +953,45 @@ public class PlanGenerationService {
         String systemPrompt = systemPromptBuilder.buildFamily();
         String userPrompt = buildFamilyUserPrompt(travelPlan, membersJson, contexts);
 
-        AiModelSelection modelSelection = modelForTier(travelPlan.getPlanTier());
-        AiGenerationResult result = aiGenerationClient.generate(systemPrompt, userPrompt,
-                modelSelection.provider(), modelSelection.model());
-        JsonNode structuredOutput = parseJson(result.content());
+        AiCallOptions planOpts = structuredAiRouter.resolvePlanOptions(
+                travelPlan.getPlanTier() != null ? travelPlan.getPlanTier().name() : "FREE");
+        boolean isAnthropic = planOpts.providerOverride() != null
+                && planOpts.providerOverride().toLowerCase().contains("anthropic");
+        TravelPlanOutputSchemas.FamilyTravelHealthPlanOutput structuredValue;
+        String provider;
+        String model;
+        Integer estimatedTokens;
+        if (isAnthropic) {
+            StructuredAiResult<TravelPlanOutputSchemas.AnthropicFamilyTravelHealthPlanOutput> liteResult
+                    = structuredAiRouter.generate(anthropicFamilySystemPrompt(systemPrompt), userPrompt,
+                            TravelPlanOutputSchemas.FAMILY_LITE, planOpts);
+            structuredValue = TravelPlanOutputSchemas.expandAnthropic(liteResult.value());
+            provider = liteResult.provider();
+            model = liteResult.model();
+            estimatedTokens = liteResult.estimatedTokens();
+        } else {
+            StructuredAiResult<TravelPlanOutputSchemas.FamilyTravelHealthPlanOutput> result
+                    = structuredAiRouter.generate(systemPrompt, userPrompt,
+                            TravelPlanOutputSchemas.FAMILY, planOpts);
+            structuredValue = result.value();
+            provider = result.provider();
+            model = result.model();
+            estimatedTokens = result.estimatedTokens();
+        }
+        structuredValue = TravelPlanOutputSchemas.withMandatoryDisclaimer(structuredValue);
+        TravelPlanOutputValidator.validate(structuredValue);
+        JsonNode structuredOutput = objectMapper.valueToTree(structuredValue);
         structuredOutput = applyFamilyDisplayLabels(structuredOutput, membersJson);
+        String planJson = structuredOutput.toString();
 
         long elapsedMs = Duration.between(startedAt, Instant.now()).toMillis();
 
-        generatedPlan.setPlanJson(writeJson(structuredOutput));
+        generatedPlan.setPlanJson(planJson);
         generatedPlan.setStatus("active");
-        generatedPlan.setProvider(result.provider());
-        generatedPlan.setModelUsed(result.model());
-        generatedPlan.setTokensUsed(result.estimatedTokens());
-        generatedPlan.setPlanGenerationTokensUsed(result.estimatedTokens());
+        generatedPlan.setProvider(provider);
+        generatedPlan.setModelUsed(model);
+        generatedPlan.setTokensUsed(estimatedTokens);
+        generatedPlan.setPlanGenerationTokensUsed(estimatedTokens);
         generatedPlan.setProcessingTimeMs(elapsedMs);
         generatedPlan.setErrorMessage(null);
         generatedPlanRepository.save(generatedPlan);
@@ -933,7 +1003,7 @@ public class PlanGenerationService {
                 elapsedMs);
 
         aiLog.setStatus("success");
-        aiLog.setTokensUsed(result.estimatedTokens());
+        aiLog.setTokensUsed(estimatedTokens);
         aiLog.setProcessingTimeMs(elapsedMs);
         aiRequestLogRepository.save(aiLog);
 

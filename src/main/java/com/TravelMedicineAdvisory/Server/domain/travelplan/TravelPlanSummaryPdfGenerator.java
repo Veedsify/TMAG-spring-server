@@ -11,9 +11,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationClient;
-import com.TravelMedicineAdvisory.Server.core.ai.AiGenerationResult;
+import com.TravelMedicineAdvisory.Server.core.ai.AiCallOptions;
+import com.TravelMedicineAdvisory.Server.core.ai.StructuredAiResult;
+import com.TravelMedicineAdvisory.Server.core.ai.StructuredAiRouter;
+import com.TravelMedicineAdvisory.Server.domain.plans.TravelPlanOutputSchemas;
+import com.TravelMedicineAdvisory.Server.domain.plans.TravelPlanOutputSchemas.ActionSheetOutput;
 import com.TravelMedicineAdvisory.Server.domain.plans.GeneratedPlan;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +46,8 @@ public class TravelPlanSummaryPdfGenerator {
     private static final String BORDER = "#ddd5cb";
     private static final String RED_SOFT = "#fef2f2";
     private static final String SEPARATOR = " &#183; ";
+    private static final int MAX_ACTION_SHEET_VACCINES = 18;
+    private static final int MAX_ACTION_SHEET_TEXT_CHARS = 260;
 
     private static final String ACTION_SHEET_SYSTEM_PROMPT = """
             You are the TMAG Action Sheet Generator. You operate as the
@@ -167,65 +171,36 @@ public class TravelPlanSummaryPdfGenerator {
             contradiction, defer to the more cautious recommendation
             and do not flag the contradiction in the Action Sheet.
 
-            MACHINE OUTPUT CONTRACT
-
-            Return only valid JSON. No markdown fences. No preamble.
-            No commentary. No text outside the JSON object.
-            Map your five sections and closing line into this exact
-            schema (field names and nesting are fixed):
-            {
-              "section1CriticalBeforeDeparture": ["string"],
-              "section2TripSnapshot": "string",
-              "section3Vaccines": [{"vaccine":"string","status":"string","action":"string"}],
-              "section4PackAndRoutine": ["string"],
-              "section5": {
-                "redFlagsLine": "string",
-                "facilities": [{"name":"string","location":"string"}],
-                "localEmergencyNumber": "string",
-                "insuranceEmergencyLine": "string"
-              },
-              "closingLine": "string"
-            }
-            Limits: section1CriticalBeforeDeparture at most 4 strings;
-            section4PackAndRoutine at most 8 strings;
-            section3Vaccines only rows that belong in the table per rules above;
-            section5.facilities at most 2 objects (top two facilities).
-            closingLine must match the exact closing sentence above.
-            Skip any string value matching TREE_<digits>_<UPPERCASE>.
-            Remove hyphen, en dash, em dash, and underscore characters
-            from all string values in the JSON (use spaces or rephrase).
+            OUTPUT CONTRACT
+ 
+            Output is constrained by the provider structured-output schema.
+            Return one JSON object only. Do not add markdown, prose,
+            comments, headings, or text outside the JSON object.
+            Follow the five section rules above. Section 1 has at most
+            four strings. Section 4 has at most eight strings. Section 5
+            has at most two facilities. The closing line must match the
+            exact sentence above. Skip internal TREE_<digits>_<UPPERCASE>
+            keys. The application also enforces these caps and scrubs
+            hyphen, en dash, em dash, and underscore characters after
+            structured decoding.
             """;
 
     private static final String ACTION_SHEET_USER_PROMPT_PREFIX = """
-            Produce the Action Sheet as JSON only, following the system instructions.
-
-            Return exactly this JSON shape (types as shown):
-            {
-              "section1CriticalBeforeDeparture": ["string"],
-              "section2TripSnapshot": "string",
-              "section3Vaccines": [{"vaccine":"string","status":"string","action":"string"}],
-              "section4PackAndRoutine": ["string"],
-              "section5": {
-                "redFlagsLine": "string",
-                "facilities": [{"name":"string","location":"string"}],
-                "localEmergencyNumber": "string",
-                "insuranceEmergencyLine": "string"
-              },
-              "closingLine": "string"
-            }
-
+            Produce the Action Sheet using only the source dossier below.
+            The response shape is constrained by the structured-output schema.
+ 
             Personalised Travel Health Dossier (JSON):
             """;
 
     private final ObjectMapper objectMapper;
-    private final AiGenerationClient aiGenerationClient;
+    private final StructuredAiRouter structuredAiRouter;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
-    public TravelPlanSummaryPdfGenerator(ObjectMapper objectMapper, AiGenerationClient aiGenerationClient) {
+    public TravelPlanSummaryPdfGenerator(ObjectMapper objectMapper, StructuredAiRouter structuredAiRouter) {
         this.objectMapper = objectMapper;
-        this.aiGenerationClient = aiGenerationClient;
+        this.structuredAiRouter = structuredAiRouter;
     }
 
     public byte[] generate(TravelPlan plan, GeneratedPlan generatedPlan) {
@@ -277,8 +252,12 @@ public class TravelPlanSummaryPdfGenerator {
         String userPrompt = ACTION_SHEET_USER_PROMPT_PREFIX + generatedPlan.getPlanJson();
 
         try {
-            AiGenerationResult result = aiGenerationClient.generateSummary(ACTION_SHEET_SYSTEM_PROMPT, userPrompt);
-            JsonNode summary = normalizeActionSheet(objectMapper.readTree(stripJsonFences(result.content())));
+            AiCallOptions summaryOpts = structuredAiRouter.resolveSummaryOptions();
+            StructuredAiResult<ActionSheetOutput> result =
+                    structuredAiRouter.generate(ACTION_SHEET_SYSTEM_PROMPT, userPrompt,
+                            TravelPlanOutputSchemas.ACTION_SHEET, summaryOpts);
+            ActionSheetOutput sanitized = ActionSheetTextSanitizer.scrub(result.value());
+            JsonNode summary = objectMapper.valueToTree(sanitized);
             if (hasUsableActionSheet(summary)) {
                 generatedPlan.setSummaryGenerationTokensUsed(result.estimatedTokens());
                 log.info("Generated travel plan Action Sheet PDF with {} model {} for travelPlanId={} generatedPlanId={} tokens={}",
@@ -289,7 +268,7 @@ public class TravelPlanSummaryPdfGenerator {
                         result.estimatedTokens());
                 return summary;
             }
-            log.warn("Summary model returned unusable JSON for travelPlanId={}; using fallback Action Sheet",
+            log.warn("Summary model returned unusable Action Sheet for travelPlanId={}; using fallback",
                     plan.getId());
         } catch (Exception ex) {
             log.warn("Summary model unavailable for travelPlanId={}; using fallback Action Sheet: {}",
@@ -323,6 +302,9 @@ public class TravelPlanSummaryPdfGenerator {
         JsonNode v = root.path("section3Vaccines");
         if (v.isArray()) {
             for (JsonNode item : v) {
+                if (vaccines.size() >= MAX_ACTION_SHEET_VACCINES) {
+                    break;
+                }
                 if (!item.isObject()) {
                     continue;
                 }
@@ -570,9 +552,6 @@ public class TravelPlanSummaryPdfGenerator {
         ObjectNode root = objectMapper.createObjectNode();
         ArrayNode s1 = root.putArray("section1CriticalBeforeDeparture");
         copyNextSteps(s1, source != null ? source.path("nextSteps") : null, 4);
-        if (s1.isEmpty()) {
-            copyTextToSection1(s1, source != null ? source.path("clinicalFlags") : null, 4);
-        }
 
         root.put("section2TripSnapshot", buildFallbackTripSnapshot(plan, source));
 
@@ -685,6 +664,9 @@ public class TravelPlanSummaryPdfGenerator {
             return;
         }
         for (JsonNode item : items) {
+            if (target.size() >= MAX_ACTION_SHEET_VACCINES) {
+                return;
+            }
             if (!item.isObject()) {
                 continue;
             }
@@ -873,17 +855,6 @@ public class TravelPlanSummaryPdfGenerator {
         }
     }
 
-    private String stripJsonFences(String content) {
-        if (!StringUtils.hasText(content)) {
-            return "{}";
-        }
-        String trimmed = content.trim();
-        if (trimmed.startsWith("```")) {
-            trimmed = trimmed.replaceFirst("^```(?:json)?\\s*", "");
-            trimmed = trimmed.replaceFirst("\\s*```$", "");
-        }
-        return trimmed;
-    }
 
     private String cleanActionSheetText(String value) {
         if (!StringUtils.hasText(value)) {
@@ -894,7 +865,10 @@ public class TravelPlanSummaryPdfGenerator {
                 .replace('_', ' ')
                 .replace('\u2013', ' ')
                 .replace('\u2014', ' ');
-        return t.trim().replaceAll("\\s+", " ");
+        t = t.trim().replaceAll("\\s+", " ");
+        return t.length() <= MAX_ACTION_SHEET_TEXT_CHARS
+                ? t
+                : t.substring(0, MAX_ACTION_SHEET_TEXT_CHARS).trim();
     }
 
     private String text(JsonNode node, String field) {
