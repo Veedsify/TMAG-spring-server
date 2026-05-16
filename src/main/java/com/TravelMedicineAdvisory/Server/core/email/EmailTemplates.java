@@ -542,7 +542,7 @@ public class EmailTemplates {
         String content = badge("Family Plan")
                 + heading("Welcome to your TMAG Family Plan")
                 + "<p style=\"" + P_STYLE + "\">Hi <strong style=\"" + STRONG_STYLE + "\">" + esc(firstName) + "</strong>,</p>"
-                + "<p style=\"" + P_STYLE + "\">Your TMAG Family Plan is ready. You can use it to create personalised travel medicine advisories for your household before upcoming trips.</p>"
+                + "<p style=\"" + P_STYLE + "\">You're on your way to getting a family travel advisory plan. Set your password to start.</p>"
                 + infoBox("Your plan includes one family trip advisory with guidance tailored to each traveller's itinerary, health profile, vaccines, medicines, and destination risks.")
                 + "<p style=\"" + P_STYLE + "margin-bottom:36px;\">Set your password to finish activating your account and start adding your family trip details.</p>"
                 + tealButton("Set Your Password", setupLink)
