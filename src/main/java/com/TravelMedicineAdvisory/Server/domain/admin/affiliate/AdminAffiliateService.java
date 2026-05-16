@@ -159,7 +159,7 @@ public class AdminAffiliateService {
         profile.setUser(savedUser);
         profile.setReferralCode(generateReferralCode(savedUser));
         profile.setCommissionRate(BigDecimal.valueOf(10));
-        profile.setDiscountRate(BigDecimal.valueOf(2));
+        profile.setDiscountRate(BigDecimal.valueOf(5));
         profile.setStatus("active");
         AffiliateProfile savedProfile = affiliateProfileRepository.save(profile);
 

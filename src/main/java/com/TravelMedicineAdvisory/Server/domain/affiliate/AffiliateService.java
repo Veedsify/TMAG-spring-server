@@ -35,7 +35,7 @@ import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 public class AffiliateService {
 
     private static final BigDecimal DEFAULT_COMMISSION_RATE = BigDecimal.valueOf(10);
-    private static final BigDecimal DEFAULT_DISCOUNT_RATE = BigDecimal.valueOf(2);
+    private static final BigDecimal DEFAULT_DISCOUNT_RATE = BigDecimal.valueOf(5);
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final int COOKIE_DAYS = 90;
     private static final String CREDIT_PURCHASE_REFERENCE = "credit_purchase";
