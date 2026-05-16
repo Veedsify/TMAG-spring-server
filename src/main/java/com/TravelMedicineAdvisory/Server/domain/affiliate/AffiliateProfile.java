@@ -33,7 +33,7 @@ public class AffiliateProfile extends BaseEntity {
     private BigDecimal commissionRate = BigDecimal.valueOf(10);
 
     @Column(name = "discount_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal discountRate = BigDecimal.valueOf(2);
+    private BigDecimal discountRate = BigDecimal.valueOf(5);
 
     @Column(name = "total_clicks", nullable = false)
     private Integer totalClicks = 0;
