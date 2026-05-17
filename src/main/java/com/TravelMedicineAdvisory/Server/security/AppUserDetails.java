@@ -11,12 +11,18 @@ public class AppUserDetails implements UserDetails {
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final boolean enabled;
 
-    public AppUserDetails(Long userId, String email, String password, Collection<? extends GrantedAuthority> authorities) {
+    public AppUserDetails(Long userId, String email, String password, Collection<? extends GrantedAuthority> authorities, boolean enabled) {
         this.userId = userId;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.enabled = enabled;
+    }
+
+    public AppUserDetails(Long userId, String email, String password, Collection<? extends GrantedAuthority> authorities) {
+        this(userId, email, password, authorities, true);
     }
 
     public Long getUserId() {
@@ -59,7 +65,7 @@ public class AppUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     public static Builder builder() {
@@ -71,6 +77,7 @@ public class AppUserDetails implements UserDetails {
         private String email;
         private String password;
         private Collection<? extends GrantedAuthority> authorities;
+        private boolean enabled = true;
 
         public Builder userId(Long userId) {
             this.userId = userId;
@@ -92,8 +99,13 @@ public class AppUserDetails implements UserDetails {
             return this;
         }
 
+        public Builder enabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
+
         public AppUserDetails build() {
-            return new AppUserDetails(userId, email, password, authorities);
+            return new AppUserDetails(userId, email, password, authorities, enabled);
         }
     }
 }

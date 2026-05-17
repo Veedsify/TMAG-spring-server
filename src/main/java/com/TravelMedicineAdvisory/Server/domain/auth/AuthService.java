@@ -191,6 +191,10 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new IllegalArgumentException("User account is disabled");
+        }
+
         if (Boolean.FALSE.equals(user.getVerified())) {
             dispatchVerificationEmail(user);
         }
@@ -339,6 +343,9 @@ public class AuthService {
                 newAssignedCredits.setAmount(1);
                 creditRepository.save(newAssignedCredits);
             } else {
+                if (Boolean.FALSE.equals(user.getIsActive())) {
+                    throw new IllegalArgumentException("User account is disabled");
+                }
                 user.setLastLogin(LocalDateTime.now());
                 if (pictureUrl != null && user.getAvatarUrl() == null) {
                     user.setAvatarUrl(pictureUrl);

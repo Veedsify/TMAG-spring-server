@@ -1,6 +1,5 @@
 package com.TravelMedicineAdvisory.Server.domain.admin.users;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +99,13 @@ public class AdminUserService {
         if (updates.containsKey("lastName")) {
             user.setLastName((String) updates.get("lastName"));
         }
+        if (updates.containsKey("name")) {
+            String name = (String) updates.get("name");
+            user.setName(name);
+            if (!updates.containsKey("firstName") && !updates.containsKey("lastName")) {
+                applyNameParts(user, name);
+            }
+        }
         if (updates.containsKey("email")) {
             user.setEmail((String) updates.get("email"));
         }
@@ -115,7 +121,7 @@ public class AdminUserService {
     public void suspend(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setDeletedAt(LocalDateTime.now());
+        user.setIsActive(false);
         userRepository.save(user);
     }
 
@@ -123,7 +129,7 @@ public class AdminUserService {
     public void activate(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setDeletedAt(null);
+        user.setIsActive(true);
         userRepository.save(user);
     }
 
@@ -220,7 +226,7 @@ public class AdminUserService {
             role = user.getRole().getName().toLowerCase();
         }
 
-        String status = user.getDeletedAt() != null ? "suspended" : "active";
+        String status = Boolean.FALSE.equals(user.getIsActive()) ? "suspended" : "active";
 
         String name = user.getName();
         if (name == null || name.isEmpty()) {
@@ -251,5 +257,30 @@ public class AdminUserService {
                 avatarUrlService.toFullUrl(user.getAvatarUrl()),
                 null,
                 null);
+    }
+
+    private void applyNameParts(User user, String name) {
+        if (name == null) {
+            user.setFirstName(null);
+            user.setLastName(null);
+            return;
+        }
+
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            user.setFirstName("");
+            user.setLastName("");
+            return;
+        }
+
+        int splitAt = trimmed.indexOf(' ');
+        if (splitAt < 0) {
+            user.setFirstName(trimmed);
+            user.setLastName("");
+            return;
+        }
+
+        user.setFirstName(trimmed.substring(0, splitAt));
+        user.setLastName(trimmed.substring(splitAt + 1).trim());
     }
 }
