@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -140,6 +141,11 @@ public class AuthService {
         Role role = determineUserRole(request.getAccountType());
 
         Credit newAssignedCredits = new Credit();
+        Optional<CreditPlan> essentialPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
+
+        if (essentialPlan.isEmpty()) {
+            throw new IllegalArgumentException("Essential credit plan not found");
+        }
 
         User user = new User();
         user.setFirstName(request.getFirstName());
@@ -154,6 +160,7 @@ public class AuthService {
         user.setVerified(false);
         user.setType(isFamilySignup ? "FAMILY" : isAffiliateSignup ? "AFFILIATE" : "INDIVIDUAL");
         user.setCredits(1);
+        user.setCreditPlan(essentialPlan.get());
         user.setBillingCurrency(
                 request.getBillingCurrency() != null ? request.getBillingCurrency() : BillingCurrency.NGN);
         user.setRole(role);
