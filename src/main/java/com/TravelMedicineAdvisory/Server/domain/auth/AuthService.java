@@ -8,7 +8,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.TravelMedicineAdvisory.Server.core.config.AppLinksProperties;
@@ -54,6 +55,8 @@ import com.google.api.client.json.gson.GsonFactory;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -83,7 +86,7 @@ public class AuthService {
     @Value("${google.redirect-uri:}")
     private String googleRedirectUri;
 
-    private final WebClient webClient = WebClient.create();
+    private final WebClient webClient;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             PasswordEncoder passwordEncoder, JwtService jwtService,
@@ -95,7 +98,8 @@ public class AuthService {
             UserSettingService userSettingService,
             AvatarUrlService avatarUrlService,
             AffiliateService affiliateService,
-            AppLinksProperties appLinks) {
+            AppLinksProperties appLinks,
+            WebClient.Builder webClientBuilder) {
         this.userRepository = userRepository;
         this.creditRepository = creditRepository;
         this.roleRepository = roleRepository;
@@ -111,7 +115,7 @@ public class AuthService {
         this.avatarUrlService = avatarUrlService;
         this.affiliateService = affiliateService;
         this.appLinks = appLinks;
-
+        this.webClient = webClientBuilder.build();
     }
 
     @Transactional
@@ -136,11 +140,6 @@ public class AuthService {
         Role role = determineUserRole(request.getAccountType());
 
         Credit newAssignedCredits = new Credit();
-        Optional<CreditPlan> userCreditPlan = userCreditPlanRepository.findByCode(CreditPlanCode.ESSENTIAL);
-
-        if (userCreditPlan.isEmpty()) {
-            throw new IllegalArgumentException("Plan Does'nt Exist");
-        }
 
         User user = new User();
         user.setFirstName(request.getFirstName());
@@ -155,7 +154,6 @@ public class AuthService {
         user.setVerified(false);
         user.setType(isFamilySignup ? "FAMILY" : isAffiliateSignup ? "AFFILIATE" : "INDIVIDUAL");
         user.setCredits(1);
-        user.setCreditPlan(userCreditPlan.get());
         user.setBillingCurrency(
                 request.getBillingCurrency() != null ? request.getBillingCurrency() : BillingCurrency.NGN);
         user.setRole(role);
@@ -367,8 +365,7 @@ public class AuthService {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Google authentication failed: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google authentication failed");
         }
     }
 

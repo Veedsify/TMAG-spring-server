@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
             Matcher matcher = UNIQUE_CONSTRAINT_PATTERN.matcher(rootMessage);
             if (matcher.find()) {
                 String field = matcher.group(1);
-                message = "Sorry" + field + " already exists.";
+                message = "Sorry, " + field + " already exists.";
             } else if (rootMessage.contains("not-null constraint")) {
                 message = "A required field is missing.";
             }
@@ -91,7 +91,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
         logger.error("Runtime exception: {}", ex.getMessage(), ex);
-        return new ResponseEntity<>(new ErrorResponse(ex.getMessage(), false, null), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(new ErrorResponse("An unexpected error occurred. Please try again later.", false, null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ResponseStatusException.class)

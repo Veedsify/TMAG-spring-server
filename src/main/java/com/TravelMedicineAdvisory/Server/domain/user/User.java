@@ -60,7 +60,7 @@ public class User extends BaseEntity {
   private Boolean onboarded = false;
 
   @Column(name = "is_verified")
-  private Boolean is_verified = false;
+  private Boolean verified = false;
 
   @Column(name = "is_active")
   private Boolean isActive = true;
@@ -139,7 +139,9 @@ public class User extends BaseEntity {
   }
 
   public String getFullName() {
-    return firstName + " " + lastName;
+    String first = firstName != null ? firstName : "";
+    String last = lastName != null ? lastName : "";
+    return (first + " " + last).trim();
   }
 
   public String getUsername() {
@@ -183,11 +185,11 @@ public class User extends BaseEntity {
   }
 
   public Boolean getVerified() {
-    return is_verified;
+    return verified;
   }
 
   public void setVerified(Boolean verified) {
-    is_verified = verified;
+    this.verified = verified;
   }
 
   public String getVerificationToken() {
