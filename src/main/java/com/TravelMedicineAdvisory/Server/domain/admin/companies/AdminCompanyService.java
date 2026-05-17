@@ -17,6 +17,7 @@ import com.TravelMedicineAdvisory.Server.domain.company.BillingStatus;
 import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.company.Tier;
+import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlan;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanCode;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
@@ -242,14 +243,12 @@ public class AdminCompanyService {
         if (updates.containsKey("contactPhone")) {
             company.setContactPhone((String) updates.get("contactPhone"));
         }
-        if (updates.containsKey("plan")) {
-            String requestedPlan = (String) updates.get("plan");
-            company.setPlan(requestedPlan);
-            try {
-                CreditPlanCode code = CreditPlanCode.valueOf(requestedPlan.toUpperCase());
-                userCreditPlanRepository.findByCode(code).ifPresent(company::setCreditPlan);
-            } catch (IllegalArgumentException ignored) {
-            }
+        if (updates.containsKey("creditPlanId")) {
+            assignCreditPlan(company, updates.get("creditPlanId"));
+        } else if (updates.containsKey("planCode")) {
+            assignCreditPlan(company, updates.get("planCode"));
+        } else if (updates.containsKey("plan")) {
+            assignCreditPlan(company, updates.get("plan"));
         }
 
         company = companyRepository.save(company);
@@ -336,10 +335,9 @@ public class AdminCompanyService {
             billingStatus = company.getBillingStatus().name().toLowerCase();
         }
 
-        String tier = "standard";
-        if (company.getTier() != null) {
-            tier = company.getTier().name().toLowerCase();
-        }
+        String tier = company.getCreditPlan() != null && company.getCreditPlan().getCode() != null
+                ? company.getCreditPlan().getCode().toLowerCase()
+                : company.getTier() != null ? company.getTier().name().toLowerCase() : "standard";
 
         String billingCurrency = company.getBillingCurrency() != null
                 ? company.getBillingCurrency().name()
@@ -363,5 +361,32 @@ public class AdminCompanyService {
                 company.getAddress(),
                 billingCurrency,
                 company.getCreatedAt());
+    }
+
+    private void assignCreditPlan(Company company, Object requestedPlan) {
+        if (requestedPlan == null) {
+            return;
+        }
+
+        CreditPlan plan;
+        if (requestedPlan instanceof Number id) {
+            plan = userCreditPlanRepository.findById(id.longValue())
+                    .orElseThrow(() -> new IllegalArgumentException("Credit plan not found"));
+        } else {
+            String code = requestedPlan.toString().trim();
+            if (code.isEmpty()) {
+                return;
+            }
+            plan = userCreditPlanRepository.findByCode(code.toUpperCase())
+                    .orElseThrow(() -> new IllegalArgumentException("Credit plan not found: " + code));
+        }
+
+        company.setCreditPlan(plan);
+        company.setPlan(plan.getCode());
+        if ("ENTERPRISE".equalsIgnoreCase(plan.getCode()) || "PREMIUM".equalsIgnoreCase(plan.getServiceLevel())) {
+            company.setTier(Tier.ENTERPRISE);
+        } else {
+            company.setTier(Tier.STANDARD);
+        }
     }
 }
