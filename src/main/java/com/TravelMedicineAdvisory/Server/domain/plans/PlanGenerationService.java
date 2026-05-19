@@ -199,8 +199,11 @@ public class PlanGenerationService {
 
             AiCallOptions planOpts = structuredAiRouter.resolvePlanOptions(
                     travelPlan.getPlanTier() != null ? travelPlan.getPlanTier().name() : "FREE");
+                    
             boolean isAnthropic = planOpts.providerOverride() != null
                     && planOpts.providerOverride().toLowerCase().contains("anthropic");
+
+
             TravelPlanOutputSchemas.TravelHealthPlanOutput structuredValue;
             String planJson;
             String provider;
