@@ -220,10 +220,18 @@ public class CompanyAdminManagementService {
         companyUser.getUser().setIsActive(!restricted);
         User saved = userRepository.save(companyUser.getUser());
 
+        // Sync Employee.status to match
+        Employee employee = findEmployeeByUserId(saved.getId());
+        if (employee != null) {
+            employee.setStatus(restricted ? "inactive" : "active");
+            employeeRepository.save(employee);
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("user_id", saved.getId());
         result.put("restricted", restricted);
         result.put("is_active", saved.getIsActive());
+        result.put("employee_status", employee != null ? employee.getStatus() : null);
         return result;
     }
 
