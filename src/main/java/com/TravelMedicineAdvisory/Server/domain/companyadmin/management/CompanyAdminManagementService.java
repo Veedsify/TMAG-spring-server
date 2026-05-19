@@ -17,6 +17,8 @@ import com.TravelMedicineAdvisory.Server.domain.company.Company;
 import com.TravelMedicineAdvisory.Server.domain.company.CompanyRepository;
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKey;
 import com.TravelMedicineAdvisory.Server.domain.companyapikey.CompanyApiKeyRepository;
+import com.TravelMedicineAdvisory.Server.domain.credit.Credit;
+import com.TravelMedicineAdvisory.Server.domain.credit.CreditRepository;
 import com.TravelMedicineAdvisory.Server.domain.creditplan.CreditPlanService;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUser;
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
@@ -45,6 +47,7 @@ public class CompanyAdminManagementService {
     private final InvoiceRepository invoiceRepository;
     private final CreditPlanService userCreditPlanService;
     private final QueueService queueService;
+    private final CreditRepository creditRepository;
 
     public CompanyAdminManagementService(
             CompanyRepository companyRepository,
@@ -57,6 +60,7 @@ public class CompanyAdminManagementService {
             CompanyApiKeyRepository companyApiKeyRepository,
             TravelPlanRepository travelPlanRepository,
             InvoiceRepository invoiceRepository,
+            CreditRepository creditRepository,
             CreditPlanService userCreditPlanService,
             QueueService queueService) {
         this.companyRepository = companyRepository;
@@ -71,6 +75,7 @@ public class CompanyAdminManagementService {
         this.invoiceRepository = invoiceRepository;
         this.userCreditPlanService = userCreditPlanService;
         this.queueService = queueService;
+        this.creditRepository = creditRepository;
     }
 
     @Transactional(readOnly = true)
@@ -283,6 +288,68 @@ public class CompanyAdminManagementService {
     @Transactional(readOnly = true)
     public Map<String, Object> getPlan(Long planId) {
         return Map.of("plan", userCreditPlanService.findById(planId));
+    }
+
+    public Map<String, Object> allocateCreditsToUser(CompanyAdminCreditAllocationRequest request) {
+        Company company = companyRepository.findById(request.companyId())
+                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+
+        CompanyUser companyUser = companyUserRepository.findById(request.companyUserId())
+                .orElseThrow(() -> new NoSuchElementException("Company user not found"));
+
+        if (companyUser.getCompany() == null || !companyUser.getCompany().getId().equals(company.getId())) {
+            throw new IllegalArgumentException("Company user does not belong to this company");
+        }
+
+        User user = companyUser.getUser();
+        if (user == null) {
+            throw new NoSuchElementException("Linked user not found");
+        }
+
+        int newAllocated = request.creditsAllocated();
+        int previousAllocated = companyUser.getCreditsAllocated() != null ? companyUser.getCreditsAllocated() : 0;
+
+        // Validate company has sufficient available credits for an increase
+        if (newAllocated > previousAllocated) {
+            int delta = newAllocated - previousAllocated;
+            int companyTotal = company.getTotalCredits() != null ? company.getTotalCredits() : 0;
+            int companyUsed = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
+            int companyAvailable = companyTotal - companyUsed;
+            if (delta > companyAvailable) {
+                throw new IllegalArgumentException(
+                        "Insufficient company credits. Available: " + companyAvailable + ", requested increase: "
+                                + delta);
+            }
+        }
+
+        companyUser.setCreditsAllocated(newAllocated);
+        companyUserRepository.save(companyUser);
+
+        user.setCredits(newAllocated);
+        userRepository.save(user);
+
+        Employee employee = findEmployeeByUserId(user.getId());
+        if (employee != null) {
+            employee.setCreditsAllocated(newAllocated);
+            employeeRepository.save(employee);
+        }
+
+        // Deduct from company pool
+        int delta = newAllocated - previousAllocated;
+        int currentUsed = company.getUsedCredits() != null ? company.getUsedCredits() : 0;
+        company.setUsedCredits(currentUsed + delta);
+        companyRepository.save(company);
+
+        // Record allocation in credit ledger
+        Credit creditEntry = new Credit();
+        creditEntry.setCompany(company);
+        creditEntry.setAmount(delta);
+        creditEntry.setType("allocation");
+        creditEntry.setReference("alloc:user:" + user.getId() + ":to:" + newAllocated);
+        creditEntry.setBalanceAfter(newAllocated);
+        creditRepository.save(creditEntry);
+
+        return mapCompanyUser(companyUser);
     }
 
     private Map<String, Object> mapCompanyUser(CompanyUser companyUser) {
