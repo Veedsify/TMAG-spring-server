@@ -54,6 +54,8 @@ public class TravelPlanPdfGenerator {
 
     private static final String IMPORTANT_MEDICAL_DISCLAIMER = "This travel health advisory plan was generated with artificial intelligence and reviewed and validated by a licensed medical doctor. It is provided for informational and educational purposes only and does not substitute consultation, diagnosis, or treatment from a certified travel medicine doctor or a licensed medical doctor. Before making decisions about vaccinations, medications, or travel health, consult your doctor or a qualified travel medicine specialist, especially if you are pregnant, have chronic conditions, or take regular medications. If you become ill during travel, seek immediate local medical care.";
     private static final String CLOSING_DISCLAIMER = "This report supports, but does not substitute care from a certified travel medicine doctor or licensed medical doctor.";
+    private static final String BRAND_TAGLINE = "Personalized Travel Health Intelligence.";
+    private static final String BRAND_SUB_TAGLINE = "Physician validated. Tailored to your itinerary and health history. Any time, anywhere.";
 
     private final ObjectMapper objectMapper;
 
@@ -190,10 +192,12 @@ public class TravelPlanPdfGenerator {
 
         // ── Hero ──────────────────────────────────────────────────────────────
         sb.append(".hero-wrap{background:").append(TEAL_DEEP).append("}");
-        sb.append(".brand-strip{padding:30px 16mm 5px;border-bottom:1px solid rgba(255,255,255,0.08)}");
+        sb.append(".brand-strip{padding:30px 16mm 12px;border-bottom:1px solid rgba(255,255,255,0.08)}");
         sb.append(
                 ".brand-name{font-size:6.5pt;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#ffffff}");
-        sb.append(".brand-sub{font-size:6pt;color:#ffffff;letter-spacing:0.07em;margin-top:2px}");
+        sb.append(
+                ".brand-tagline{font-family:'Fraunces',Georgia,serif;font-size:13pt;color:#ffffff;font-weight:700;line-height:1.15;margin-top:6px}");
+        sb.append(".brand-sub{font-size:7pt;color:#dff2ee;letter-spacing:0.03em;margin-top:4px;line-height:1.35}");
 
         sb.append("table.hero-tbl{width:100%;border-collapse:collapse}");
         sb.append(".hero-left{padding:18px 0 18px 16mm;width:64%;vertical-align:top}");
@@ -321,7 +325,8 @@ public class TravelPlanPdfGenerator {
         // Brand strip at very top
         sb.append("<div class=\"brand-strip\">")
                 .append("<div class=\"brand-name\">Travel Medicine Advisory Global</div>")
-                .append("<div class=\"brand-sub\">Personalised Travel Health Dossier</div>")
+                .append("<div class=\"brand-tagline\">").append(BRAND_TAGLINE).append("</div>")
+                .append("<div class=\"brand-sub\">").append(BRAND_SUB_TAGLINE).append("</div>")
                 .append("</div>");
 
         // Two-column row: title/meta left, badges right
@@ -379,7 +384,8 @@ public class TravelPlanPdfGenerator {
 
         sb.append("<div class=\"brand-strip\">")
                 .append("<div class=\"brand-name\">Travel Medicine Advisory Global</div>")
-                .append("<div class=\"brand-sub\">Condensed Travel Health Summary</div>")
+                .append("<div class=\"brand-tagline\">").append(BRAND_TAGLINE).append("</div>")
+                .append("<div class=\"brand-sub\">").append(BRAND_SUB_TAGLINE).append("</div>")
                 .append("</div>");
         sb.append("<table class=\"hero-tbl\" cellspacing=\"0\" cellpadding=\"0\"><tr>");
         sb.append("<td class=\"hero-left\">");

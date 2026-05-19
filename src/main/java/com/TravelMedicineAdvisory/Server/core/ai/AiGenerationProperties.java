@@ -16,7 +16,7 @@ public class AiGenerationProperties {
     private String freeModel = "";
     private String standardPremiumModel = "";
     private double temperature = 0.3d;
-    private int maxOutputTokens = 24576;
+    private int maxOutputTokens = 8192;
     private int summaryMaxOutputTokens = 4096;
 
     private final Vertex vertex = new Vertex();
