@@ -195,10 +195,14 @@ public class CompanyAdminManagementService {
         return mapCompanyUser(companyUserRepository.save(companyUser));
     }
 
-    public void deleteCompanyUser(Long companyUserId) {
+    public void deleteCompanyUser(Long companyUserId, Long currentUserId) {
         CompanyUser companyUser = companyUserRepository.findById(companyUserId)
                 .orElseThrow(() -> new NoSuchElementException("Company user not found"));
         User user = companyUser.getUser();
+
+        if (user != null && user.getId().equals(currentUserId)) {
+            throw new IllegalArgumentException("You cannot delete your own account");
+        }
 
         companyUserRepository.delete(companyUser);
 
