@@ -86,7 +86,11 @@ public class CompanyAdminAuthService {
                         "timestamp", timestamp)));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        String jwtToken = jwtService.generateToken(userDetails);
+
+        // Include userId in JWT claims so downstream permission checks can resolve it
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", user.getId());
+        String jwtToken = jwtService.generateToken(extraClaims, userDetails);
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", jwtToken);

@@ -242,6 +242,7 @@ public class DataSeeder implements CommandLineRunner {
                     assignments.add(createRolePermission(administrator, p));
             }
         }
+        addPermissions(assignments, administrator, permMap, "travel_plan", "read", "list", "update");
 
         // HR
         Role hr = roleMap.get("HR");

@@ -2,6 +2,9 @@ package com.TravelMedicineAdvisory.Server.domain.companyadmin.management;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+import com.TravelMedicineAdvisory.Server.security.AppUserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.TravelMedicineAdvisory.Server.core.types.SuccessResponse;
+
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -54,8 +59,9 @@ public class CompanyAdminManagementController {
 
     @DeleteMapping("/users/{companyUserId}")
     @PreAuthorize("@perm.has(authentication, 'company_user:delete')")
-    public ResponseEntity<SuccessResponse> deleteUser(@PathVariable Long companyUserId) {
-        service.deleteCompanyUser(companyUserId);
+    public ResponseEntity<SuccessResponse> deleteUser(@PathVariable Long companyUserId,
+            @AuthenticationPrincipal AppUserDetails authUser) {
+        service.deleteCompanyUser(companyUserId, authUser.getUserId());
         return ResponseEntity.ok(new SuccessResponse("Deleted successfully", null));
     }
 
@@ -79,6 +85,14 @@ public class CompanyAdminManagementController {
     @PreAuthorize("@perm.company(authentication, #companyId, 'data_export:read', 'company:read', 'employee:list')")
     public ResponseEntity<SuccessResponse> exportCompanyData(@RequestParam Long companyId) {
         return ResponseEntity.ok(new SuccessResponse("Export generated successfully", service.exportCompanyData(companyId)));
+    }
+
+    @PostMapping("/allocate-credits")
+    @PreAuthorize("@perm.company(authentication, #request.companyId(), 'credit:update', 'employee:update')")
+    public ResponseEntity<SuccessResponse> allocateCreditsToUser(
+            @Valid @RequestBody CompanyAdminCreditAllocationRequest request) {
+        return ResponseEntity.ok(new SuccessResponse("Credits allocated successfully",
+                service.allocateCreditsToUser(request)));
     }
 
     @DeleteMapping("/companies/{companyId}")
