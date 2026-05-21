@@ -90,7 +90,7 @@ public class EmployeeService {
         return toResponse(saved);
     }
 
-    public EmployeeResponse allocateCredits(Long id, Integer creditsAllocated, Integer companyId) {
+    public EmployeeResponse allocateCredits(Long id, Integer creditsAllocated) {
 
         Employee entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Employee not found"));
@@ -98,8 +98,10 @@ public class EmployeeService {
         int currentEmployeeCredits = entity.getCreditsAllocated() != null ? entity.getCreditsAllocated() : 0;
         entity.setCreditsAllocated(currentEmployeeCredits + creditsAllocated);
 
-        Company company = companyRepository.findById(companyId.longValue())
-                .orElseThrow(() -> new NoSuchElementException("Company not found"));
+        Company company = entity.getCompany();
+        if (company == null) {
+            throw new IllegalArgumentException("Employee is not associated with a company");
+        }
 
         int creditsToAllocate = creditsAllocated;
         int availableCredits = company.getAvailableCredits();

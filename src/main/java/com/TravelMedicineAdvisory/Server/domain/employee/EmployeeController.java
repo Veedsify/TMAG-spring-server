@@ -69,7 +69,7 @@ public class EmployeeController {
     public ResponseEntity<SuccessResponse> allocateCredits(@PathVariable Long id,
             @RequestBody Map<String, Integer> body) {
         return ResponseEntity.ok(new SuccessResponse("Credits allocated",
-                service.allocateCredits(id, body.get("creditsAllocated"), body.get("companyId"))));
+                service.allocateCredits(id, body.get("creditsAllocated"))));
     }
 
     @PutMapping("/{id}/status")
