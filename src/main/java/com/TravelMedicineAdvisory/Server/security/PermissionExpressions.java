@@ -1,6 +1,7 @@
 package com.TravelMedicineAdvisory.Server.security;
 
 import com.TravelMedicineAdvisory.Server.domain.companyuser.CompanyUserRepository;
+import com.TravelMedicineAdvisory.Server.domain.user.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -13,9 +14,11 @@ import java.util.Objects;
 public class PermissionExpressions {
 
     private final CompanyUserRepository companyUserRepository;
+    private final UserRepository userRepository;
 
-    public PermissionExpressions(CompanyUserRepository companyUserRepository) {
+    public PermissionExpressions(CompanyUserRepository companyUserRepository, UserRepository userRepository) {
         this.companyUserRepository = companyUserRepository;
+        this.userRepository = userRepository;
     }
 
     public boolean has(Authentication authentication, String... permissions) {
@@ -54,7 +57,17 @@ public class PermissionExpressions {
             return false;
         }
 
-        return companyUserRepository.existsActiveByUserIdAndCompanyId(userDetails.getUserId(), companyId);
+        Long userId = userDetails.getUserId();
+        // Fallback: resolve userId from email if not set in principal
+        if (userId == null && userDetails.getEmail() != null) {
+            userId = userRepository.findByEmail(userDetails.getEmail()).map(com.TravelMedicineAdvisory.Server.domain.user.User::getId).orElse(null);
+        }
+
+        if (userId == null) {
+            return false;
+        }
+
+        return companyUserRepository.existsActiveByUserIdAndCompanyId(userId, companyId);
     }
 
     private boolean hasAnyRole(Authentication authentication, String... roles) {

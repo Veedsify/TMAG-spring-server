@@ -236,7 +236,7 @@ public class TravelPlanService {
 
         Optional<Employee> employee = employeeRepository.findByUser(user);
 
-        if (user.getCredits() < 1) {
+        if (user.getCredits() == null || user.getCredits() < 1) {
             throw new RuntimeException("Insufficient credits");
         }
 

@@ -9,7 +9,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
@@ -19,9 +18,12 @@ import java.util.UUID;
 /**
  * StorageService backed by AWS S3 (or any S3-compatible provider).
  *
- * <p>Files whose size is at or above {@code multipartThresholdBytes} are uploaded
- * using the S3 multipart upload API so that individual parts are streamed rather
- * than loading the entire file into memory at once. This prevents heap exhaustion
+ * <p>
+ * Files whose size is at or above {@code multipartThresholdBytes} are uploaded
+ * using the S3 multipart upload API so that individual parts are streamed
+ * rather
+ * than loading the entire file into memory at once. This prevents heap
+ * exhaustion
  * and connection timeouts for files larger than 100 MB.
  */
 public class S3StorageService implements StorageService {
@@ -38,7 +40,7 @@ public class S3StorageService implements StorageService {
     private final long partSizeBytes;
 
     public S3StorageService(String bucket, String region, String accessKey, String secretKey,
-                             String endpoint, long multipartThresholdBytes, long partSizeBytes) {
+            String endpoint, long multipartThresholdBytes, long partSizeBytes) {
         this.bucket = bucket;
         this.region = region;
         this.accessKey = accessKey;
@@ -115,7 +117,7 @@ public class S3StorageService implements StorageService {
 
     @Override
     public String storeStream(InputStream inputStream, long contentLength, String path,
-                               String filename, String contentType) {
+            String filename, String contentType) {
         String key = path + "/" + filename;
         if (contentLength >= multipartThresholdBytes || contentLength < 0) {
             doMultipartUpload(inputStream, contentLength, key, contentType);
@@ -139,7 +141,8 @@ public class S3StorageService implements StorageService {
             return client.getObjectAsBytes(
                     GetObjectRequest.builder()
                             .bucket(bucket).key(path)
-                            .build()).asByteArray();
+                            .build())
+                    .asByteArray();
         }
     }
 
@@ -176,7 +179,7 @@ public class S3StorageService implements StorageService {
      * @param contentType   MIME type of the object
      */
     private void doMultipartUpload(InputStream inputStream, long contentLength,
-                                    String key, String contentType) {
+            String key, String contentType) {
         try (S3Client client = buildClient()) {
             CreateMultipartUploadResponse init = client.createMultipartUpload(
                     CreateMultipartUploadRequest.builder()
@@ -221,7 +224,8 @@ public class S3StorageService implements StorageService {
                         offset = 0;
                     }
 
-                    if (endOfStream) break;
+                    if (endOfStream)
+                        break;
                 }
 
                 client.completeMultipartUpload(
